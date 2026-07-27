@@ -1,9 +1,11 @@
-# Claude Prompt Template (Token-Efficient)
+# Claude Prompt Template (Token-saving, Frontend-first)
 
-Use this template for daily frontend tasks.
+## เปิดงานสั้น (แนะนำ)
+```md
+ใช้โหมดประหยัด token: ตอบสั้น, ถ้าข้อมูลไม่พอถามไม่เกิน 2 ข้อ, ส่ง Plan สั้น + diff only + test checklist, และแก้เฉพาะ frontend ตาม scope นี้: ...
+```
 
-## Template
-
+## Template มาตรฐาน
 ```md
 [PROJECT]
 Name: AI_Project
@@ -13,10 +15,10 @@ Context Files:
 - frontend/AGENTS.md
 
 [TASK]
-Objective: <single frontend objective>
+Objective: <งานเดียว>
 Definition of Done:
-- [ ] <check 1>
-- [ ] <check 2>
+- [ ] <ข้อที่ 1>
+- [ ] <ข้อที่ 2>
 
 Constraints:
 - Frontend scope only (`frontend/`)
@@ -25,24 +27,10 @@ Constraints:
 - If context is missing, ask up to 3 clarifying questions first
 
 [FILES IN SCOPE]
-- <absolute or repo-relative frontend file paths only>
+- <เฉพาะไฟล์ที่เกี่ยวข้อง>
 
 [OUTPUT]
 1) Plan (max 5 bullets)
 2) Unified diff only
 3) Verification checklist (lint/test/manual)
-```
-
-## Example (Resume Upload Task)
-
-```md
-Objective: Implement resume upload UI with file type validation.
-Definition of Done:
-- [ ] Accept .pdf/.doc/.docx
-- [ ] Show error for unsupported file types
-- [ ] Disable submit until file is valid
-
-FILES IN SCOPE:
-- frontend/app/upload/page.tsx
-- frontend/components/resume-upload-form.tsx
 ```
