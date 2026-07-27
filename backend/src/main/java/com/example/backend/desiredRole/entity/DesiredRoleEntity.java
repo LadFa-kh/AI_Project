@@ -16,7 +16,7 @@ public class DesiredRoleEntity {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity userEntity;
+    private UserEntity user;
 
     @Column(name = "role_name")
     private String roleName;

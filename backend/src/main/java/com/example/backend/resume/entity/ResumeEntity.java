@@ -2,10 +2,16 @@ package com.example.backend.resume.entity;
 
 import com.example.backend.user.entity.UserEntity;
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "resumes")
 public class ResumeEntity {

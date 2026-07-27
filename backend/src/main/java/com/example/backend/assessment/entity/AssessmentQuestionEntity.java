@@ -2,9 +2,11 @@ package com.example.backend.assessment.entity;
 
 import com.example.backend.resume.entity.ResumeEntity;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "assessment_question")
 public class AssessmentQuestionEntity {

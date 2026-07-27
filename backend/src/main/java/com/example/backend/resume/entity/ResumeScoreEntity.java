@@ -1,10 +1,12 @@
 package com.example.backend.resume.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "resume_score")
 public class ResumeScoreEntity {

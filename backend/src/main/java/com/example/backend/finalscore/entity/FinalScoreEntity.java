@@ -3,10 +3,12 @@ package com.example.backend.finalscore.entity;
 import com.example.backend.resume.entity.ResumeEntity;
 import com.example.backend.user.entity.UserEntity;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "final_score")
 public class FinalScoreEntity {
