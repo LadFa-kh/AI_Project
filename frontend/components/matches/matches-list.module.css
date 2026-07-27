@@ -1,0 +1,213 @@
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pageHeading {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: -0.015em;
+  color: #FFFFFF;
+}
+
+.pageSubheading {
+  margin: 0;
+  font-size: 14px;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+/* Filter/sort bar */
+.controlBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #0a0a0a 90%, transparent);
+  border: 1px solid color-mix(in srgb, #E5E0FF 14%, transparent);
+}
+
+.sortSelect {
+  min-height: 44px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: #E5E0FF;
+  background: #0a0a0a;
+  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+}
+.sortSelect:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); }
+.sortSelect:focus-visible { border-color: #FC8337; outline: 2px solid #FC8337; outline-offset: 1px; }
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: color-mix(in srgb, #E5E0FF 78%, transparent);
+  background: #0a0a0a;
+  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.filterChip:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); }
+.filterChip:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
+
+.filterChipActive {
+  color: #030303;
+  background: #FC8337;
+  border-color: #FC8337;
+}
+
+/* Match grid */
+.matchGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 700px) {
+  .matchGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .matchGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.matchCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #0a0a0a;
+  border: 1px solid #3f424d;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.matchCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, #FC8337 45%, transparent);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+}
+
+.matchCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.matchCardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.matchTitle {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #FFFFFF;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matchCompany {
+  margin: 0;
+  font-size: 13px;
+  color: color-mix(in srgb, #E5E0FF 65%, transparent);
+}
+
+.detailLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #030303;
+  background: #FC8337;
+  border: 1px solid #FC8337;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+.detailLink:hover { filter: brightness(1.08); }
+.detailLink:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+
+/* Skeleton loading cards */
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #0a0a0a;
+  border: 1px solid #3f424d;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #E5E0FF 10%, transparent) 25%,
+    color-mix(in srgb, #E5E0FF 18%, transparent) 37%,
+    color-mix(in srgb, #E5E0FF 10%, transparent) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Empty state */
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 56px 24px;
+  text-align: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, #0a0a0a 70%, transparent);
+  border: 1px dashed color-mix(in srgb, #E5E0FF 20%, transparent);
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0a0a0a;
+  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.35);
+  color: #FC8337;
+}

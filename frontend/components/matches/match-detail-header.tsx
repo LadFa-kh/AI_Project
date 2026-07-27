@@ -8,7 +8,7 @@ type MatchDetailHeaderProps = {
 export function MatchDetailHeader({ detail }: MatchDetailHeaderProps) {
   return (
     <div className="rounded-lg border border-zinc-300 p-4 dark:border-zinc-700">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-[clamp(1.125rem,1rem+0.6vw,1.25rem)] font-semibold text-zinc-900 dark:text-zinc-50">
         {detail.title}
       </h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400">{detail.company}</p>

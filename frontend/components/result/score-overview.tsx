@@ -16,7 +16,7 @@ export function ScoreOverview({ score }: ScoreOverviewProps) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border border-zinc-300 p-6 text-center dark:border-zinc-700">
       <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">คะแนนรวม</p>
-      <p className="text-5xl font-bold text-zinc-900 dark:text-zinc-50">{score}</p>
+      <p className="text-[clamp(2.25rem,1.8rem+2vw,3rem)] font-bold text-zinc-900 dark:text-zinc-50">{score}</p>
       <span
         className={`mt-1 rounded-full px-3 py-1 text-xs font-medium ${LEVEL_BADGE_CLASS[level]}`}
       >

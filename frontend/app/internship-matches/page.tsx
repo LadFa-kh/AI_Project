@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MatchCard } from "@/components/matches/match-card";
 import { MatchFiltersBar } from "@/components/matches/match-filters";
 import { MatchSort } from "@/components/matches/match-sort";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/page-state";
 import {
   MOCK_MATCHES,
   type InternshipMatch,
@@ -24,25 +23,29 @@ export default function InternshipMatchesPage() {
     location: "all",
   });
 
-  const load = useCallback(async () => {
-    setStatus("loading");
-    try {
-      // TODO: wire to backend (see PROJECT_CONTEXT.md: GET /internships/matches)
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      if (MOCK_MATCHES.length === 0) {
-        setStatus("empty");
-        return;
-      }
-      setMatches(MOCK_MATCHES);
-      setStatus("success");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
-
   useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setStatus("loading");
+      try {
+        // TODO: wire to backend (see PROJECT_CONTEXT.md: GET /internships/matches)
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        if (cancelled) return;
+        if (MOCK_MATCHES.length === 0) {
+          setStatus("empty");
+          return;
+        }
+        setMatches(MOCK_MATCHES);
+        setStatus("success");
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    }
     load();
-  }, [load]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const locationOptions = useMemo(
     () => Array.from(new Set(matches.map((m) => m.location))),
@@ -66,16 +69,16 @@ export default function InternshipMatchesPage() {
   }, [matches, filters, sort]);
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 px-4 py-12 dark:bg-black">
-      <div className="w-full max-w-3xl mx-auto flex flex-col gap-6">
+    <div className="flex flex-1 justify-center bg-zinc-50 px-4 py-[clamp(24px,6vw,48px)] dark:bg-black">
+      <div className="w-full max-w-3xl mx-auto flex flex-col gap-6" style={{ maxWidth: "min(48rem, 92vw)" }}>
         <div className="flex flex-col gap-2">
           <Link
             href="/evaluation-result"
-            className="w-fit text-sm font-medium text-zinc-600 underline hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+            className="w-fit text-sm font-medium text-zinc-600 underline hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 min-h-11 inline-flex items-center"
           >
             ← ย้อนกลับผลประเมิน
           </Link>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-[clamp(1.375rem,1.1rem+1.2vw,1.5rem)] font-semibold text-zinc-900 dark:text-zinc-50">
             สถานที่ฝึกงานที่เหมาะสม
           </h1>
         </div>
@@ -91,25 +94,30 @@ export default function InternshipMatchesPage() {
           </div>
         )}
 
-        {status === "loading" && <LoadingState message="กำลังโหลดรายการฝึกงาน..." />}
+        {status === "loading" && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">กำลังโหลดรายการฝึกงาน...</p>
+        )}
 
         {status === "error" && (
-          <ErrorState
-            message="ไม่สามารถโหลดรายการฝึกงานได้ กรุณาลองใหม่อีกครั้ง"
-            onRetry={load}
-          />
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            ไม่สามารถโหลดรายการฝึกงานได้ กรุณาลองใหม่อีกครั้ง
+          </p>
         )}
 
         {status === "empty" && (
-          <EmptyState message="ยังไม่มีตำแหน่งฝึกงานที่ตรงกับผลประเมินของคุณ" />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            ยังไม่มีตำแหน่งฝึกงานที่ตรงกับผลประเมินของคุณ
+          </p>
         )}
 
         {status === "success" && visibleMatches.length === 0 && (
-          <EmptyState message="ไม่พบตำแหน่งที่ตรงกับตัวกรองที่เลือก" />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            ไม่พบตำแหน่งที่ตรงกับตัวกรองที่เลือก
+          </p>
         )}
 
         {status === "success" && visibleMatches.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 min-[481px]:grid-cols-2 xl:grid-cols-3 min-[1440px]:grid-cols-4">
             {visibleMatches.map((match) => (
               <MatchCard key={match.internshipId} match={match} />
             ))}

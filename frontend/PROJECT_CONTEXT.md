@@ -50,8 +50,11 @@ Build a frontend experience for students to:
 ### 4) Internship Matching
 - Request example:
   - `GET /internships/matches?assessmentId=<id>`
-- Response shape:
+- Response shape (current, implemented):
   - `{ matches: [{ internshipId, title, company, matchScore, requiredSkills }], total }`
+- **Requested addition (not yet implemented by backend):** the list endpoint's `requiredSkills` is currently a flat `string[]` with no way to tell which skills the student already matches vs. gaps in — the detail page/endpoint has this distinction but the list does not. Frontend list cards (`MatchCard`) currently render every skill chip as "matched" as a placeholder. Requested shape:
+  - `requiredSkills: [{ skillName: string, isMatch: boolean }]` (replacing the plain `string[]`)
+  - Until this ships, frontend will keep treating all list-view skill chips as matched.
 
 ## Token-Saving Prompting Constraints
 - Always read `frontend/PROJECT_CONTEXT.md`, `frontend/TASK_BOARD.md`, and `frontend/AGENTS.md` first.

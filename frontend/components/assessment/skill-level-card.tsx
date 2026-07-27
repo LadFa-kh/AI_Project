@@ -21,7 +21,7 @@ export function SkillLevelCard({ skillName, selected, onSelect }: SkillLevelCard
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(level.value)}
-              className={`h-10 rounded-lg border text-sm font-medium transition-colors ${
+              className={`min-h-11 rounded-lg border text-sm font-medium transition-colors ${
                 isSelected
                   ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
                   : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"

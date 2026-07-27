@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { RESUME_ACCEPTED_EXTENSIONS } from "@/lib/validators";
 import styles from "./resume-upload.module.css";
 
-type FileDropzoneProps = {
+type ResumeDropzoneProps = {
   disabled?: boolean;
   hasError?: boolean;
   onFileSelected: (file: File) => void;
 };
 
-export function FileDropzone({ disabled, hasError, onFileSelected }: FileDropzoneProps) {
+export function ResumeDropzone({ disabled, hasError, onFileSelected }: ResumeDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -37,40 +37,43 @@ export function FileDropzone({ disabled, hasError, onFileSelected }: FileDropzon
     setIsDragOver(false);
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (!disabled && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      inputRef.current?.click();
-    }
-  }
-
   const classNames = [
     styles.dropzone,
     isDragOver ? styles.dropzoneActive : "",
     hasError ? styles.dropzoneError : "",
     disabled ? styles.dropzoneDisabled : "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
-      aria-label="Upload your resume. Drag and drop a file, or press enter to browse."
       onClick={() => !disabled && inputRef.current?.click()}
-      onKeyDown={handleKeyDown}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={classNames}
     >
-      <div className={styles.dropzoneIcon}>
-        <svg width="22" height="22" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-          <path d="M224,152v56a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V152a8,8,0,0,1,16,0v56H208V152a8,8,0,0,1,16,0ZM93.66,85.66,120,59.31V152a8,8,0,0,0,16,0V59.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,85.66Z" />
+      <span className={styles.dropzoneIcon} aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M224,152v56a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V152a8,8,0,0,1,16,0v56H208V152a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V152a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z" />
         </svg>
-      </div>
-      <p className={styles.dropzoneTitle}>Drag &amp; drop your resume, or click to browse</p>
-      <p className={styles.dropzoneHint}>Accepted formats: {RESUME_ACCEPTED_EXTENSIONS.join(", ")} · Max 5MB</p>
+      </span>
+      <p className={styles.dropzoneTitle}>
+        Drag &amp; drop your resume, or click to browse
+      </p>
+      <p className={styles.dropzoneHint}>
+        Accepted formats: {RESUME_ACCEPTED_EXTENSIONS.join(", ")} · Max 5MB
+      </p>
       <input
         ref={inputRef}
         type="file"
@@ -78,7 +81,7 @@ export function FileDropzone({ disabled, hasError, onFileSelected }: FileDropzon
         disabled={disabled}
         onChange={handleChange}
         className="sr-only"
-        aria-label="Choose a resume file"
+        aria-label="Choose resume file"
       />
     </div>
   );

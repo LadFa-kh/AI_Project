@@ -1,0 +1,279 @@
+/* Nocturne tokens — shared visual system with /login, scoped locally to /register. */
+
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22.4px 16.8px;
+  background: #030303;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 22.4px;
+  padding: 33.6px 28px;
+  border-radius: 14px;
+  background: #0a0a0a;
+  box-shadow: 0 0 0 1px #3f424d, 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 40px -12px rgba(252, 131, 55, 0.35);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11.2px;
+  text-align: center;
+}
+
+.logoMark {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0a0a0a;
+  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.35);
+  color: #FC8337;
+}
+
+.kicker {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+}
+
+.headingBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 5.6px;
+  text-align: center;
+}
+
+.heading {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 25px;
+  letter-spacing: -0.015em;
+  color: #FFFFFF;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16.8px;
+}
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8.4px 11.2px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  background: oklch(26% 0.05 25);
+  border: 1px solid oklch(42% 0.11 25);
+  color: oklch(85% 0.09 25);
+}
+
+.formError svg { flex: none; margin-top: 1px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field > label {
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in srgb, #E5E0FF 70%, transparent);
+}
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: #E5E0FF;
+  caret-color: #FC8337;
+  background: #0a0a0a;
+  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input::placeholder { color: color-mix(in srgb, #E5E0FF 38%, transparent); }
+.input:hover { border-color: color-mix(in srgb, #E5E0FF 45%, transparent); }
+.input:focus-visible { border-color: #FC8337; outline: 2px solid #FC8337; outline-offset: 1px; }
+.input:disabled { opacity: 0.5; cursor: not-allowed; }
+.inputInvalid { border-color: oklch(58% 0.14 25); }
+.inputInvalid:focus-visible { border-color: oklch(58% 0.14 25); outline-color: oklch(58% 0.14 25); }
+
+.fieldError {
+  font-size: 12px;
+  color: oklch(75% 0.13 25);
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: color-mix(in srgb, #E5E0FF 50%, transparent);
+}
+
+.strengthRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, #E5E0FF 14%, transparent);
+  overflow: hidden;
+}
+
+.strengthFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+.strengthLabel {
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 52px;
+  text-align: right;
+}
+
+.link {
+  font-size: 13px;
+  font-weight: 500;
+  color: #FC8337;
+  text-decoration: none;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.link:hover { text-decoration: underline; }
+.link:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; border-radius: 4px; }
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.checkbox {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 13px;
+  accent-color: #FC8337;
+  cursor: pointer;
+}
+
+.checkLabel {
+  padding: 12px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: color-mix(in srgb, #E5E0FF 75%, transparent);
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 2.8px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: #030303;
+  background: #FC8337;
+  border: 1px solid #FC8337;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+.submitBtn:hover:not(:disabled) { filter: brightness(1.08); }
+.submitBtn:active:not(:disabled) { filter: brightness(0.96); }
+.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(3, 3, 3, 0.35);
+  border-top-color: #030303;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 11.2px;
+}
+.dividerLine {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(to right, transparent, color-mix(in srgb, #E5E0FF 16%, transparent) 20%, color-mix(in srgb, #E5E0FF 16%, transparent) 80%, transparent);
+}
+.dividerText {
+  font-size: 12px;
+  color: color-mix(in srgb, #E5E0FF 50%, transparent);
+}
+
+.googleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #3c4043;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+.googleBtn:hover:not(:disabled) { background: #f8f8f8; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.googleBtn:active:not(:disabled) { background: #f1f1f1; }
+.googleBtn:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
+.googleBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.footer {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: color-mix(in srgb, #E5E0FF 60%, transparent);
+}

@@ -1,53 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-
-  /* Home theme tokens */
-  --home-primary: #4f46e5;
-  --home-primary-hover: #4338ca;
-  --home-accent: #06b6d4;
-  --home-bg: #0b1020;
-  --home-surface: #121a2b;
-  --home-text-primary: #e5e7eb;
-  --home-text-secondary: #94a3b8;
-  --home-success: #22c55e;
-  --home-warning: #f59e0b;
-  --home-error: #ef4444;
-  --home-border: #243045;
+  --background: #030303;
+  --foreground: #E5E0FF;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: "Inter", Arial, Helvetica, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
 
-  --color-home-primary: var(--home-primary);
-  --color-home-primary-hover: var(--home-primary-hover);
-  --color-home-accent: var(--home-accent);
-  --color-home-bg: var(--home-bg);
-  --color-home-surface: var(--home-surface);
-  --color-home-text-primary: var(--home-text-primary);
-  --color-home-text-secondary: var(--home-text-secondary);
-  --color-home-success: var(--home-success);
-  --color-home-warning: var(--home-warning);
-  --color-home-error: var(--home-error);
-  --color-home-border: var(--home-border);
-  --font-heading: var(--font-poppins), Arial, Helvetica, sans-serif;
-  --font-body: var(--font-inter), Arial, Helvetica, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Stardust design system tokens (home page + shared surfaces) */
+  --color-home-bg: #030303;
+  --color-home-surface: #0a0a0a;
+  --color-home-primary: #FC8337;
+  --color-home-primary-hover: #e3712a;
+  --color-home-accent: #FC8337;
+  --color-home-text-primary: #FFFFFF;
+  --color-home-text-secondary: #E5E0FF;
+  --color-home-border: #2a2a2a;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", Arial, Helvetica, sans-serif;
 }

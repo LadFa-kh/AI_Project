@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function UploadResumePage() {
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-12 dark:bg-black">
+    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-[clamp(24px,6vw,48px)] dark:bg-black">
       <ResumeUploadForm />
     </div>
   );

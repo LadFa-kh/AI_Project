@@ -48,8 +48,8 @@ export function ResumeUploadForm() {
 
   if (isSuccess) {
     return (
-      <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 text-center">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+      <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 text-center" style={{ maxWidth: "min(24rem, 90vw)" }}>
+        <h1 className="text-[clamp(1.375rem,1.1rem+1.2vw,1.5rem)] font-semibold text-zinc-900 dark:text-zinc-50">
           อัปโหลดสำเร็จ
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -66,8 +66,8 @@ export function ResumeUploadForm() {
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 text-center">
+    <div className="w-full max-w-sm mx-auto" style={{ maxWidth: "min(24rem, 90vw)" }}>
+      <h1 className="text-[clamp(1.375rem,1.1rem+1.2vw,1.5rem)] font-semibold text-zinc-900 dark:text-zinc-50 text-center">
         อัปโหลดเรซูเม่
       </h1>
       <p className="mt-1 text-center text-sm text-zinc-600 dark:text-zinc-400">

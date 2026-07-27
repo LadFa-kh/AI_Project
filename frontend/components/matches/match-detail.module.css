@@ -1,0 +1,147 @@
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+  color: color-mix(in srgb, #E5E0FF 75%, transparent);
+  text-decoration: none;
+  width: fit-content;
+}
+.backLink:hover { color: #E5E0FF; text-decoration: underline; }
+.backLink:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; border-radius: 4px; }
+
+.detailCard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+  border-radius: 16px;
+  background: #0a0a0a;
+  border: 1px solid #3f424d;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 40px -12px rgba(252, 131, 55, 0.3);
+}
+
+.headerBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.headerTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.titleText {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+}
+
+.companyText {
+  margin: 0;
+  font-size: 14px;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.sectionHeading {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: color-mix(in srgb, #E5E0FF 88%, transparent);
+}
+
+.bodyText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: color-mix(in srgb, #E5E0FF 78%, transparent);
+}
+
+.skillChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Details row (location / type / duration) */
+.detailsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.detailIcon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, #FC8337 16%, transparent);
+  color: #FC8337;
+}
+
+.detailTextBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.detailLabel {
+  font-size: 11px;
+  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+}
+
+.detailValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: #E5E0FF;
+}
+
+.ctaRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.externalNote {
+  margin: 0;
+  font-size: 12px;
+  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+  text-align: center;
+}
+
+/* Skeleton */
+.skeletonLine {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #E5E0FF 10%, transparent) 25%,
+    color-mix(in srgb, #E5E0FF 18%, transparent) 37%,
+    color-mix(in srgb, #E5E0FF 10%, transparent) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

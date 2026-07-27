@@ -72,8 +72,8 @@ export function AuthForm({ mode }: AuthFormProps) {
   const isLoading = status === "loading";
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 text-center">
+    <div className="w-full max-w-sm mx-auto" style={{ maxWidth: "min(24rem, 90vw)" }}>
+      <h1 className="text-[clamp(1.375rem,1.1rem+1.2vw,1.5rem)] font-semibold text-zinc-900 dark:text-zinc-50 text-center">
         {isRegister ? "สมัครสมาชิก" : "เข้าสู่ระบบ"}
       </h1>
 

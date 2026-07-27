@@ -1,45 +1,37 @@
 import Link from "next/link";
-import { WORK_MODE_LABEL, type InternshipMatch } from "@/lib/match-types";
+import type { InternshipMatchSummary } from "@/lib/internship-match-types";
+import nocturne from "@/components/ui/nocturne.module.css";
+import { RequiredSkillChip } from "./required-skill-chip";
 
 type MatchCardProps = {
-  match: InternshipMatch;
+  match: InternshipMatchSummary;
 };
 
 export function MatchCard({ match }: MatchCardProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-300 p-4 dark:border-zinc-700">
+    <div className={nocturne.card} style={{ maxWidth: "none", gap: 12 }}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          <h3 className={nocturne.heading} style={{ fontSize: 15, textAlign: "left" }}>
             {match.title}
           </h3>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{match.company}</p>
+          <p className={nocturne.subheading} style={{ textAlign: "left" }}>{match.company}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 dark:bg-green-950 dark:text-green-300">
-          {match.matchScore}%
+        <span className={nocturne.scorePill} style={{ flex: "none" }}>
+          {match.matchScore}% match
         </span>
       </div>
 
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        {match.location} · {WORK_MODE_LABEL[match.workMode]}
-      </p>
-
-      <div className="flex flex-wrap gap-1.5">
+      <div className={nocturne.chipRow}>
         {match.requiredSkills.map((skill) => (
-          <span
-            key={skill}
-            className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-          >
-            {skill}
-          </span>
+          <RequiredSkillChip key={skill} skill={skill} isMatch />
         ))}
       </div>
 
-      <p className="text-xs text-zinc-600 dark:text-zinc-400">{match.matchReason}</p>
-
       <Link
         href={`/internship-matches/${match.internshipId}`}
-        className="mt-1 flex h-9 w-full items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        className={nocturne.ghostBtn}
+        style={{ marginTop: 4 }}
       >
         ดูรายละเอียด
       </Link>

@@ -1,0 +1,304 @@
+/* Nocturne tokens — shared visual system with /login and /register, scoped to /upload-resume. */
+
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22.4px 16.8px;
+  background: #030303;
+}
+
+.card {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 22.4px;
+  padding: 33.6px 28px;
+  border-radius: 14px;
+  background: #0a0a0a;
+  box-shadow: 0 0 0 1px #3f424d, 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 40px -12px rgba(252, 131, 55, 0.35);
+}
+
+/* Step indicator */
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #FC8337;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #FC8337 18%, transparent);
+  border: 1px solid color-mix(in srgb, #FC8337 40%, transparent);
+}
+
+.stepTrack {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  max-width: 140px;
+}
+
+.stepDot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: color-mix(in srgb, #E5E0FF 16%, transparent);
+}
+
+.stepDotActive {
+  background: #FC8337;
+}
+
+.headingBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 5.6px;
+  text-align: center;
+}
+
+.heading {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 25px;
+  letter-spacing: -0.015em;
+  color: #FFFFFF;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16.8px;
+}
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8.4px 11.2px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  background: oklch(26% 0.05 25);
+  border: 1px solid oklch(42% 0.11 25);
+  color: oklch(85% 0.09 25);
+}
+
+.formError svg { flex: none; margin-top: 1px; }
+
+/* Dropzone */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 24px;
+  min-height: 200px;
+  border-radius: 12px;
+  border: 2px dashed color-mix(in srgb, #E5E0FF 22%, transparent);
+  background: color-mix(in srgb, #FC8337 4%, #0a0a0a);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dropzone:hover { border-color: color-mix(in srgb, #E5E0FF 45%, transparent); }
+.dropzone:focus-visible { border-color: #FC8337; outline: 2px solid #FC8337; outline-offset: 2px; }
+.dropzoneActive {
+  border-color: #FC8337;
+  border-style: solid;
+  background: color-mix(in srgb, #FC8337 14%, #0a0a0a);
+}
+.dropzoneError {
+  border-color: oklch(58% 0.14 25);
+}
+.dropzoneDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dropzoneIcon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0a0a0a;
+  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.35);
+  color: #FC8337;
+}
+
+.dropzoneTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+.dropzoneHint {
+  margin: 0;
+  font-size: 12px;
+  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+}
+
+/* Selected file preview */
+.filePreview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #0a0a0a;
+  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+}
+
+.fileIcon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, #FC8337 18%, transparent);
+  color: #FC8337;
+}
+
+.fileMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #E5E0FF;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  margin: 0;
+  font-size: 12px;
+  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+}
+
+.removeBtn {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, #E5E0FF 65%, transparent);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.removeBtn:hover:not(:disabled) { background: color-mix(in srgb, #E5E0FF 10%, transparent); color: #E5E0FF; }
+.removeBtn:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
+.removeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.fieldError {
+  font-size: 12px;
+  color: oklch(75% 0.13 25);
+}
+
+.progressBar {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, #E5E0FF 14%, transparent);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 2px;
+  background: #FC8337;
+  transition: width 0.2s ease;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: #030303;
+  background: #FC8337;
+  border: 1px solid #FC8337;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.submitBtn:hover:not(:disabled) { filter: brightness(1.08); }
+.submitBtn:active:not(:disabled) { filter: brightness(0.96); }
+.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(3, 3, 3, 0.35);
+  border-top-color: #030303;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.successBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.successIcon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: oklch(30% 0.06 150);
+  color: oklch(80% 0.13 150);
+  margin-bottom: 4px;
+}
+
+.link {
+  font-size: 14px;
+  font-weight: 500;
+  color: #FC8337;
+  text-decoration: none;
+}
+.link:hover { text-decoration: underline; }
+.link:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; border-radius: 4px; }

@@ -1,43 +1,47 @@
-export type ScoreLevel = "basic" | "good" | "excellent";
+export type ScoreLevel = "developing" | "good" | "excellent";
 
 export function getScoreLevel(score: number): ScoreLevel {
   if (score >= 85) return "excellent";
   if (score >= 60) return "good";
-  return "basic";
+  return "developing";
 }
 
 export const SCORE_LEVEL_LABEL: Record<ScoreLevel, string> = {
-  basic: "พื้นฐาน",
-  good: "ดี",
-  excellent: "ดีมาก",
+  developing: "Developing",
+  good: "Good",
+  excellent: "Excellent",
 };
 
-export type SkillSummary = {
-  skillName: string;
-  level: string;
+// Maps to a CSS custom property consumed by .scoreRing / .scoreBadge in nocturne.module.css
+export const SCORE_LEVEL_COLOR: Record<ScoreLevel, string> = {
+  developing: "#f0a256",
+  good: "#9184d9",
+  excellent: "#7fd88f",
 };
 
 export type EvaluationResult = {
+  assessmentId: string;
   overallScore: number;
   strengths: string[];
   gaps: string[];
   recommendations: string[];
-  skillSummary: SkillSummary[];
 };
 
-// Mock data until backend evaluation is wired (see PROJECT_CONTEXT.md: POST /assessments response)
+// Mock data until backend evaluation is wired
+// GET response per PROJECT_CONTEXT.md: { assessmentId, overallScore, recommendations, strengths, gaps }
 export const MOCK_EVALUATION_RESULT: EvaluationResult = {
+  assessmentId: "mock-assessment-1",
   overallScore: 78,
-  strengths: ["พื้นฐาน JavaScript แข็งแรง", "สื่อสารและทำงานร่วมกับทีมได้ดี"],
-  gaps: ["ขาดประสบการณ์ SQL ขั้นสูง", "ยังไม่เคยใช้งาน React ในโปรเจกต์จริง"],
-  recommendations: [
-    "ฝึกทำโปรเจกต์ React ขนาดเล็กเพื่อสร้างพอร์ตโฟลิโอ",
-    "ทบทวนพื้นฐาน SQL query และ database design",
+  strengths: [
+    "Strong grasp of JavaScript fundamentals",
+    "Clear, collaborative communication style",
   ],
-  skillSummary: [
-    { skillName: "JavaScript", level: "ดีมาก" },
-    { skillName: "React", level: "ผ่านเกณฑ์" },
-    { skillName: "SQL", level: "พอได้" },
-    { skillName: "การสื่อสาร", level: "ดีเยี่ยม" },
+  gaps: [
+    "Limited hands-on experience with advanced SQL",
+    "Hasn't yet used React in a production-scale project",
+  ],
+  recommendations: [
+    "Build a small React project to strengthen your portfolio",
+    "Review SQL query fundamentals and basic database design",
   ],
 };
