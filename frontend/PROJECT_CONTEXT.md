@@ -1,39 +1,61 @@
 # Project Context (Frontend)
 
-## Product Summary
-AI_Project is a resume analysis and intelligent skill assessment system that uses Generative AI to match students with suitable internship opportunities.
+## Project Goal
+Build a frontend experience for students to:
+1) upload resume,
+2) complete skill assessment,
+3) receive AI evaluation,
+4) view matched internships.
 
-## Scope for Frontend Team
-- Authentication UI: Login, Register, Google Sign-In
-- Resume upload UX: PDF/Word selection, validation, progress
-- Skill assessment UX: guided multiple-choice levels per detected skill
-- Results UI: score summary, strengths/gaps, matched internships
+## Frontend Scope Boundary
+- This document governs frontend collaboration under `frontend/` only.
+- Backend implementation is out of scope; backend needs must be documented as contracts/checklists.
 
-> This file is frontend-focused. Backend implementation is out of scope here.
-
-## Core Product Flow
+## User Flow
 1. User signs in (email/password or Google).
-2. User uploads resume (`.pdf`, `.doc`, `.docx`).
-3. System receives extracted resume skills (from backend pipeline).
-4. User answers skill-level questions per skill (fixed levels, not free-text generation).
-5. AI evaluation returns score + concise recommendations.
-6. UI shows internship matches from database-driven results.
+2. User uploads resume file (`.pdf`, `.doc`, `.docx`).
+3. Frontend receives extracted skills from backend.
+4. User selects a level per skill (no free-text answers).
+5. Frontend submits assessment answers.
+6. Frontend shows evaluation summary and internship matches.
 
-## Current Status
-- Frontend app scaffold exists (Next.js + TypeScript + Tailwind).
-- Main business screens are pending implementation.
-- Documentation/context workflow for AI-assisted execution is now established.
+## Skill Level Scale
+- Basic
+- Meets Expectations
+- Strong
+- Excellent
 
-## AI Prompting Constraints (Token-Saving)
-- Always send only task-relevant files/snippets.
-- Reuse fixed prompt template and output format.
-- Prefer structured input/output (JSON schema) for API tasks.
-- Do not paste full raw resume text unless required.
+## Frontend-Expected Backend API Contracts (High-Level)
+
+### 1) Auth
+- Request examples:
+  - `POST /auth/login` → `{ email, password }`
+  - `POST /auth/register` → `{ name, email, password }`
+  - `POST /auth/google` → `{ idToken }`
+- Response shape:
+  - `{ accessToken, user: { id, name, email } }`
+
+### 2) Resume Upload + Skill Extraction
+- Request example:
+  - `POST /resumes` (multipart form-data) with `file`
+- Response shape:
+  - `{ resumeId, extractedSkills: [{ skillName, source? }] }`
+
+### 3) Skill Assessment Submit
+- Request example:
+  - `POST /assessments` → `{ resumeId, answers: [{ skillName, level }] }`
+- Response shape:
+  - `{ assessmentId, overallScore, recommendations, strengths, gaps }`
+
+### 4) Internship Matching
+- Request example:
+  - `GET /internships/matches?assessmentId=<id>`
+- Response shape:
+  - `{ matches: [{ internshipId, title, company, matchScore, requiredSkills }], total }`
+
+## Token-Saving Prompting Constraints
+- Always read `frontend/PROJECT_CONTEXT.md`, `frontend/TASK_BOARD.md`, and `frontend/AGENTS.md` first.
 - Keep each prompt to one objective and one Definition of Done.
-
-## Frontend ↔ Backend Touchpoints (Checklist Only)
-- [ ] Auth endpoints contract confirmed (login/register/google callback).
-- [ ] Resume upload API contract confirmed (file type/size/errors).
-- [ ] Resume extracted skills response shape confirmed.
-- [ ] Skill assessment submit payload/response contract confirmed.
-- [ ] Internship match result schema confirmed.
+- Return concise structure: short plan + focused diff + short validation checklist.
+- Avoid repeating unchanged project context.
+- Never edit files outside `frontend/`; if backend is required, return contract/checklist only.

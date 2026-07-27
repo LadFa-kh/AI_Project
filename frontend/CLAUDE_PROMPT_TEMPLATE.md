@@ -22,6 +22,7 @@ Definition of Done:
 
 Constraints:
 - Frontend scope only (`frontend/`)
+- Never edit files outside `frontend/`; if backend is required, return contract/checklist only.
 - Minimal diff, no unrelated refactor
 - Keep TypeScript compatibility
 - If context is missing, ask up to 3 clarifying questions first
