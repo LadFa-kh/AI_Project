@@ -1,33 +1,222 @@
-/* Assessment-specific pieces layered on top of the shared components/ui/nocturne.module.css system. */
+/* Stardust premium treatment — scoped to /skill-assessment only.
+   Mirrors the /login, /register, /internship-matches visual system (glassmorphism
+   card, ambient glow behind content, focus states, staggered entrance). This page
+   renders inside AppShell's sidebar layout (like /evaluation-result and
+   /internship-matches), so there's no back-to-home link or full-page ambient shell
+   — ambient motion stays behind the card only. Does NOT touch the shared
+   nocturne.module.css, so other pages are unaffected.
 
-.cardWide {
+   Also fixes a latent bug: the previous version of this file referenced
+   nocturne.progressBar / nocturne.progressFill, which don't exist in
+   nocturne.module.css — those classes are now defined locally below. */
+
+.page {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 6vw, 48px) 16.8px;
+  overflow: hidden;
+}
+
+/* Ambient drifting glow blobs behind the card — decorative, low opacity */
+.ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.13;
+  will-change: transform;
+}
+
+.blobOne {
+  width: 480px;
+  height: 480px;
+  top: -160px;
+  left: -120px;
+  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  animation: drift-one 27s ease-in-out infinite;
+}
+
+.blobTwo {
+  width: 420px;
+  height: 420px;
+  bottom: -150px;
+  right: -110px;
+  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  opacity: 0.09;
+  animation: drift-two 33s ease-in-out infinite;
+}
+
+@keyframes drift-one {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(36px, 28px) scale(1.07); }
+}
+
+@keyframes drift-two {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-28px, -22px) scale(1.04); }
+}
+
+.cardWrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
   max-width: 600px;
 }
+
+.halo {
+  position: absolute;
+  inset: -40px;
+  z-index: 0;
+  background: radial-gradient(closest-side, rgba(252, 131, 55, 0.2), transparent 72%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: clamp(28px, 4vw, 44px) clamp(24px, 4vw, 36px);
+  border-radius: 20px;
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(252, 131, 55, 0.08),
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    0 0 60px -16px rgba(252, 131, 55, 0.3);
+}
+
+.headingBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.heading {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(24px, 3.4vw, 28px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #FFFFFF;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Intro/landing screen (shown before the actual form) */
+.introIconWrap {
+  align-self: center;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, #FC8337 14%, transparent);
+  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.3), 0 0 32px -8px rgba(252, 131, 55, 0.45);
+  color: #FC8337;
+}
+
+.introList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.introListItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: color-mix(in srgb, #E5E0FF 82%, transparent);
+}
+
+.introListItem svg {
+  flex: none;
+  margin-top: 3px;
+  color: #FC8337;
+}
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: oklch(26% 0.05 25);
+  border: 1px solid oklch(42% 0.11 25);
+  color: oklch(85% 0.09 25);
+}
+
+.formError svg { flex: none; margin-top: 1px; }
 
 .skillList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .skillRow {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: #0a0a0a;
-  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #0a0a0a 60%, transparent);
+  border: 1px solid color-mix(in srgb, #E5E0FF 14%, transparent);
+  transition: border-color 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out;
+}
+
+.skillRow:hover {
+  border-color: color-mix(in srgb, #E5E0FF 30%, transparent);
+  background: color-mix(in srgb, #0a0a0a 72%, transparent);
 }
 
 .skillRowRated {
   border-color: color-mix(in srgb, #FC8337 45%, transparent);
 }
+.skillRowRated:hover {
+  border-color: color-mix(in srgb, #FC8337 60%, transparent);
+}
 
 .skillName {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 14.5px;
+  font-weight: 600;
   color: #E5E0FF;
 }
 
@@ -35,7 +224,7 @@
 .levelGroup {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 @media (min-width: 480px) {
@@ -54,29 +243,137 @@
   font-weight: 500;
   text-align: center;
   color: color-mix(in srgb, #E5E0FF 75%, transparent);
-  background: #0a0a0a;
+  background: color-mix(in srgb, #0a0a0a 85%, transparent);
   border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.18s ease-out, background 0.18s ease-out, color 0.18s ease-out,
+    transform 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 
-.levelOption:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); }
+.levelOption:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); transform: translateY(-1px); }
 .levelOption:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
 
 .levelOptionSelected {
   color: #030303;
   background: #FC8337;
   border-color: #FC8337;
+  transform: scale(1.04);
+  box-shadow: 0 8px 20px -6px rgba(252, 131, 55, 0.55);
 }
-.levelOptionSelected:hover { border-color: #FC8337; }
+.levelOptionSelected:hover { border-color: #FC8337; transform: scale(1.04); }
 
-/* Progress summary */
+/* Progress summary — local replacements for the previously-missing
+   nocturne.progressBar / nocturne.progressFill */
 .progressRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
   color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.progressBar {
+  height: 6px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, #E5E0FF 14%, transparent);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #FC8337;
+  transition: width 0.25s ease-out;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #030303;
+  background: #FC8337;
+  border: 1px solid #FC8337;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+}
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
+}
+.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
+.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(3, 3, 3, 0.35);
+  border-top-color: #030303;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Full-card loading state (shown while submitting the assessment) */
+.loadingBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.loadingSpinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(229, 224, 255, 0.2);
+  border-top-color: #FC8337;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Entrance animation — staggered fade + slide up, top to bottom */
+.animateIn {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fade-slide-up 0.5s ease-out forwards;
+}
+
+@keyframes fade-slide-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blobOne, .blobTwo {
+    animation: none;
+  }
+  .animateIn {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .skillRow, .levelOption, .submitBtn {
+    transition: none;
+  }
+  .levelOptionSelected {
+    transform: none;
+  }
 }

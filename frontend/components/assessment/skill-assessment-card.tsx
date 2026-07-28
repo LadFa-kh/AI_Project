@@ -5,7 +5,6 @@ import { useState } from "react";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { SkillLevelGroup } from "./skill-level-group";
 import { MOCK_SKILLS, type SkillAnswers, type SkillLevel } from "@/lib/assessment-types";
-import nocturne from "@/components/ui/nocturne.module.css";
 import styles from "./skill-assessment.module.css";
 
 type Status = "default" | "loading" | "error" | "success";
@@ -45,17 +44,37 @@ export function SkillAssessmentCard() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className={styles.card}>
+        <div className={`${styles.animateIn} ${styles.delay1}`}>
+          <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+        </div>
+        <div className={`${styles.loadingBlock} ${styles.animateIn} ${styles.delay2}`}>
+          <span className={styles.loadingSpinner} aria-hidden="true" />
+          <p className={styles.subheading}>Submitting your assessment…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isSuccess) {
     return (
-      <div className={`${nocturne.card} ${styles.cardWide}`}>
-        <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
-        <div className={nocturne.headingBlock}>
-          <h1 className={nocturne.heading}>Assessment submitted</h1>
-          <p className={nocturne.subheading}>
+      <div className={styles.card}>
+        <div className={styles.animateIn}>
+          <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+        </div>
+        <div className={`${styles.headingBlock} ${styles.animateIn}`} style={{ animationDelay: "60ms" }}>
+          <h1 className={styles.heading}>Assessment submitted</h1>
+          <p className={styles.subheading}>
             Thanks — we&apos;ve recorded your skill ratings.
           </p>
         </div>
-        <Link href="/evaluation-result" className={nocturne.submitBtn}>
+        <Link
+          href="/evaluation-result"
+          className={`${styles.submitBtn} ${styles.animateIn}`}
+          style={{ animationDelay: "120ms" }}
+        >
           View your results
         </Link>
       </div>
@@ -63,19 +82,21 @@ export function SkillAssessmentCard() {
   }
 
   return (
-    <div className={`${nocturne.card} ${styles.cardWide}`}>
-      <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+    <div className={styles.card}>
+      <div className={styles.animateIn}>
+        <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+      </div>
 
-      <div className={nocturne.headingBlock}>
-        <h1 className={nocturne.heading}>Rate your skills</h1>
-        <p className={nocturne.subheading}>
+      <div className={`${styles.headingBlock} ${styles.animateIn}`} style={{ animationDelay: "60ms" }}>
+        <h1 className={styles.heading}>Rate your skills</h1>
+        <p className={styles.subheading}>
           These skills came from your resume — select the level that honestly reflects your ability.
         </p>
       </div>
 
-      <div className={nocturne.form}>
+      <div className={styles.form}>
         {formError && (
-          <p className={nocturne.formError} role="alert">
+          <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
             <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
               <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
             </svg>
@@ -84,12 +105,13 @@ export function SkillAssessmentCard() {
         )}
 
         <div className={styles.skillList}>
-          {skills.map((skill) => {
+          {skills.map((skill, index) => {
             const selected = answers[skill.skillName] ?? null;
             return (
               <div
                 key={skill.skillName}
-                className={`${styles.skillRow} ${selected ? styles.skillRowRated : ""}`}
+                className={`${styles.skillRow} ${selected ? styles.skillRowRated : ""} ${styles.animateIn}`}
+                style={{ animationDelay: `${120 + index * 60}ms` }}
               >
                 <p className={styles.skillName}>{skill.skillName}</p>
                 <SkillLevelGroup
@@ -103,27 +125,31 @@ export function SkillAssessmentCard() {
           })}
         </div>
 
-        <div className={styles.progressRow}>
-          <span>
-            {answeredCount} of {skills.length} rated
-          </span>
-          {isLoading && <span>Submitting…</span>}
-        </div>
-        <div className={nocturne.progressBar}>
-          <div
-            className={nocturne.progressFill}
-            style={{ width: `${(answeredCount / skills.length) * 100}%` }}
-          />
+        <div
+          className={`${styles.animateIn}`}
+          style={{ animationDelay: `${120 + skills.length * 60 + 60}ms` }}
+        >
+          <div className={styles.progressRow}>
+            <span>
+              {answeredCount} of {skills.length} rated
+            </span>
+          </div>
+          <div className={styles.progressBar}>
+            <div
+              className={styles.progressFill}
+              style={{ width: `${(answeredCount / skills.length) * 100}%` }}
+            />
+          </div>
         </div>
 
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className={nocturne.submitBtn}
+          className={`${styles.submitBtn} ${styles.animateIn}`}
+          style={{ animationDelay: `${120 + skills.length * 60 + 120}ms` }}
         >
-          {isLoading && <span className={nocturne.spinner} aria-hidden="true" />}
-          {isLoading ? "Submitting…" : "Submit assessment"}
+          Submit assessment
         </button>
       </div>
     </div>

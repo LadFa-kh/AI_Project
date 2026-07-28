@@ -1,3 +1,64 @@
+/* Stardust premium treatment — scoped to /internship-matches/[id] only.
+   Mirrors the /login, /register, /upload-resume, /skill-assessment,
+   /internship-matches visual system (glassmorphism card, ambient glow,
+   focus states, staggered entrance). This page renders inside AppShell's
+   sidebar layout (like /internship-matches), so ambient motion lives behind
+   the content, not as a full standalone page shell, and there's no
+   back-to-home link (the "Back to matches" link already serves that role).
+   Does NOT touch the shared nocturne.module.css, so other pages
+   (/internship-matches, /evaluation-result, etc.) are unaffected. */
+
+/* Ambient drifting glow blobs behind the content — decorative, low opacity */
+.ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.13;
+  will-change: transform;
+}
+
+.blobOne {
+  width: 480px;
+  height: 480px;
+  top: -160px;
+  left: -120px;
+  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  animation: drift-one 27s ease-in-out infinite;
+}
+
+.blobTwo {
+  width: 420px;
+  height: 420px;
+  bottom: -150px;
+  right: -110px;
+  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  opacity: 0.09;
+  animation: drift-two 33s ease-in-out infinite;
+}
+
+@keyframes drift-one {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(36px, 28px) scale(1.07); }
+}
+
+@keyframes drift-two {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-28px, -22px) scale(1.04); }
+}
+
+.contentLayer {
+  position: relative;
+  z-index: 1;
+}
+
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -8,6 +69,7 @@
   color: color-mix(in srgb, #E5E0FF 75%, transparent);
   text-decoration: none;
   width: fit-content;
+  transition: color 0.18s ease-out;
 }
 .backLink:hover { color: #E5E0FF; text-decoration: underline; }
 .backLink:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; border-radius: 4px; }
@@ -15,12 +77,17 @@
 .detailCard {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 32px;
-  border-radius: 16px;
-  background: #0a0a0a;
-  border: 1px solid #3f424d;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 40px -12px rgba(252, 131, 55, 0.3);
+  gap: 28px;
+  padding: clamp(28px, 4vw, 40px) clamp(24px, 4vw, 36px);
+  border-radius: 20px;
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(252, 131, 55, 0.08),
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    0 0 60px -16px rgba(252, 131, 55, 0.3);
 }
 
 .headerBlock {
@@ -34,7 +101,7 @@
 .headerTitleBlock {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -42,19 +109,20 @@
   margin: 0;
   font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
-  font-size: 22px;
-  letter-spacing: -0.01em;
+  font-size: clamp(22px, 3vw, 26px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: #FFFFFF;
 }
 
 .companyText {
   margin: 0;
-  font-size: 14px;
+  font-size: 14.5px;
   color: color-mix(in srgb, #E5E0FF 68%, transparent);
 }
 
 .sectionHeading {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 600;
   color: color-mix(in srgb, #E5E0FF 88%, transparent);
@@ -62,7 +130,7 @@
 
 .bodyText {
   margin: 0;
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.65;
   color: color-mix(in srgb, #E5E0FF 78%, transparent);
 }
@@ -71,6 +139,16 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Skill chips are shared components from nocturne.module.css — this targets
+   them by wrapping context, not by editing the shared classes themselves. */
+.chipHoverable {
+  transition: transform 0.15s ease-out, filter 0.15s ease-out;
+}
+.chipHoverable:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
 }
 
 /* Details row (location / type / duration) */
@@ -83,17 +161,17 @@
 .detailItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 140px;
 }
 
 .detailIcon {
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 9px;
   background: color-mix(in srgb, #FC8337 16%, transparent);
   color: #FC8337;
 }
@@ -110,7 +188,7 @@
 }
 
 .detailValue {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   color: #E5E0FF;
 }
@@ -118,7 +196,7 @@
 .ctaRow {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .externalNote {
@@ -127,6 +205,72 @@
   color: color-mix(in srgb, #E5E0FF 55%, transparent);
   text-align: center;
 }
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: oklch(26% 0.05 25);
+  border: 1px solid oklch(42% 0.11 25);
+  color: oklch(85% 0.09 25);
+}
+.formError svg { flex: none; margin-top: 1px; }
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #030303;
+  background: #FC8337;
+  border: 1px solid #FC8337;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+}
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
+}
+.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
+.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: color-mix(in srgb, #E5E0FF 82%, transparent);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, #E5E0FF 20%, transparent);
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out;
+}
+.ghostBtn:hover {
+  border-color: color-mix(in srgb, #E5E0FF 45%, transparent);
+  background: color-mix(in srgb, #E5E0FF 6%, transparent);
+  transform: translateY(-1px);
+}
+.ghostBtn:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
 
 /* Skeleton */
 .skeletonLine {
@@ -144,4 +288,38 @@
 @keyframes shimmer {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
+}
+
+/* Entrance animation — staggered fade + slide up, top to bottom */
+.animateIn {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fade-slide-up 0.5s ease-out forwards;
+}
+
+@keyframes fade-slide-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.delay1 { animation-delay: 0ms; }
+.delay2 { animation-delay: 80ms; }
+.delay3 { animation-delay: 160ms; }
+.delay4 { animation-delay: 240ms; }
+.delay5 { animation-delay: 320ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .blobOne, .blobTwo {
+    animation: none;
+  }
+  .animateIn {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .backLink, .chipHoverable, .submitBtn, .ghostBtn {
+    transition: none;
+  }
 }

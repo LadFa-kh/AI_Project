@@ -9,6 +9,7 @@ import {
 import { MatchCard } from "./match-card";
 import { MatchSkeletonCard } from "./match-skeleton-card";
 import { MatchesControlBar } from "./matches-control-bar";
+import { ScrollReveal } from "@/components/home/scroll-reveal";
 import nocturne from "@/components/ui/nocturne.module.css";
 import styles from "./matches-list.module.css";
 
@@ -58,16 +59,23 @@ export function InternshipMatchesView() {
   }, [matches, sort, activeSkill]);
 
   return (
-    <div className={nocturne.wideShell}>
-      <div className={nocturne.wideContainer}>
-        <div className={styles.headerRow}>
-          <h1 className={styles.pageHeading}>Your internship matches</h1>
-          <p className={styles.pageSubheading}>
-            {status === "success"
-              ? `Ranked by fit to your skill assessment · ${matches.length} match${matches.length === 1 ? "" : "es"} found`
-              : "Ranked by fit to your skill assessment"}
-          </p>
-        </div>
+    <div className={nocturne.wideShell} style={{ position: "relative", overflow: "hidden" }}>
+      <div className={styles.ambient} aria-hidden="true">
+        <div className={`${styles.blob} ${styles.blobOne}`} />
+        <div className={`${styles.blob} ${styles.blobTwo}`} />
+      </div>
+
+      <div className={`${nocturne.wideContainer} ${styles.contentLayer}`}>
+        <ScrollReveal>
+          <div className={styles.headerRow}>
+            <h1 className={styles.pageHeading}>Your internship matches</h1>
+            <p className={styles.pageSubheading}>
+              {status === "success"
+                ? `Ranked by fit to your skill assessment · ${matches.length} match${matches.length === 1 ? "" : "es"} found`
+                : "Ranked by fit to your skill assessment"}
+            </p>
+          </div>
+        </ScrollReveal>
 
         {status === "error" && (
           <p className={nocturne.formError} role="alert">
@@ -92,13 +100,15 @@ export function InternshipMatchesView() {
         )}
 
         {status === "success" && matches.length > 0 && (
-          <MatchesControlBar
-            sort={sort}
-            onSortChange={setSort}
-            skillOptions={skillOptions}
-            activeSkill={activeSkill}
-            onSkillChange={setActiveSkill}
-          />
+          <ScrollReveal delayMs={80}>
+            <MatchesControlBar
+              sort={sort}
+              onSortChange={setSort}
+              skillOptions={skillOptions}
+              activeSkill={activeSkill}
+              onSkillChange={setActiveSkill}
+            />
+          </ScrollReveal>
         )}
 
         {status === "success" && matches.length === 0 && (
@@ -130,8 +140,12 @@ export function InternshipMatchesView() {
 
         {status === "success" && visibleMatches.length > 0 && (
           <div className={styles.matchGrid}>
-            {visibleMatches.map((match) => (
-              <MatchCard key={match.internshipId} match={match} />
+            {visibleMatches.map((match, index) => (
+              <MatchCard
+                key={match.internshipId}
+                match={match}
+                revealDelayMs={(index % 3) * 80}
+              />
             ))}
           </div>
         )}

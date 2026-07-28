@@ -1,6 +1,98 @@
-.cardWide {
-  max-width: 640px;
+/* Stardust premium treatment — page-scoped to /evaluation-result only.
+   Card-level only (glassmorphism, glow shadow, typography, micro-interactions,
+   staggered entrance). This page renders inside AppShell's sidebar layout (unlike
+   /login and /register, which are standalone), so no ambient background blobs,
+   glow halo, or back-to-home link here — those would clash with the sidebar and
+   duplicate the nav's existing Home link. Does NOT touch the shared
+   nocturne.module.css, so other pages (upload-resume, skill-assessment, matches)
+   are unaffected. */
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: min(640px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: clamp(28px, 4vw, 44px) clamp(24px, 4vw, 36px);
+  border-radius: 20px;
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(252, 131, 55, 0.08),
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    0 0 60px -16px rgba(252, 131, 55, 0.3);
 }
+
+.headingBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.heading {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(22px, 3vw, 26px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #FFFFFF;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: oklch(26% 0.05 25);
+  border: 1px solid oklch(42% 0.11 25);
+  color: oklch(85% 0.09 25);
+}
+
+.formError svg { flex: none; margin-top: 1px; }
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #030303;
+  background: #FC8337;
+  border: 1px solid #FC8337;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+}
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
+}
+.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
+.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .loadingBlock {
   display: flex;
@@ -9,4 +101,41 @@
   gap: 14px;
   padding: 24px 0;
   text-align: center;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Entrance animation — staggered fade + slide up */
+.animateIn {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fade-slide-up 0.6s ease-out forwards;
+}
+
+.delay1 { animation-delay: 0.05s; }
+.delay2 { animation-delay: 0.15s; }
+.delay3 { animation-delay: 0.25s; }
+.delay4 { animation-delay: 0.35s; }
+.delay5 { animation-delay: 0.45s; }
+
+@keyframes fade-slide-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animateIn {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .submitBtn {
+    transition: none;
+  }
 }

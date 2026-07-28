@@ -1,34 +1,98 @@
+/* Stardust premium treatment — scoped to /internship-matches only.
+   Mirrors the /login and /register visual system (glassmorphism cards, glow,
+   focus states, staggered entrance) adapted for a list/grid page. This page
+   renders inside AppShell's sidebar layout (like /evaluation-result), so ambient
+   motion lives behind the content area, not as a full standalone page shell —
+   and there's no back-to-home link since the sidebar nav already has one.
+   Does NOT touch the shared nocturne.module.css, so other pages are unaffected. */
+
+/* Ambient drifting glow blobs behind the page content — decorative, low opacity */
+.ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.13;
+  will-change: transform;
+}
+
+.blobOne {
+  width: 520px;
+  height: 520px;
+  top: -180px;
+  left: -140px;
+  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  animation: drift-one 28s ease-in-out infinite;
+}
+
+.blobTwo {
+  width: 460px;
+  height: 460px;
+  bottom: -160px;
+  right: -120px;
+  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  opacity: 0.08;
+  animation: drift-two 34s ease-in-out infinite;
+}
+
+@keyframes drift-one {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(36px, 26px) scale(1.06); }
+}
+
+@keyframes drift-two {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-28px, -20px) scale(1.04); }
+}
+
+.contentLayer {
+  position: relative;
+  z-index: 1;
+}
+
 .headerRow {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .pageHeading {
   margin: 0;
   font-family: "Inter", system-ui, sans-serif;
   font-weight: 600;
-  font-size: 28px;
-  letter-spacing: -0.015em;
+  font-size: clamp(26px, 3.6vw, 32px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: #FFFFFF;
 }
 
 .pageSubheading {
   margin: 0;
-  font-size: 14px;
+  font-size: 14.5px;
+  line-height: 1.55;
   color: color-mix(in srgb, #E5E0FF 68%, transparent);
 }
 
-/* Filter/sort bar */
+/* Filter/sort bar — same elevation language as login/register form fields */
 .controlBar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: color-mix(in srgb, #0a0a0a 90%, transparent);
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid color-mix(in srgb, #E5E0FF 14%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 .sortSelect {
@@ -37,14 +101,20 @@
   font: inherit;
   font-size: 13px;
   color: #E5E0FF;
-  background: #0a0a0a;
+  background: color-mix(in srgb, #0a0a0a 85%, transparent);
   border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
-  border-radius: 8px;
+  border-radius: 10px;
   outline: none;
   cursor: pointer;
+  transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 .sortSelect:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); }
-.sortSelect:focus-visible { border-color: #FC8337; outline: 2px solid #FC8337; outline-offset: 1px; }
+.sortSelect:focus-visible {
+  border-color: #FC8337;
+  outline: 2px solid #FC8337;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.16);
+}
 
 .filterChips {
   display: flex;
@@ -61,26 +131,27 @@
   font-size: 12.5px;
   font-weight: 500;
   color: color-mix(in srgb, #E5E0FF 78%, transparent);
-  background: #0a0a0a;
+  background: color-mix(in srgb, #0a0a0a 85%, transparent);
   border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
   border-radius: 999px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.18s ease-out, background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
 }
-.filterChip:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); }
-.filterChip:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
+.filterChip:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); transform: translateY(-1px); }
+.filterChip:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.14); }
 
 .filterChipActive {
   color: #030303;
   background: #FC8337;
   border-color: #FC8337;
 }
+.filterChipActive:hover { transform: translateY(-1px); }
 
 /* Match grid */
 .matchGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 
 @media (min-width: 700px) {
@@ -96,20 +167,23 @@
 }
 
 .matchCard {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  border-radius: 14px;
-  background: #0a0a0a;
-  border: 1px solid #3f424d;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 16px;
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, border-color 0.18s ease-out;
 }
 .matchCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.02);
   border-color: color-mix(in srgb, #FC8337 45%, transparent);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 22px 48px -8px rgba(0, 0, 0, 0.5), 0 0 32px -12px rgba(252, 131, 55, 0.3);
 }
 
 .matchCardTop {
@@ -122,13 +196,13 @@
 .matchCardTitleBlock {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .matchTitle {
   margin: 0;
-  font-size: 15.5px;
+  font-size: 16px;
   font-weight: 600;
   color: #FFFFFF;
   overflow: hidden;
@@ -149,15 +223,20 @@
   min-height: 44px;
   padding: 0 16px;
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: #030303;
   background: #FC8337;
   border: 1px solid #FC8337;
-  border-radius: 8px;
+  border-radius: 10px;
   text-decoration: none;
-  transition: filter 0.15s ease;
+  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
 }
-.detailLink:hover { filter: brightness(1.08); }
+.detailLink:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 24px -8px rgba(252, 131, 55, 0.5);
+}
+.detailLink:active { filter: brightness(0.96); transform: translateY(0) scale(1); }
 .detailLink:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
 
 /* Skeleton loading cards */
@@ -165,10 +244,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px;
-  border-radius: 14px;
-  background: #0a0a0a;
-  border: 1px solid #3f424d;
+  padding: 24px;
+  border-radius: 16px;
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
 }
 
 .skeletonLine {
@@ -196,8 +275,10 @@
   gap: 10px;
   padding: 56px 24px;
   text-align: center;
-  border-radius: 14px;
+  border-radius: 16px;
   background: color-mix(in srgb, #0a0a0a 70%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px dashed color-mix(in srgb, #E5E0FF 20%, transparent);
 }
 
@@ -210,4 +291,24 @@
   background: #0a0a0a;
   box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.35);
   color: #FC8337;
+}
+
+/* Skill chip and score pill hover/focus states (chips/pills are shared components
+   from nocturne.module.css — this targets them by wrapping context, not by editing
+   the shared classes themselves) */
+.chipHoverable {
+  transition: transform 0.15s ease-out, filter 0.15s ease-out;
+}
+.chipHoverable:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blobOne, .blobTwo {
+    animation: none;
+  }
+  .matchCard, .detailLink, .filterChip, .sortSelect, .chipHoverable {
+    transition: none;
+  }
 }

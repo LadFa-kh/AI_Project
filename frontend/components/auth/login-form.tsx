@@ -66,7 +66,7 @@ export function LoginForm() {
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
       {formError && (
-        <p className={styles.formError} role="alert">
+        <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
             <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
           </svg>
@@ -74,7 +74,7 @@ export function LoginForm() {
         </p>
       )}
 
-      <div className={styles.field}>
+      <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
         <label htmlFor="email">Email</label>
         <input
           id="email"
@@ -94,7 +94,7 @@ export function LoginForm() {
         )}
       </div>
 
-      <div className={styles.field}>
+      <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
         <label htmlFor="password">Password</label>
         <input
           id="password"
@@ -114,16 +114,20 @@ export function LoginForm() {
         )}
       </div>
 
-      <div className={styles.helpRow}>
+      <div className={`${styles.helpRow} ${styles.animateIn} ${styles.delay3}`}>
         <Link href="/forgot-password" className={styles.link}>Forgot password?</Link>
       </div>
 
-      <button type="submit" className={styles.submitBtn} disabled={isLoading}>
+      <button
+        type="submit"
+        className={`${styles.submitBtn} ${styles.animateIn} ${styles.delay4}`}
+        disabled={isLoading}
+      >
         {isLoading && <span className={styles.spinner} aria-hidden="true" />}
         {isLoading ? "Logging in…" : "Log in"}
       </button>
 
-      <div className={styles.divider}>
+      <div className={`${styles.divider} ${styles.animateIn} ${styles.delay4}`}>
         <span className={styles.dividerLine} />
         <span className={styles.dividerText}>or</span>
         <span className={styles.dividerLine} />
@@ -131,7 +135,7 @@ export function LoginForm() {
 
       <button
         type="button"
-        className={styles.googleBtn}
+        className={`${styles.googleBtn} ${styles.animateIn} ${styles.delay4}`}
         disabled={isLoading}
         onClick={handleGoogleSignIn}
       >

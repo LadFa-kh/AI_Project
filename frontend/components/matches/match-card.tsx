@@ -1,40 +1,42 @@
 import Link from "next/link";
 import type { InternshipMatchSummary } from "@/lib/internship-match-types";
-import nocturne from "@/components/ui/nocturne.module.css";
+import { MatchScorePill } from "./match-score-pill";
 import { RequiredSkillChip } from "./required-skill-chip";
+import { ScrollReveal } from "@/components/home/scroll-reveal";
+import styles from "./matches-list.module.css";
 
 type MatchCardProps = {
   match: InternshipMatchSummary;
+  revealDelayMs?: number;
 };
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, revealDelayMs = 0 }: MatchCardProps) {
   return (
-    <div className={nocturne.card} style={{ maxWidth: "none", gap: 12 }}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className={nocturne.heading} style={{ fontSize: 15, textAlign: "left" }}>
-            {match.title}
-          </h3>
-          <p className={nocturne.subheading} style={{ textAlign: "left" }}>{match.company}</p>
+    <ScrollReveal delayMs={revealDelayMs}>
+      <div className={styles.matchCard}>
+        <div className={styles.matchCardTop}>
+          <div className={styles.matchCardTitleBlock}>
+            <h3 className={styles.matchTitle}>{match.title}</h3>
+            <p className={styles.matchCompany}>{match.company}</p>
+          </div>
+          <span className={styles.chipHoverable}>
+            <MatchScorePill score={match.matchScore} />
+          </span>
         </div>
-        <span className={nocturne.scorePill} style={{ flex: "none" }}>
-          {match.matchScore}% match
-        </span>
-      </div>
 
-      <div className={nocturne.chipRow}>
-        {match.requiredSkills.map((skill) => (
-          <RequiredSkillChip key={skill} skill={skill} isMatch />
-        ))}
-      </div>
+        <div className={styles.chipHoverable} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {match.requiredSkills.map((skill) => (
+            <RequiredSkillChip key={skill} skill={skill} isMatch />
+          ))}
+        </div>
 
-      <Link
-        href={`/internship-matches/${match.internshipId}`}
-        className={nocturne.ghostBtn}
-        style={{ marginTop: 4 }}
-      >
-        ดูรายละเอียด
-      </Link>
-    </div>
+        <Link
+          href={`/internship-matches/${match.internshipId}`}
+          className={styles.detailLink}
+        >
+          View details
+        </Link>
+      </div>
+    </ScrollReveal>
   );
 }

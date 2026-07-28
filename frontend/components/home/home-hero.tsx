@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeroSceneCanvas } from "./hero-scene-canvas";
 
 export function HomeHero() {
   return (
@@ -7,6 +8,7 @@ export function HomeHero() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(252,131,55,0.10),_transparent_55%),radial-gradient(circle_at_bottom_right,_rgba(252,131,55,0.05),_transparent_50%)]"
       />
+      <HeroSceneCanvas />
       <div className="relative mx-auto max-w-3xl text-center">
         <h1 className="font-heading text-[clamp(1.75rem,1.3rem+2.2vw,3rem)] font-bold text-home-text-primary">
           วิเคราะห์เรซูเม่ ประเมินทักษะ

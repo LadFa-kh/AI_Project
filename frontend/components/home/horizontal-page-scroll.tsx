@@ -24,6 +24,7 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [ready, setReady] = useState(false);
   const [maxTranslate, setMaxTranslate] = useState(0); // max px translateY (track height - wrapper height)
+  const [activeIndex, setActiveIndex] = useState(0);
   const translate = useRef(0); // current px translateY, clamped to [0, maxTranslate]
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -33,6 +34,16 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
   const panelCenters = useRef<number[]>([]);
 
   const panelCount = Children.count(children);
+
+  // Index of the panel center closest to a given translate value.
+  const nearestIndexTo = (value: number) => {
+    const centers = panelCenters.current;
+    if (centers.length === 0) return 0;
+    return centers.reduce(
+      (closest, c, i) => (Math.abs(c - value) < Math.abs(centers[closest] - value) ? i : closest),
+      0
+    );
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -80,6 +91,7 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
       translate.current = centers2.length > 0 ? nearest : Math.min(translate.current, max);
       track.style.transition = "none";
       track.style.transform = `translateY(-${translate.current}px)`;
+      setActiveIndex(nearestIndexTo(translate.current));
       setReady(true);
     };
 
@@ -146,6 +158,7 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
       }
       e.preventDefault();
       applyTranslate(translate.current + delta);
+      setActiveIndex(nearestIndexTo(translate.current));
       scheduleSnap();
     };
 
@@ -178,6 +191,7 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
         }
         e.preventDefault();
         applyTranslate(touchStartTranslate.current + dy, true);
+        setActiveIndex(nearestIndexTo(translate.current));
       }
     };
 
@@ -185,6 +199,7 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
       touchStartX.current = null;
       touchStartY.current = null;
       snapToNearest();
+      setActiveIndex(nearestIndexTo(translate.current));
     };
 
     wrapper.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -212,28 +227,46 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
       );
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const next = centers[Math.min(currentIndex + 1, centers.length - 1)];
+        const nextIndex = Math.min(currentIndex + 1, centers.length - 1);
+        const next = centers[nextIndex];
         translate.current = next;
         const track = trackRef.current;
         if (track) {
           track.style.transition = "transform 280ms ease-out";
           track.style.transform = `translateY(-${next}px)`;
         }
+        setActiveIndex(nextIndex);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const prev = centers[Math.max(currentIndex - 1, 0)];
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        const prev = centers[prevIndex];
         translate.current = prev;
         const track = trackRef.current;
         if (track) {
           track.style.transition = "transform 280ms ease-out";
           track.style.transform = `translateY(-${prev}px)`;
         }
+        setActiveIndex(prevIndex);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [reduceMotion, ready, maxTranslate]);
+
+  // Jump directly to a panel (used by the dot navigation).
+  const jumpToIndex = (index: number) => {
+    const centers = panelCenters.current;
+    if (index < 0 || index >= centers.length) return;
+    const target = centers[index];
+    translate.current = target;
+    const track = trackRef.current;
+    if (track) {
+      track.style.transition = "transform 280ms ease-out";
+      track.style.transform = `translateY(-${target}px)`;
+    }
+    setActiveIndex(index);
+  };
 
   if (reduceMotion) {
     return <div className="flex flex-col">{children}</div>;
@@ -257,6 +290,36 @@ export function HorizontalPageScroll({ children }: HorizontalPageScrollProps) {
           </div>
         ))}
       </div>
+
+      <nav
+        className="pointer-events-auto absolute right-5 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-3 sm:right-8"
+        aria-label="Section navigation"
+      >
+        {childArray.map((_, index) => {
+          const isActive = index === activeIndex;
+          return (
+            <button
+              key={index}
+              type="button"
+              onClick={() => jumpToIndex(index)}
+              aria-label={`Go to section ${index + 1}`}
+              aria-current={isActive ? "true" : undefined}
+              className="group relative flex h-6 w-6 items-center justify-center"
+            >
+              <span
+                className="block rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: isActive ? 16 : 11,
+                  height: isActive ? 16 : 11,
+                  backgroundColor: isActive ? "#FC8337" : "transparent",
+                  border: isActive ? "none" : "2px solid #8A8A94",
+                  boxShadow: isActive ? "0 0 10px rgba(252, 131, 55, 0.7)" : "none",
+                }}
+              />
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

@@ -52,9 +52,13 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
   }, [load]);
 
   return (
-    <div className={nocturne.wideShell}>
-      <div className={nocturne.narrowContainer}>
-        <Link href="/internship-matches" className={styles.backLink}>
+    <div className={nocturne.wideShell} style={{ position: "relative", overflow: "hidden" }}>
+      <div className={styles.ambient} aria-hidden="true">
+        <div className={`${styles.blob} ${styles.blobOne}`} />
+        <div className={`${styles.blob} ${styles.blobTwo}`} />
+      </div>
+      <div className={`${nocturne.narrowContainer} ${styles.contentLayer}`}>
+        <Link href="/internship-matches" className={`${styles.backLink} ${styles.animateIn} ${styles.delay1}`}>
           <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
             <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
           </svg>
@@ -62,7 +66,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
         </Link>
 
         {status === "loading" && (
-          <div className={styles.detailCard} aria-hidden="true">
+          <div className={`${styles.detailCard} ${styles.animateIn} ${styles.delay2}`} aria-hidden="true">
             <div className={styles.skeletonLine} style={{ width: "60%", height: 22 }} />
             <div className={styles.skeletonLine} style={{ width: "35%" }} />
             <div className={styles.skeletonLine} style={{ width: "100%" }} />
@@ -72,31 +76,31 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
         )}
 
         {status === "not-found" && (
-          <div className={styles.detailCard}>
-            <p className={nocturne.formError} role="alert">
+          <div className={`${styles.detailCard} ${styles.animateIn} ${styles.delay2}`}>
+            <p className={styles.formError} role="alert">
               <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
                 <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
               </svg>
               This internship is no longer available.
             </p>
-            <Link href="/internship-matches" className={nocturne.ghostBtn}>
+            <Link href="/internship-matches" className={styles.ghostBtn}>
               Back to matches
             </Link>
           </div>
         )}
 
         {status === "error" && (
-          <div className={styles.detailCard}>
-            <p className={nocturne.formError} role="alert">
+          <div className={`${styles.detailCard} ${styles.animateIn} ${styles.delay2}`}>
+            <p className={styles.formError} role="alert">
               <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
                 <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
               </svg>
               We couldn&apos;t load this internship. Please try again.
             </p>
-            <button type="button" onClick={load} className={nocturne.submitBtn}>
+            <button type="button" onClick={load} className={styles.submitBtn}>
               Retry
             </button>
-            <Link href="/internship-matches" className={nocturne.ghostBtn}>
+            <Link href="/internship-matches" className={styles.ghostBtn}>
               Back to matches
             </Link>
           </div>
@@ -104,34 +108,37 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
 
         {status === "success" && detail && (
           <div className={styles.detailCard}>
-            <div className={styles.headerBlock}>
+            <div className={`${styles.headerBlock} ${styles.animateIn} ${styles.delay2}`}>
               <div className={styles.headerTitleBlock}>
                 <h1 className={styles.titleText}>{detail.title}</h1>
                 <p className={styles.companyText}>{detail.company}</p>
               </div>
-              <MatchScorePill score={detail.matchScore} />
+              <span className={styles.chipHoverable}>
+                <MatchScorePill score={detail.matchScore} />
+              </span>
             </div>
 
-            <div>
+            <div className={`${styles.animateIn} ${styles.delay3}`}>
               <h2 className={styles.sectionHeading}>Required skills</h2>
               <div className={styles.skillChipRow}>
                 {detail.requiredSkills.map((skill) => (
-                  <RequiredSkillChip
-                    key={skill}
-                    skill={skill}
-                    isMatch={detail.matchedSkills.includes(skill)}
-                  />
+                  <span key={skill} className={styles.chipHoverable}>
+                    <RequiredSkillChip
+                      skill={skill}
+                      isMatch={detail.matchedSkills.includes(skill)}
+                    />
+                  </span>
                 ))}
               </div>
             </div>
 
-            <div>
+            <div className={`${styles.animateIn} ${styles.delay3}`}>
               <h2 className={styles.sectionHeading}>About this role</h2>
               <p className={styles.bodyText}>{detail.description}</p>
             </div>
 
             {(detail.location || detail.workType || detail.duration) && (
-              <div className={styles.detailsRow}>
+              <div className={`${styles.detailsRow} ${styles.animateIn} ${styles.delay4}`}>
                 {detail.location && (
                   <MatchDetailFact
                     icon={
@@ -168,12 +175,12 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
               </div>
             )}
 
-            <div className={styles.ctaRow}>
+            <div className={`${styles.ctaRow} ${styles.animateIn} ${styles.delay5}`}>
               <a
                 href={detail.externalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={nocturne.submitBtn}
+                className={styles.submitBtn}
               >
                 Learn more
                 <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -183,7 +190,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
               <p className={styles.externalNote}>
                 This opens the employer&apos;s site in a new tab — applications aren&apos;t submitted through this tool.
               </p>
-              <Link href="/internship-matches" className={nocturne.ghostBtn}>
+              <Link href="/internship-matches" className={styles.ghostBtn}>
                 Back to matches
               </Link>
             </div>
