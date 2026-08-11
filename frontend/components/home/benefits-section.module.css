@@ -1,0 +1,117 @@
+/* Lowest layer (z-index 0): lightweight CSS gradient echo of the ambient
+   glow used in HomeHero and HowItWorksCards. Always rendered — it's the
+   mobile fallback and also what's visible before the 3D ambient canvas
+   mounts on desktop, so there's never a flash of empty background. */
+.ambientFallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top left, rgba(252, 131, 55, 0.08), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(252, 131, 55, 0.04), transparent 50%);
+}
+
+/* Section heading gets a soft backdrop so it stays legible over the moving
+   ambient network layer behind it. */
+.sectionHeading {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  width: fit-content;
+  padding: 6px 20px;
+  border-radius: 999px;
+  text-align: center;
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(1.375rem, 1.1rem + 1.2vw, 1.875rem);
+  color: #ffffff;
+  background: color-mix(in srgb, #030303 38%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, #2a2a2a 100%, transparent);
+  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 12px 30px -18px rgba(0, 0, 0, 0.6),
+    0 0 0 1px color-mix(in srgb, #fc8337 6%, transparent);
+  transition:
+    transform 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    border-color 0.18s ease-out;
+}
+
+.card:hover {
+  transform: translateY(-3px) scale(1.015);
+  border-color: color-mix(in srgb, #fc8337 30%, transparent);
+  box-shadow:
+    0 18px 36px -16px rgba(0, 0, 0, 0.65),
+    0 0 32px -8px rgba(252, 131, 55, 0.35);
+}
+
+.iconBadge {
+  display: flex;
+  height: 40px;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: color-mix(in srgb, #fc8337 12%, transparent);
+  transition:
+    transform 0.18s ease-out,
+    background 0.18s ease-out;
+}
+
+.card:hover .iconBadge {
+  background: color-mix(in srgb, #fc8337 18%, transparent);
+}
+
+@media (min-width: 768px) {
+  .iconBadge {
+    height: 68px;
+    width: 68px;
+    background: transparent;
+  }
+
+  .card:hover .iconBadge {
+    background: transparent;
+    transform: scale(1.08);
+  }
+}
+
+.cardTitle {
+  margin-top: 16px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.cardDescription {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: #e5e0ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .iconBadge {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .card:hover .iconBadge {
+    transform: none;
+  }
+}
