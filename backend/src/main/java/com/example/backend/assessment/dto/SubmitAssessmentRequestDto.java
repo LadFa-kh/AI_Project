@@ -8,11 +8,12 @@ import java.util.UUID;
 public class SubmitAssessmentRequestDto {
     private UUID userId;
     private UUID resumeId;
+    private String desiredRoleName;
     private List<AnswerItem> answers;
 
     @Data
     public static class AnswerItem {
         private UUID questionId;
-        private Integer selectedScore; // ค่าคะแนน 1, 2, 3, 4
+        private Integer selectedScore;
     }
 }

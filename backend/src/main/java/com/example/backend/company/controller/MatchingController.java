@@ -11,6 +11,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/matching")
 @RequiredArgsConstructor
+@CrossOrigin("*")
 public class MatchingController {
 
     private final MatchingService matchingService;
@@ -23,6 +24,7 @@ public class MatchingController {
             List<JobMatchResponseDto> recommendations = matchingService.getMatchedJobs(userId, resumeId);
             return ResponseEntity.ok(recommendations);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }

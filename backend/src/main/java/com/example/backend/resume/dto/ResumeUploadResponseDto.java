@@ -1,5 +1,6 @@
-package com.example.backend.resume.python;
+package com.example.backend.resume.dto;
 
+import com.example.backend.resume.dto.python.PythonResumeResponseDto;
 import lombok.Builder;
 import lombok.Data;
 

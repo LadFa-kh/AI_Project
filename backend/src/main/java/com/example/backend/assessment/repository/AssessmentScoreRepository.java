@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface AssessmentScoreRepository extends JpaRepository<AssessmentScoreEntity, UUID> {
     Optional<AssessmentScoreEntity> findByResume_Id(UUID resumeId);
+    boolean existsByResume_Id(UUID resumeId);
 }

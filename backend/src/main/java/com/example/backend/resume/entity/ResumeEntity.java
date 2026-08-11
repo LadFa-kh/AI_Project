@@ -35,12 +35,6 @@ public class ResumeEntity {
     @Column(name = "file_hash")
     private String fileHash;         // SHA-256 สำหรับ idempotency check
 
-    @Column(name = "raw_text", columnDefinition = "TEXT")
-    private String rawText;
-
-    @Column(name = "cleaned_text", columnDefinition = "TEXT")
-    private String cleanedText;
-
     @Column(name = "uploaded_at")
     private Instant uploadedAt;
 }

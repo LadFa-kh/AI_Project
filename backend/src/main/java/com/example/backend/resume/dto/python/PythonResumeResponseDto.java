@@ -1,22 +1,28 @@
-package com.example.backend.resume.python;
+package com.example.backend.resume.dto.python;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 public class PythonResumeResponseDto {
+
     private ResumeData resume_data;
     private List<QuestionData> questions;
 
-    @Data
+    @Getter
+    @Setter
     public static class ResumeData {
-        private List<String> skills;
+        private List<String> hard_skills;
+        private List<String> soft_skills;
     }
 
-    @Data
+    @Getter
+    @Setter
     public static class QuestionData {
-        private Integer id;
+        private String id;
         private String question;
         private List<String> options;
     }

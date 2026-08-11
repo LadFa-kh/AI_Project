@@ -23,6 +23,4 @@ public class ResumeScoreEntity {
     @Column(name = "resume_score")
     private BigDecimal resumeScore;
 
-    @Column(name = "breakdown_json", columnDefinition = "TEXT")
-    private String breakDownJson;
 }

@@ -13,7 +13,6 @@ public class JobMatchResponseDto {
     private String companyName;
     private String positionName;
     private BigDecimal userFinalScore;
-    private BigDecimal matchPercentage;      // เปอร์เซ็นต์ความเหมาะสม (0 - 100%)
-    private List<String> matchedSkills;       // ทักษะที่มีตรงกับตำแหน่งงาน
-    private List<String> missingSkills;       // ทักษะที่ยังขาดอยู่ (Gap Analysis)
+    private List<String> matchedSkills;
+    private List<String> missingSkills;
 }

@@ -23,13 +23,10 @@ public class MatchingService {
     private final FinalScoreRepository finalScoreRepository;
 
     public List<JobMatchResponseDto> getMatchedJobs(UUID userId, UUID resumeId) {
-        // 1. ดึง FinalScore สุทธิ (Resume 60% + Self-Assessment 40%) ที่คำนวณไว้แล้วใน Phase 2
         FinalScoreEntity finalScoreEntity = finalScoreRepository.findByUserIdAndResumeId(userId, resumeId)
                 .orElseThrow(() -> new RuntimeException("Final score not found"));
-
         BigDecimal userFinalScore = finalScoreEntity.getFinalScore();
 
-        // 2. ดึงรายการ Skills ทั้งหมดของผู้ใช้จาก DB
         List<String> userSkills = resumeSkillRepository.findByResumeEntityId(resumeId)
                 .stream()
                 .map(ResumeSkillEntity::getSkillName)
@@ -37,39 +34,46 @@ public class MatchingService {
                 .map(String::trim)
                 .collect(Collectors.toList());
 
-        // 3. ดึงประกาศงานทั้งหมด
         List<JobDescriptionEntity> allJobs = jobDescriptionRepository.findAll();
-        List<JobMatchResponseDto> matchResults = new ArrayList<>();
+
+        // ใช้ record ชั่วคราวเก็บ DTO คู่กับ % ไว้ sort เท่านั้น ไม่ expose ออกไป
+        record ScoredMatch(JobMatchResponseDto dto, double matchPercentage) {}
+
+        List<ScoredMatch> scored = new ArrayList<>();
 
         for (JobDescriptionEntity job : allJobs) {
-            List<String> requiredSkills = parseRequiredSkills(job.getRequiredSkills());
+            List<String> requiredSkills = parseRequiredSkills(String.valueOf(job.getRequiredSkills()));
+            if (requiredSkills.isEmpty()) continue; // กัน job ที่ยังไม่ได้กรอก skill เลย
 
             List<String> matchedSkills = new ArrayList<>();
             List<String> missingSkills = new ArrayList<>();
 
-            // 4. เปรียบเทียบ Skill Match และเก็บ Gap Analysis (ทักษะที่ขาด)
             for (String reqSkill : requiredSkills) {
-                if (userSkills.contains(reqSkill.toLowerCase().trim())) {
+                String normalizedReqSkill = reqSkill.toLowerCase().trim();
+                if (userSkills.contains(normalizedReqSkill)) {
                     matchedSkills.add(reqSkill);
                 } else {
-                    missingSkills.add(reqSkill); // ทักษะที่ควรพัฒนาเพิ่ม
+                    missingSkills.add(reqSkill);
                 }
             }
 
-            // 5. ส่งค่า FinalScore ที่มีอยู่แล้วไปแสดงผลคู่กับ Job แนะนำตรงๆ (ไม่มีการนำไปบวกเพิ่ม)
-            matchResults.add(JobMatchResponseDto.builder()
+            double matchPercentage = (double) matchedSkills.size() / requiredSkills.size() * 100;
+
+            JobMatchResponseDto dto = JobMatchResponseDto.builder()
                     .jobId(job.getId())
                     .companyName(job.getCompanyName())
                     .positionName(job.getPositionName())
-                    .userFinalScore(userFinalScore) // แสดง Final Score สุทธิของผู้ใช้
+                    .userFinalScore(userFinalScore)
                     .matchedSkills(matchedSkills)
                     .missingSkills(missingSkills)
-                    .build());
+                    .build();
+
+            scored.add(new ScoredMatch(dto, matchPercentage));
         }
 
-        // 6. จัดอันดับสถานประกอบการที่ตรงที่สุด (พิจารณาจากจำนวน Skill ที่ตรงกันมากที่สุด) แล้วเลือก Top 5
-        return matchResults.stream()
-                .sorted(Comparator.comparingInt((JobMatchResponseDto dto) -> dto.getMatchedSkills().size()).reversed())
+        return scored.stream()
+                .sorted(Comparator.comparingDouble(ScoredMatch::matchPercentage).reversed())
+                .map(ScoredMatch::dto)
                 .limit(5)
                 .collect(Collectors.toList());
     }

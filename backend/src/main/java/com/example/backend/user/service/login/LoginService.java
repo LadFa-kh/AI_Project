@@ -1,6 +1,9 @@
 package com.example.backend.user.service.login;
 
+import com.example.backend.handle.JwtTokenProvider;
+import com.example.backend.handle.repository.RefreshTokenRepository;
 import com.example.backend.user.dto.request.LoginRequestDto;
+import com.example.backend.user.dto.response.AuthenticationResponseDto;
 import com.example.backend.user.entity.UserEntity;
 import com.example.backend.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,26 +14,39 @@ public class LoginService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider; // คลาสสำหรับสร้าง JWT ของคุณ
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    // Inject UserRepository และ PasswordEncoder ผ่าน Constructor
-    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+
+    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
-    public UserEntity login(LoginRequestDto request) {
-        // 1. ค้นหา User ด้วย Email
+    public AuthenticationResponseDto login(LoginRequestDto request) {
         UserEntity user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("อีเมลหรือรหัสผ่านไม่ถูกต้อง"));
 
-        // 2. ตรวจสอบว่า Password ตรงกับ Hash ใน Database หรือไม่
-        boolean isPasswordMatched = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
-
-        if (!isPasswordMatched) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
         }
 
-        // 3. ถ้าถูกต้อง คืนค่า UserEntity ออกไป (หรือถ้าทำ JWT ค่อยสร้าง Token ส่งกลับตรงนี้)
-        return user;
+        // สร้าง Access Token และ Refresh Token
+        String accessToken = jwtTokenProvider.generateAccessToken(user);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        // (ทางเลือก) บันทึก Refresh Token ลง Database
+        // saveRefreshTokenToDatabase(user, refreshToken);
+
+        return new AuthenticationResponseDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                accessToken,
+                refreshToken
+        );
     }
 }

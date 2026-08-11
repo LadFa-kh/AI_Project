@@ -28,10 +28,4 @@ public class AssessmentQuestionEntity {
     private String optionsC;
     private String optionsD;
 
-    @Column(name = "correct_answer")
-    private String correctAnswer;
-
-    @Column(name = "target_skill")
-    private String targetSkill;
-
 }
