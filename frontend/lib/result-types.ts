@@ -19,6 +19,11 @@ export const SCORE_LEVEL_COLOR: Record<ScoreLevel, string> = {
   excellent: "#7fd88f",
 };
 
+export type SkillSummary = {
+  skillName: string;
+  level: string;
+};
+
 export type EvaluationResult = {
   assessmentId: string;
   overallScore: number;

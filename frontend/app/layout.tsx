@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
+import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -31,7 +32,9 @@ export default function RootLayout({
       className={`h-full antialiased ${poppins.variable} ${inter.variable}`}
     >
       <body className="min-h-full flex flex-col">
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

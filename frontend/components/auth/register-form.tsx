@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
+import { register } from "@/lib/auth-service";
+import { ApiError, NetworkError } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 import styles from "./register.module.css";
 
 type FieldErrors = {
@@ -52,6 +56,8 @@ function getPasswordStrength(value: string): { score: number; label: string; col
 }
 
 export function RegisterForm() {
+  const router = useRouter();
+  const { setSession } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,14 +90,18 @@ export function RegisterForm() {
 
     setStatus("loading");
     try {
-      // TODO: wire to backend auth API — POST /auth/register { name, email, password } -> { accessToken, user } (see PROJECT_CONTEXT.md)
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => reject(new Error("email_taken")), 800)
-      );
+      // Backend field is `fullname` (not `name`); `role` defaults server-side to STUDENT.
+      const session = await register(email, password, name);
+      setSession(session);
       setStatus("default");
-    } catch {
+      router.push("/");
+    } catch (err) {
       setStatus("error");
-      setFormError("An account with this email already exists.");
+      setFormError(
+        err instanceof ApiError || err instanceof NetworkError
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
     }
   }
 

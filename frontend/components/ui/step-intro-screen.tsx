@@ -4,21 +4,7 @@ type StepIntroScreenProps = {
   /** CSS module classes from the host page's own module (e.g. resume-upload.module.css,
    *  skill-assessment.module.css). Kept generic so this component has no CSS module of
    *  its own and stays scoped to each host page's already-approved visual language. */
-  styles: {
-    card: string;
-    headingBlock: string;
-    heading: string;
-    subheading: string;
-    submitBtn: string;
-    animateIn: string;
-    delay1: string;
-    delay2: string;
-    delay3: string;
-    delay4: string;
-    introIconWrap: string;
-    introList: string;
-    introListItem: string;
-  };
+  styles: Readonly<Record<string, string>>;
   icon: ReactNode;
   heading: string;
   subheading: string;

@@ -26,13 +26,10 @@ export function validateFullName(value: string): string | null {
   return null;
 }
 
+// Backend (resume-controller /resumes/upload) accepts PDF only, max 5MB.
 export const RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;
-export const RESUME_ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
-const RESUME_ACCEPTED_MIME_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+export const RESUME_ACCEPTED_EXTENSIONS = [".pdf"];
+const RESUME_ACCEPTED_MIME_TYPES = ["application/pdf"];
 
 export function validateResumeFile(file: File): string | null {
   const hasValidExtension = RESUME_ACCEPTED_EXTENSIONS.some((ext) =>
@@ -42,12 +39,29 @@ export function validateResumeFile(file: File): string | null {
     file.type === "" || RESUME_ACCEPTED_MIME_TYPES.includes(file.type);
 
   if (!hasValidExtension || !hasValidMimeType) {
-    return "รองรับเฉพาะไฟล์ .pdf, .doc, .docx เท่านั้น";
+    return "รองรับเฉพาะไฟล์ .pdf เท่านั้น";
   }
   if (file.size > RESUME_MAX_SIZE_BYTES) {
     return "ขนาดไฟล์ต้องไม่เกิน 5MB";
   }
   return null;
+}
+
+// Guards against javascript:/data: URIs etc. in backend-supplied external
+// links (e.g. internship posting URLs) rendered as <a href>. Returns null
+// (safe to render as-is) for http(s) URLs, or a safe fallback ("#") for
+// anything else so a malicious/malformed URL can never execute.
+export function sanitizeExternalUrl(url: string | undefined | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return url;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function formatFileSize(bytes: number): string {

@@ -5,11 +5,15 @@ import { useState, type ChangeEvent } from "react";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { ResumeDropzone } from "./resume-dropzone";
 import { formatFileSize, validateResumeFile } from "@/lib/validators";
+import { uploadResume } from "@/lib/resume-service";
+import { writeResumeUploadResult } from "@/lib/resume-session";
+import { useAuth } from "@/lib/auth-context";
 import styles from "./resume-upload.module.css";
 
 type Status = "default" | "loading" | "error" | "success";
 
 export function ResumeUploadCard() {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("default");
@@ -37,18 +41,20 @@ export function ResumeUploadCard() {
 
   async function handleSubmit() {
     if (!file || fileError) return;
+    if (!user) {
+      setStatus("error");
+      setFormError("กรุณาเข้าสู่ระบบก่อนอัปโหลดเรซูเม่");
+      return;
+    }
     setStatus("loading");
     setFormError(null);
     try {
-      // TODO: wire to backend — POST /resumes (multipart form-data, field "file")
-      // -> { resumeId, extractedSkills: [{ skillName, source? }] } (see PROJECT_CONTEXT.md)
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => reject(new Error("upload_failed")), 1200)
-      );
+      const result = await uploadResume(user.userId, file, targetField);
+      writeResumeUploadResult({ resumeId: result.resumeId, questions: result.questions });
       setStatus("success");
-    } catch {
+    } catch (err) {
       setStatus("error");
-      setFormError("Upload failed. Please try again.");
+      setFormError(err instanceof Error ? err.message : "Upload failed. Please try again.");
     }
   }
 

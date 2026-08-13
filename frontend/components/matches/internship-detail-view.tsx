@@ -9,6 +9,7 @@ import {
   getMockInternshipDetail,
   type InternshipDetail,
 } from "@/lib/internship-detail-types";
+import { sanitizeExternalUrl } from "@/lib/validators";
 import nocturne from "@/components/ui/nocturne.module.css";
 import styles from "./match-detail.module.css";
 
@@ -177,7 +178,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
 
             <div className={`${styles.ctaRow} ${styles.animateIn} ${styles.delay5}`}>
               <a
-                href={detail.externalUrl}
+                href={sanitizeExternalUrl(detail.externalUrl) ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.submitBtn}

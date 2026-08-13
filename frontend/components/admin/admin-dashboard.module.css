@@ -1,0 +1,52 @@
+/* /admin dashboard — stat grid only; page shell/card/heading tokens reused from nocturne.module.css */
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: clamp(12px, 2vw, 16px);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statLabel {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 13px;
+  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+}
+
+.statValue {
+  font-family: "Poppins", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(28px, 4vw, 36px);
+  color: #FFFFFF;
+}
+
+.statValueAccent {
+  color: #FC8337;
+}
+
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.pageHeading {
+  margin: 0;
+  font-family: "Poppins", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(22px, 3vw, 28px);
+  color: #FFFFFF;
+}
+
+.pageSubheading {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+  color: color-mix(in srgb, #E5E0FF 72%, transparent);
+}

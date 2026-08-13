@@ -1,57 +1,63 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-import { SKILL_LEVELS, type SkillLevel } from "@/lib/assessment-types";
 import styles from "./skill-assessment.module.css";
 
 type SkillLevelGroupProps = {
-  skillName: string;
-  selected: SkillLevel | null;
+  questionId: string;
+  options: string[];
+  selected: string | null;
   disabled?: boolean;
-  onSelect: (level: SkillLevel) => void;
+  onSelect: (option: string) => void;
 };
 
-export function SkillLevelGroup({ skillName, selected, disabled, onSelect }: SkillLevelGroupProps) {
+export function SkillLevelGroup({
+  questionId,
+  options,
+  selected,
+  disabled,
+  onSelect,
+}: SkillLevelGroupProps) {
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>, index: number) {
     if (disabled) return;
     let nextIndex: number | null = null;
     if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-      nextIndex = (index + 1) % SKILL_LEVELS.length;
+      nextIndex = (index + 1) % options.length;
     } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-      nextIndex = (index - 1 + SKILL_LEVELS.length) % SKILL_LEVELS.length;
+      nextIndex = (index - 1 + options.length) % options.length;
     }
     if (nextIndex !== null) {
       e.preventDefault();
-      onSelect(SKILL_LEVELS[nextIndex].value);
+      onSelect(options[nextIndex]);
     }
   }
 
   return (
     <div
       role="radiogroup"
-      aria-label={`Skill level for ${skillName}`}
+      aria-label={`Answer for question ${questionId}`}
       className={styles.levelGroup}
     >
-      {SKILL_LEVELS.map((level, index) => {
-        const isSelected = selected === level.value;
+      {options.map((option, index) => {
+        const isSelected = selected === option;
         return (
           <div
-            key={level.value}
+            key={option}
             role="radio"
             aria-checked={isSelected}
-            aria-label={`${skillName}: ${level.label}`}
+            aria-label={option}
             tabIndex={disabled ? -1 : isSelected || (!selected && index === 0) ? 0 : -1}
-            onClick={() => !disabled && onSelect(level.value)}
+            onClick={() => !disabled && onSelect(option)}
             onKeyDown={(e) => {
               handleKeyDown(e, index);
               if (!disabled && (e.key === "Enter" || e.key === " ")) {
                 e.preventDefault();
-                onSelect(level.value);
+                onSelect(option);
               }
             }}
             className={`${styles.levelOption} ${isSelected ? styles.levelOptionSelected : ""}`}
           >
-            {level.label}
+            {option}
           </div>
         );
       })}

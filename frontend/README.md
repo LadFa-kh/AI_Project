@@ -22,6 +22,7 @@ Target product flow pages (frontend roadmap):
 4. Evaluation Result (score + recommendations)
 5. Internship Match List
 6. Match Detail
+7. Admin Dashboard (`/admin` — internal, mock data only, no access control yet)
 
 ## Local Run
 From `/frontend`:

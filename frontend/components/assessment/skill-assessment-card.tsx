@@ -1,28 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { SkillLevelGroup } from "./skill-level-group";
-import { MOCK_SKILLS, type SkillAnswers, type SkillLevel } from "@/lib/assessment-types";
+import type { AssessmentAnswers, AssessmentQuestion } from "@/lib/assessment-types";
+import { readResumeUploadResult } from "@/lib/resume-session";
 import styles from "./skill-assessment.module.css";
 
 type Status = "default" | "loading" | "error" | "success";
 
 export function SkillAssessmentCard() {
-  const skills = MOCK_SKILLS;
-  const [answers, setAnswers] = useState<SkillAnswers>({});
+  const [questions, setQuestions] = useState<AssessmentQuestion[] | null>(null);
+  const [answers, setAnswers] = useState<AssessmentAnswers>({});
   const [status, setStatus] = useState<Status>("default");
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Questions come from the upload-resume step's sessionStorage hand-off —
+  // there's no API to fetch them independently.
+  useEffect(() => {
+    const stored = readResumeUploadResult();
+    setQuestions(stored?.questions ?? []);
+  }, []);
+
   const answeredCount = Object.keys(answers).length;
-  const isComplete = answeredCount === skills.length;
+  const isComplete = questions !== null && questions.length > 0 && answeredCount === questions.length;
   const isLoading = status === "loading";
   const isSuccess = status === "success";
   const canSubmit = isComplete && !isLoading;
 
-  function handleSelect(skillName: string, level: SkillLevel) {
-    setAnswers((prev) => ({ ...prev, [skillName]: level }));
+  function handleSelect(questionId: string, option: string) {
+    setAnswers((prev) => ({ ...prev, [questionId]: option }));
     setFormError(null);
   }
 
@@ -31,17 +39,49 @@ export function SkillAssessmentCard() {
     setStatus("loading");
     setFormError(null);
     try {
-      // TODO: wire to backend — POST /assessments
-      // body: { resumeId, answers: [{ skillName, level }] }
-      // -> { assessmentId, overallScore, recommendations, strengths, gaps } (see PROJECT_CONTEXT.md)
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => reject(new Error("submit_failed")), 1000)
-      );
+      // No backend "submit assessment" endpoint exists yet — answers stay
+      // client-side for now. Simulate a brief delay for UX consistency.
+      await new Promise((resolve) => setTimeout(resolve, 400));
       setStatus("success");
     } catch {
       setStatus("error");
       setFormError("Couldn't submit your assessment. Please try again.");
     }
+  }
+
+  if (questions === null) {
+    return (
+      <div className={styles.card}>
+        <div className={`${styles.animateIn} ${styles.delay1}`}>
+          <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+        </div>
+        <div className={`${styles.loadingBlock} ${styles.animateIn} ${styles.delay2}`}>
+          <span className={styles.loadingSpinner} aria-hidden="true" />
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className={styles.card}>
+        <div className={`${styles.animateIn} ${styles.delay1}`}>
+          <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+        </div>
+        <div className={`${styles.headingBlock} ${styles.animateIn} ${styles.delay2}`}>
+          <h1 className={styles.heading}>No questions found</h1>
+          <p className={styles.subheading}>
+            Please upload your resume first — we generate these questions from it.
+          </p>
+        </div>
+        <Link
+          href="/upload-resume"
+          className={`${styles.submitBtn} ${styles.animateIn} ${styles.delay3}`}
+        >
+          Go to upload resume
+        </Link>
+      </div>
+    );
   }
 
   if (isLoading) {
@@ -90,7 +130,7 @@ export function SkillAssessmentCard() {
       <div className={`${styles.headingBlock} ${styles.animateIn}`} style={{ animationDelay: "60ms" }}>
         <h1 className={styles.heading}>Rate your skills</h1>
         <p className={styles.subheading}>
-          These skills came from your resume — select the level that honestly reflects your ability.
+          These questions came from your resume — select the option that honestly reflects your ability.
         </p>
       </div>
 
@@ -105,20 +145,21 @@ export function SkillAssessmentCard() {
         )}
 
         <div className={styles.skillList}>
-          {skills.map((skill, index) => {
-            const selected = answers[skill.skillName] ?? null;
+          {questions.map((q, index) => {
+            const selected = answers[q.id] ?? null;
             return (
               <div
-                key={skill.skillName}
+                key={q.id}
                 className={`${styles.skillRow} ${selected ? styles.skillRowRated : ""} ${styles.animateIn}`}
                 style={{ animationDelay: `${120 + index * 60}ms` }}
               >
-                <p className={styles.skillName}>{skill.skillName}</p>
+                <p className={styles.skillName}>{q.question}</p>
                 <SkillLevelGroup
-                  skillName={skill.skillName}
+                  questionId={q.id}
+                  options={q.options}
                   selected={selected}
                   disabled={isLoading}
-                  onSelect={(level) => handleSelect(skill.skillName, level)}
+                  onSelect={(option) => handleSelect(q.id, option)}
                 />
               </div>
             );
@@ -127,17 +168,17 @@ export function SkillAssessmentCard() {
 
         <div
           className={`${styles.animateIn}`}
-          style={{ animationDelay: `${120 + skills.length * 60 + 60}ms` }}
+          style={{ animationDelay: `${120 + questions.length * 60 + 60}ms` }}
         >
           <div className={styles.progressRow}>
             <span>
-              {answeredCount} of {skills.length} rated
+              {answeredCount} of {questions.length} rated
             </span>
           </div>
           <div className={styles.progressBar}>
             <div
               className={styles.progressFill}
-              style={{ width: `${(answeredCount / skills.length) * 100}%` }}
+              style={{ width: `${(answeredCount / questions.length) * 100}%` }}
             />
           </div>
         </div>
@@ -147,7 +188,7 @@ export function SkillAssessmentCard() {
           onClick={handleSubmit}
           disabled={!canSubmit}
           className={`${styles.submitBtn} ${styles.animateIn}`}
-          style={{ animationDelay: `${120 + skills.length * 60 + 120}ms` }}
+          style={{ animationDelay: `${120 + questions.length * 60 + 120}ms` }}
         >
           Submit assessment
         </button>

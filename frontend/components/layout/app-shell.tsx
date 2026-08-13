@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { NavProvider } from "./nav-context";
 import { Navbar } from "./navbar";
 import { MobileTopbar } from "./mobile-topbar";
+import { RouteGuard } from "./route-guard";
 import styles from "@/components/ui/nocturne.module.css";
 
 // /login and /register stay full-screen per spec. Home ("/") now shares the same
@@ -25,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Navbar />
         <div className={styles.appContent}>
           <MobileTopbar />
-          {children}
+          <RouteGuard>{children}</RouteGuard>
         </div>
       </div>
     </NavProvider>

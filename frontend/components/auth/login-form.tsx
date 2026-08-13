@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { login } from "@/lib/auth-service";
+import { ApiError, NetworkError } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 import styles from "./login.module.css";
 
 type FieldErrors = {
@@ -23,6 +27,8 @@ function validatePassword(value: string): string | null {
 }
 
 export function LoginForm() {
+  const router = useRouter();
+  const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -48,14 +54,17 @@ export function LoginForm() {
 
     setStatus("loading");
     try {
-      // TODO: wire to backend auth API — POST /auth/login { email, password } (see PROJECT_CONTEXT.md)
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => reject(new Error("invalid_credentials")), 800)
-      );
+      const session = await login(email, password);
+      setSession(session);
       setStatus("default");
-    } catch {
+      router.push("/");
+    } catch (err) {
       setStatus("error");
-      setFormError("Incorrect email or password. Please try again.");
+      setFormError(
+        err instanceof ApiError || err instanceof NetworkError
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
     }
   }
 

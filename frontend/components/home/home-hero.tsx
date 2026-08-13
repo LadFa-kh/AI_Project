@@ -1,7 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { HeroSceneCanvas } from "./hero-scene-canvas";
+import { useAuth } from "@/lib/auth-context";
 
 export function HomeHero() {
+  const { isAuthenticated, isLoading } = useAuth();
+  // Hide during the initial localStorage hydration too, so a logged-in user
+  // doesn't see a flash of the Login/Register buttons before they vanish.
+  const showAuthButtons = !isLoading && !isAuthenticated;
+
   return (
     <section className="relative flex h-full min-h-full flex-col items-center justify-center bg-home-bg px-[clamp(1rem,4vw,2rem)] py-[clamp(2.5rem,8vw,6rem)]">
       <div
@@ -20,20 +28,22 @@ export function HomeHero() {
         <p className="font-body mx-auto mt-4 max-w-2xl text-[clamp(0.9375rem,0.85rem+0.4vw,1.125rem)] text-home-text-secondary">
           อัปโหลดเรซูเม่ ให้ AI ประเมินทักษะของคุณ แล้วรับคำแนะนำสถานที่ฝึกงานที่เหมาะกับคุณที่สุด
         </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/login"
-            className="font-body flex h-12 w-full items-center justify-center rounded-full bg-home-primary px-6 text-sm font-medium text-white transition-colors hover:bg-home-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-home-accent sm:w-auto"
-          >
-            เข้าสู่ระบบ
-          </Link>
-          <Link
-            href="/register"
-            className="font-body flex h-12 w-full items-center justify-center rounded-full border border-home-border px-6 text-sm font-medium text-home-text-primary transition-colors hover:bg-home-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-home-accent sm:w-auto"
-          >
-            สมัครสมาชิก
-          </Link>
-        </div>
+        {showAuthButtons && (
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/login"
+              className="font-body flex h-12 w-full items-center justify-center rounded-full bg-home-primary px-6 text-sm font-medium text-white transition-colors hover:bg-home-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-home-accent sm:w-auto"
+            >
+              เข้าสู่ระบบ
+            </Link>
+            <Link
+              href="/register"
+              className="font-body flex h-12 w-full items-center justify-center rounded-full border border-home-border px-6 text-sm font-medium text-home-text-primary transition-colors hover:bg-home-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-home-accent sm:w-auto"
+            >
+              สมัครสมาชิก
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
