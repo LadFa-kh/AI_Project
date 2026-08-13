@@ -3,11 +3,13 @@ package com.example.backend.assessment.entity;
 import com.example.backend.resume.entity.ResumeEntity;
 import com.example.backend.user.entity.UserEntity;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "assessment_score")
 public class AssessmentScoreEntity {

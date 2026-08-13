@@ -2,10 +2,16 @@ package com.example.backend.resume.entity;
 
 import com.example.backend.user.entity.UserEntity;
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "resumes")
 public class ResumeEntity {
@@ -28,12 +34,6 @@ public class ResumeEntity {
 
     @Column(name = "file_hash")
     private String fileHash;         // SHA-256 สำหรับ idempotency check
-
-    @Column(name = "raw_text", columnDefinition = "TEXT")
-    private String rawText;
-
-    @Column(name = "cleaned_text", columnDefinition = "TEXT")
-    private String cleanedText;
 
     @Column(name = "uploaded_at")
     private Instant uploadedAt;

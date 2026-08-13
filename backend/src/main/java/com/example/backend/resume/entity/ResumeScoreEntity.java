@@ -1,10 +1,12 @@
 package com.example.backend.resume.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "resume_score")
 public class ResumeScoreEntity {
@@ -21,6 +23,4 @@ public class ResumeScoreEntity {
     @Column(name = "resume_score")
     private BigDecimal resumeScore;
 
-    @Column(name = "breakdown_json", columnDefinition = "TEXT")
-    private String breakDownJson;
 }

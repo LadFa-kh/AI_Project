@@ -1,10 +1,11 @@
 package com.example.backend.resume.entity;
 
-import com.example.backend.skillTaxonomy.entity.SkillsTaxonomyEntity;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "resume_skills")
 public class ResumeSkillEntity {
@@ -22,9 +23,4 @@ public class ResumeSkillEntity {
     @Column(name = "skill_type")
     private String skillType; // HARD, SOFT
 
-    @ManyToOne
-    @JoinColumn(name = "matched_taxonomy_id")
-    private SkillsTaxonomyEntity matchedTaxonomy; // nullable
-
-    private Double confidence;
 }

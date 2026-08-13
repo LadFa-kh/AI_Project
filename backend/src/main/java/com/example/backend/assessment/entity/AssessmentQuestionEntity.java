@@ -2,9 +2,11 @@ package com.example.backend.assessment.entity;
 
 import com.example.backend.resume.entity.ResumeEntity;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "assessment_question")
 public class AssessmentQuestionEntity {
@@ -25,11 +27,5 @@ public class AssessmentQuestionEntity {
     private String optionsB;
     private String optionsC;
     private String optionsD;
-
-    @Column(name = "correct_answer")
-    private String correctAnswer;
-
-    @Column(name = "target_skill")
-    private String targetSkill;
 
 }
