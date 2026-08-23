@@ -5,3 +5,5 @@
 # Local scratch — files staged for deletion during cleanup, not part of
 # the project. Keeping these out of the repo/GitHub.
 /frontend/_to_delete/
+
+.env
