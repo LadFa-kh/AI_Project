@@ -1,24 +1,30 @@
-/* Stardust premium treatment — scoped to /upload-resume only.
-   Mirrors the /login, /register, /skill-assessment visual system (glassmorphism
-   card, ambient glow behind content, focus states, staggered entrance). This page
-   renders inside AppShell's sidebar layout (like /skill-assessment and
-   /evaluation-result), so there's no back-to-home link or full-page ambient shell
-   — ambient motion stays behind the card only. Does NOT touch the shared
-   nocturne.module.css (still used for StepIndicator), so other pages are unaffected. */
+/* Full-page structure rebuilt to match the standalone demo
+   (seam-demo/upload-resume.html) exactly, per explicit request — replaces
+   the earlier single glassmorphism-card layout shared with /login,
+   /skill-assessment. Nocturne (purple/pink/blue) palette, matching
+   login.module.css's token values so the upload → assessment → login flow
+   reads as one visual system. This page renders inside AppShell's sidebar
+   layout (not in NO_NAV_ROUTES), so the navbar shows automatically — no
+   navbar markup lives in this module. */
 
 .page {
   position: relative;
   min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(24px, 6vw, 48px) 16.8px;
-  overflow: hidden;
+  overflow-x: hidden;
+  background: #000000;
 }
 
-/* Ambient drifting glow blobs behind the card — decorative, low opacity */
+/* Particle field background — full viewport, matches the demo's
+   #particle-canvas (fixed, behind everything, non-interactive) */
+.particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .ambient {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -28,27 +34,27 @@
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.13;
+  filter: blur(100px);
+  opacity: 0.24;
   will-change: transform;
 }
 
 .blobOne {
-  width: 480px;
-  height: 480px;
-  top: -160px;
-  left: -120px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  width: 460px;
+  height: 460px;
+  top: -120px;
+  left: -140px;
+  background: #7c3aed;
   animation: drift-one 27s ease-in-out infinite;
 }
 
 .blobTwo {
   width: 420px;
   height: 420px;
-  bottom: -150px;
-  right: -110px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
-  opacity: 0.09;
+  bottom: -160px;
+  right: -140px;
+  background: #3b82f6;
+  opacity: 0.2;
   animation: drift-two 33s ease-in-out infinite;
 }
 
@@ -62,39 +68,73 @@
   50% { transform: translate(-28px, -22px) scale(1.04); }
 }
 
-.cardWrap {
+.main {
   position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 600px;
+  z-index: 2;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 5rem) clamp(1.25rem, 4vw, 2.5rem) 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.halo {
-  position: absolute;
-  inset: -40px;
-  z-index: 0;
-  background: radial-gradient(closest-side, rgba(252, 131, 55, 0.2), transparent 72%);
-  filter: blur(20px);
-  pointer-events: none;
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  margin-bottom: 1rem;
 }
 
-.card {
-  position: relative;
-  z-index: 1;
+/* Split-word heading — fades/slides in once, no loop. Kept on one line per
+   request (nowrap); font-size clamp's lower bound is tuned down slightly so
+   the longer upload-resume heading still fits narrow viewports without
+   overflowing horizontally. */
+.splitHeading {
+  margin: 0;
+  font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(1.3rem, 1rem + 2vw, 3rem);
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+.splitWord {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(6px);
+  animation: word-in 0.6s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
+}
+
+@keyframes word-in {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.subtitle {
+  margin-top: 1.25rem;
+  font-size: 1.05rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  max-width: 480px;
+}
+
+/* Step indicator row — centered above the dropzone, its own colors come
+   from nocturne.module.css (StepIndicator's shared styles) */
+.stepRow {
+  margin-top: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stateBlock {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: clamp(28px, 4vw, 44px) clamp(24px, 4vw, 36px);
-  border-radius: 20px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(252, 131, 55, 0.08),
-    0 32px 80px rgba(0, 0, 0, 0.6),
-    0 0 60px -16px rgba(252, 131, 55, 0.3);
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
 }
 
 .headingBlock {
@@ -106,69 +146,26 @@
 
 .heading {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
   font-weight: 600;
   font-size: clamp(24px, 3.4vw, 28px);
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .subheading {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.55;
-  color: color-mix(in srgb, #E5E0FF 68%, transparent);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Intro/landing screen (shown before the actual form) */
-.introIconWrap {
-  align-self: center;
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: color-mix(in srgb, #FC8337 14%, transparent);
-  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.3), 0 0 32px -8px rgba(252, 131, 55, 0.45);
-  color: #FC8337;
-}
-
-.introList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.introListItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: color-mix(in srgb, #E5E0FF 82%, transparent);
-}
-
-.introListItem svg {
-  flex: none;
-  margin-top: 3px;
-  color: #FC8337;
+  color: color-mix(in srgb, #b8b0d9 75%, transparent);
 }
 
 .formError {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 0;
+  margin-top: 1.5rem;
   padding: 10px 13px;
   border-radius: 10px;
   font-size: 13px;
@@ -176,96 +173,155 @@
   background: oklch(26% 0.05 25);
   border: 1px solid oklch(42% 0.11 25);
   color: oklch(85% 0.09 25);
+  text-align: left;
+  width: 100%;
 }
 
 .formError svg { flex: none; margin-top: 1px; }
 
-/* Dropzone */
+/* ===== Dropzone — animated dashed border (marching ants) via
+   background-image + background-position instead of border-style:dashed,
+   so the speed/color of the "marching" motion can be controlled. Matches
+   the demo's .dropzone exactly, ported to Nocturne tokens. ===== */
+.dropzoneWrap {
+  margin-top: 3rem;
+  width: 100%;
+}
+
 .dropzone {
+  position: relative;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
   text-align: center;
-  padding: 40px 24px;
-  min-height: 200px;
-  border-radius: 14px;
-  border: 2px dashed color-mix(in srgb, #E5E0FF 22%, transparent);
-  background: color-mix(in srgb, #FC8337 4%, #0a0a0a);
+  padding: clamp(2.5rem, 6vw, 4rem) 1.5rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
   outline: none;
-  transition: border-color 0.18s ease-out, background 0.18s ease-out,
-    box-shadow 0.18s ease-out, transform 0.18s ease-out;
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(270deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px);
+  background-position: 0 0, 0 0, 100% 0, 0 100%;
+  background-size: 2px 22px, 22px 2px, 2px 22px, 22px 2px;
+  background-repeat: repeat-y, repeat-x, repeat-y, repeat-x;
+  animation: march 0.9s linear infinite;
 }
-.dropzone:hover { border-color: color-mix(in srgb, #E5E0FF 45%, transparent); }
-.dropzone:focus-visible { border-color: #FC8337; outline: 2px solid #FC8337; outline-offset: 2px; }
 
+@keyframes march {
+  to { background-position: 0 22px, -22px 0, 0 -22px, 22px 0; }
+}
+
+.dropzone:hover,
 .dropzoneActive {
-  border-color: #FC8337;
-  border-style: solid;
-  background: color-mix(in srgb, #FC8337 14%, #0a0a0a);
-  transform: scale(1.012);
-  box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.14), 0 0 32px -8px rgba(252, 131, 55, 0.45);
+  background-color: rgba(124, 58, 237, 0.08);
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.3), 0 20px 50px -20px rgba(124, 58, 237, 0.4);
+  transform: translateY(-2px);
+}
+
+.dropzone:focus-visible {
+  box-shadow: 0 0 0 2px #7c3aed;
 }
 
 .dropzoneError {
-  border-color: oklch(58% 0.14 25);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(248,113,113,0.5) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(90deg, rgba(248,113,113,0.5) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(180deg, rgba(248,113,113,0.5) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(270deg, rgba(248,113,113,0.5) 0 10px, transparent 10px 20px);
 }
+
 .dropzoneDisabled {
   opacity: 0.5;
   cursor: not-allowed;
+  animation: none;
 }
 
 .dropzoneIcon {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: #0a0a0a;
-  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.35);
-  color: #FC8337;
-  transition: box-shadow 0.18s ease-out;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.25rem;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  color: #ffffff;
+  animation: icon-float 2.6s ease-in-out infinite;
 }
 
-.dropzoneActive .dropzoneIcon {
-  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.6), 0 0 18px -2px rgba(252, 131, 55, 0.6);
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
 .dropzoneTitle {
   margin: 0;
-  font-size: 15px;
-  font-weight: 500;
-  color: #FFFFFF;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .dropzoneHint {
   margin: 0;
-  font-size: 12px;
-  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+  font-size: 0.85rem;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
 }
 
-/* Selected file preview */
+.dropzoneMeta {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, #b8b0d9 55%, transparent);
+}
+
+.filetypes {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.filetypeChip {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.78rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+}
+
+/* Selected file preview — replaces the dropzone once a file is chosen */
 .filePreview {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: color-mix(in srgb, #0a0a0a 60%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 14%, transparent);
+  gap: 1rem;
+  padding: 1.1rem 1.4rem;
+  border-radius: 18px;
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  text-align: left;
 }
 
 .fileIcon {
   flex: none;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: color-mix(in srgb, #FC8337 18%, transparent);
-  color: #FC8337;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
 }
 
 .fileMeta {
@@ -278,9 +334,9 @@
 
 .fileName {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: #E5E0FF;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #f5f3ff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -288,86 +344,79 @@
 
 .fileSize {
   margin: 0;
-  font-size: 12px;
-  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+  font-size: 0.78rem;
+  color: color-mix(in srgb, #b8b0d9 75%, transparent);
 }
 
 .removeBtn {
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: color-mix(in srgb, #E5E0FF 65%, transparent);
+  color: color-mix(in srgb, #f5f3ff 65%, transparent);
   cursor: pointer;
+  font-size: 1.1rem;
   transition: background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
 }
 .removeBtn:hover:not(:disabled) {
-  background: color-mix(in srgb, #E5E0FF 10%, transparent);
-  color: #E5E0FF;
+  background: color-mix(in srgb, #f5f3ff 10%, transparent);
+  color: #f5f3ff;
   transform: scale(1.06);
 }
-.removeBtn:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
+.removeBtn:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 .removeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .fieldError {
+  margin-top: 0.6rem;
   font-size: 12px;
   color: oklch(75% 0.13 25);
+  width: 100%;
+  text-align: left;
 }
 
 /* Target field text input (optional "interested track" field) */
 .field {
+  margin-top: 2.5rem;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  text-align: left;
+  /* .animateIn (transform + animation) makes this a stacking context of its
+     own, same as .submitBtn below — without an explicit z-index here the
+     dropdown menu inside SkillAutocomplete can never paint above the button
+     no matter its own z-index, since DOM order decides between two
+     equal (auto) stacking contexts and .submitBtn comes later. */
+  position: relative;
+  z-index: 2;
 }
 
 .fieldLabel {
   font-size: 13px;
   font-weight: 500;
-  color: color-mix(in srgb, #E5E0FF 80%, transparent);
+  color: color-mix(in srgb, #f5f3ff 85%, transparent);
 }
 
 .fieldOptional {
   font-weight: 400;
-  color: color-mix(in srgb, #E5E0FF 45%, transparent);
+  color: color-mix(in srgb, #b8b0d9 55%, transparent);
 }
-
-.textInput {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: 14.5px;
-  font-family: "Inter", system-ui, sans-serif;
-  color: #FFFFFF;
-  background: color-mix(in srgb, #0a0a0a 60%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
-  border-radius: 10px;
-  outline: none;
-  transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out;
-}
-.textInput::placeholder { color: color-mix(in srgb, #E5E0FF 38%, transparent); }
-.textInput:hover { border-color: color-mix(in srgb, #E5E0FF 45%, transparent); }
-.textInput:focus-visible {
-  border-color: #FC8337;
-  box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.16);
-}
-.textInput:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .progressBar {
   height: 4px;
   border-radius: 2px;
-  background: color-mix(in srgb, #E5E0FF 14%, transparent);
+  background: color-mix(in srgb, #f5f3ff 14%, transparent);
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
   border-radius: 2px;
-  background: #FC8337;
+  background: linear-gradient(90deg, #7c3aed, #ec4899);
   transition: width 0.2s ease;
 }
 
@@ -378,44 +427,44 @@
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  margin-top: 4px;
-  font-family: "Inter", system-ui, sans-serif;
+  margin-top: 1.5rem;
+  font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
   font-weight: 600;
   font-size: 15px;
-  color: #030303;
-  background: #FC8337;
-  border: 1px solid #FC8337;
-  border-radius: 10px;
+  color: #ffffff;
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  border: 1px solid transparent;
+  border-radius: 14px;
   cursor: pointer;
   text-decoration: none;
   transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 .submitBtn:hover:not(:disabled) {
   filter: brightness(1.08);
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -12px rgba(124, 58, 237, 0.55);
 }
-.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
-.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0); }
+.submitBtn:focus-visible { outline: 2px solid #f9a8d4; outline-offset: 2px; }
 .submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .spinner {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid rgba(3, 3, 3, 0.35);
-  border-top-color: #030303;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Full-card loading state (shown while uploading the resume) */
+/* Full-width loading state (shown while uploading the resume) */
 .loadingBlock {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 24px 0;
+  padding: 2rem 0;
   text-align: center;
 }
 
@@ -423,8 +472,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 3px solid rgba(229, 224, 255, 0.2);
-  border-top-color: #FC8337;
+  border: 3px solid rgba(245, 243, 255, 0.18);
+  border-top-color: #7c3aed;
   animation: spin 0.7s linear infinite;
 }
 
@@ -447,11 +496,11 @@
   margin-bottom: 4px;
 }
 
-/* Entrance animation — staggered fade + slide up, top to bottom */
+/* Entrance animation — staggered fade + slide up */
 .animateIn {
   opacity: 0;
   transform: translateY(14px);
-  animation: fade-slide-up 0.5s ease-out forwards;
+  animation: fade-slide-up 0.6s ease-out forwards;
 }
 
 @keyframes fade-slide-up {
@@ -461,14 +510,13 @@
   }
 }
 
-.delay1 { animation-delay: 0ms; }
-.delay2 { animation-delay: 80ms; }
-.delay3 { animation-delay: 160ms; }
-.delay4 { animation-delay: 240ms; }
-.delay5 { animation-delay: 320ms; }
+.delay1 { animation-delay: 0.15s; }
+.delay2 { animation-delay: 0.3s; }
+.delay3 { animation-delay: 0.45s; }
+.delay4 { animation-delay: 0.6s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .blobOne, .blobTwo {
+  .blobOne, .blobTwo, .dropzone, .dropzoneIcon {
     animation: none;
   }
   .animateIn {
@@ -476,10 +524,16 @@
     transform: none;
     animation: none;
   }
-  .dropzone, .removeBtn, .submitBtn, .dropzoneIcon {
+  .splitWord {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    animation: none;
+  }
+  .removeBtn, .submitBtn {
     transition: none;
   }
-  .dropzoneActive {
+  .dropzone:hover, .dropzoneActive {
     transform: none;
   }
   .removeBtn:hover:not(:disabled) {

@@ -1,17 +1,32 @@
-/* Stardust tokens — premium login treatment. Locally scoped (CSS module). */
+/* Nocturne (purple/pink/blue) tokens — scoped locally to this module only,
+   per explicit request to restyle /login+/register as one page. Ported
+   from the standalone demo (seam-demo/login-register.html). All class
+   names from the original Stardust orange version are kept unchanged so
+   LoginForm.tsx / RegisterForm.tsx need zero edits — only the visual
+   values changed here. New classes added at the bottom for the
+   mode-toggle + card-flip + particle-canvas + split-heading, which the
+   page component (not the forms) consumes directly. */
 
 .page {
   position: relative;
   min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: clamp(24px, 6vw, 48px) 16.8px;
-  background: #030303;
+  background: #000000;
   overflow: hidden;
 }
 
-/* Ambient drifting glow blobs — decorative, kept far below contrast-relevant elements */
+/* Particle-canvas background (reused pattern from the other demo pages) */
+.particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .ambient {
   position: absolute;
   inset: 0;
@@ -23,27 +38,27 @@
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.16;
+  filter: blur(90px);
+  opacity: 0.26;
   will-change: transform;
 }
 
 .blobOne {
-  width: 480px;
-  height: 480px;
-  top: -160px;
-  left: -120px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  width: 460px;
+  height: 460px;
+  top: -140px;
+  left: -140px;
+  background: #7c3aed;
   animation: drift-one 26s ease-in-out infinite;
 }
 
 .blobTwo {
   width: 420px;
   height: 420px;
-  bottom: -140px;
-  right: -100px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
-  opacity: 0.1;
+  bottom: -160px;
+  right: -140px;
+  background: #ec4899;
+  opacity: 0.22;
   animation: drift-two 32s ease-in-out infinite;
 }
 
@@ -57,7 +72,6 @@
   50% { transform: translate(-30px, -24px) scale(1.05); }
 }
 
-/* Stacks the back-link and card centered as one column */
 .contentStack {
   position: relative;
   z-index: 1;
@@ -68,7 +82,6 @@
   max-width: 424px;
 }
 
-/* Back-to-home link, sits above the card */
 .backLinkRow {
   position: relative;
   z-index: 1;
@@ -84,15 +97,131 @@
   padding: 0 4px;
   font-size: 13.5px;
   font-weight: 500;
-  color: color-mix(in srgb, #E5E0FF 65%, transparent);
+  color: color-mix(in srgb, #f5f3ff 65%, transparent);
   text-decoration: none;
   transition: color 0.15s ease-out, transform 0.15s ease-out;
 }
-.backLink:hover { color: #FC8337; transform: translateX(-2px); }
-.backLink:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; border-radius: 6px; }
+.backLink:hover { color: #ec4899; transform: translateX(-2px); }
+.backLink:focus-visible { outline: 2px solid #ec4899; outline-offset: 2px; border-radius: 6px; }
 .backLink svg { flex: none; }
 
-/* Glow halo behind the card */
+/* ===== Component 3 (text animation): split-word heading =====
+   Re-animates every time the mode switches, same pattern as the demo —
+   see the page component's useSplitHeading effect. */
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.splitHeading {
+  text-align: center;
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #ffffff;
+  min-height: 1.3em;
+}
+
+.splitWord {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(6px);
+  animation: word-in 0.5s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
+}
+@keyframes word-in {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* ===== Component 2 (components): sliding pill mode toggle =====
+   React Bits "PillNav"-style — a sliding background indicator instead of
+   an instant color swap between the two buttons. */
+.modeToggle {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ffffff 4%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 8%, transparent);
+}
+.modeIndicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  box-shadow: 0 8px 20px -8px rgba(124, 58, 237, 0.6);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 0;
+}
+.modeBtn {
+  position: relative;
+  z-index: 1;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: color 0.25s ease;
+}
+.modeBtn.isActive { color: #ffffff; }
+
+/* ===== Component 1 (animation): 3D card-flip between the two forms ===== */
+.cardStage {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  perspective: 1600px;
+  transition: height 0.4s ease;
+}
+.cardFlip {
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.cardFlip.isFlipped { transform: rotateY(180deg); }
+
+.cardFace {
+  width: 100%;
+  backface-visibility: hidden;
+}
+.cardFaceFront { position: relative; }
+.cardFaceBack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateY(180deg);
+}
+
+/* backface-visibility only hides a face visually — the browser still lets
+   the backward-facing face receive clicks/focus/keyboard input because it
+   stays in normal layout/stacking. Explicitly disable interaction on
+   whichever face is currently facing away, so typing in the register form
+   doesn't get swallowed by the invisible-but-still-interactive login form
+   sitting on top of it (and vice versa). */
+.cardFlip:not(.isFlipped) .cardFaceBack,
+.cardFlip.isFlipped .cardFaceFront {
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .cardWrap {
   position: relative;
   z-index: 1;
@@ -104,7 +233,7 @@
   position: absolute;
   inset: -40px;
   z-index: 0;
-  background: radial-gradient(closest-side, rgba(252, 131, 55, 0.22), transparent 72%);
+  background: radial-gradient(closest-side, rgba(124, 58, 237, 0.25), transparent 72%);
   filter: blur(20px);
   pointer-events: none;
 }
@@ -115,17 +244,17 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 44px 36px;
+  gap: 24px;
+  padding: 40px 32px;
   border-radius: 20px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  background: color-mix(in srgb, #0a0714 80%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f5f3ff 12%, transparent);
   box-shadow:
-    0 0 0 1px rgba(252, 131, 55, 0.08),
+    0 0 0 1px rgba(124, 58, 237, 0.1),
     0 32px 80px rgba(0, 0, 0, 0.6),
-    0 0 60px -16px rgba(252, 131, 55, 0.3);
+    0 0 60px -16px rgba(124, 58, 237, 0.35);
 }
 
 .brand {
@@ -143,9 +272,9 @@
   display: grid;
   place-items: center;
   border-radius: 13px;
-  background: linear-gradient(155deg, color-mix(in srgb, #FC8337 16%, #0a0a0a), #0a0a0a);
-  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.4), 0 8px 24px -8px rgba(252, 131, 55, 0.45);
-  color: #FC8337;
+  background: linear-gradient(135deg, #7c3aed, #ec4899, #3b82f6);
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.4), 0 8px 24px -8px rgba(124, 58, 237, 0.5);
+  color: #ffffff;
 }
 
 .headingBlock {
@@ -157,19 +286,19 @@
 
 .heading {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
   font-weight: 600;
   font-size: clamp(28px, 4vw, 32px);
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .subheading {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.55;
-  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+  color: color-mix(in srgb, #b8b0d9 75%, transparent);
 }
 
 .form {
@@ -203,7 +332,7 @@
 .field > label {
   font-size: 12px;
   font-weight: 500;
-  color: color-mix(in srgb, #E5E0FF 70%, transparent);
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
 }
 
 .input {
@@ -212,22 +341,22 @@
   padding: 10px 14px;
   font: inherit;
   font-size: 15px;
-  color: #E5E0FF;
-  caret-color: #FC8337;
-  background: color-mix(in srgb, #0a0a0a 85%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  color: #f5f3ff;
+  caret-color: #ec4899;
+  background: color-mix(in srgb, #0a0714 85%, transparent);
+  border: 1px solid color-mix(in srgb, #f5f3ff 16%, transparent);
   border-radius: 10px;
   outline: none;
   transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.18s ease-out;
 }
 
-.input::placeholder { color: color-mix(in srgb, #E5E0FF 38%, transparent); }
-.input:hover { border-color: color-mix(in srgb, #E5E0FF 45%, transparent); }
+.input::placeholder { color: color-mix(in srgb, #f5f3ff 38%, transparent); }
+.input:hover { border-color: color-mix(in srgb, #f5f3ff 45%, transparent); }
 .input:focus-visible {
-  border-color: #FC8337;
-  outline: 2px solid #FC8337;
+  border-color: #7c3aed;
+  outline: 2px solid #7c3aed;
   outline-offset: 1px;
-  box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.16);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
   transform: scale(1.008);
 }
 .input:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -243,6 +372,32 @@
   color: oklch(75% 0.13 25);
 }
 
+/* Password-strength meter (used by RegisterForm only) */
+.strengthRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, #f5f3ff 14%, transparent);
+  overflow: hidden;
+}
+.strengthFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.18s ease-out, background-color 0.18s ease-out;
+}
+.strengthLabel {
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 52px;
+  text-align: right;
+}
+
 .helpRow {
   display: flex;
   justify-content: flex-end;
@@ -251,7 +406,7 @@
 .link {
   font-size: 13px;
   font-weight: 500;
-  color: #FC8337;
+  color: #ec4899;
   text-decoration: none;
   text-underline-offset: 3px;
   min-height: 44px;
@@ -259,8 +414,30 @@
   align-items: center;
   transition: color 0.15s ease-out;
 }
-.link:hover { text-decoration: underline; color: #ffb88a; }
-.link:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; border-radius: 4px; }
+.link:hover { text-decoration: underline; color: #f9a8d4; }
+.link:focus-visible { outline: 2px solid #ec4899; outline-offset: 2px; border-radius: 4px; }
+
+/* Terms checkbox row (used by RegisterForm only) */
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+}
+.checkbox {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 13px;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+.checkLabel {
+  padding: 12px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+}
 
 .submitBtn {
   display: inline-flex;
@@ -270,12 +447,12 @@
   width: 100%;
   min-height: 44px;
   margin-top: 4px;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
   font-weight: 600;
   font-size: 15px;
-  color: #030303;
-  background: #FC8337;
-  border: 1px solid #FC8337;
+  color: #ffffff;
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  border: 1px solid transparent;
   border-radius: 10px;
   cursor: pointer;
   transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
@@ -283,18 +460,18 @@
 .submitBtn:hover:not(:disabled) {
   filter: brightness(1.08);
   transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
+  box-shadow: 0 12px 28px -10px rgba(124, 58, 237, 0.55);
 }
 .submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
-.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.submitBtn:focus-visible { outline: 2px solid #f9a8d4; outline-offset: 2px; }
 .submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .spinner {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid rgba(3, 3, 3, 0.35);
-  border-top-color: #030303;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -307,11 +484,11 @@
 .dividerLine {
   height: 1px;
   flex: 1;
-  background: linear-gradient(to right, transparent, color-mix(in srgb, #E5E0FF 16%, transparent) 20%, color-mix(in srgb, #E5E0FF 16%, transparent) 80%, transparent);
+  background: linear-gradient(to right, transparent, color-mix(in srgb, #f5f3ff 16%, transparent) 20%, color-mix(in srgb, #f5f3ff 16%, transparent) 80%, transparent);
 }
 .dividerText {
   font-size: 12px;
-  color: color-mix(in srgb, #E5E0FF 50%, transparent);
+  color: color-mix(in srgb, #b8b0d9 60%, transparent);
 }
 
 .googleBtn {
@@ -321,33 +498,32 @@
   gap: 10px;
   width: 100%;
   min-height: 44px;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
   font-weight: 500;
   font-size: 14px;
-  color: #3c4043;
-  background: #ffffff;
-  border: 1px solid #ffffff;
+  color: #f5f3ff;
+  background: color-mix(in srgb, #ffffff 3%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 14%, transparent);
   border-radius: 10px;
   cursor: pointer;
-  transition: box-shadow 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out;
+  transition: box-shadow 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out, border-color 0.18s ease-out;
 }
 .googleBtn:hover:not(:disabled) {
-  background: #f8f8f8;
-  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, #ffffff 6%, transparent);
+  border-color: color-mix(in srgb, #ffffff 28%, transparent);
   transform: translateY(-1px);
 }
-.googleBtn:active:not(:disabled) { background: #f1f1f1; transform: translateY(0); }
-.googleBtn:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
+.googleBtn:active:not(:disabled) { transform: translateY(0); }
+.googleBtn:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 .googleBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .footer {
   margin: 0;
   text-align: center;
   font-size: 13px;
-  color: color-mix(in srgb, #E5E0FF 60%, transparent);
+  color: color-mix(in srgb, #b8b0d9 70%, transparent);
 }
 
-/* Entrance animation — staggered fade + slide up */
 .animateIn {
   opacity: 0;
   transform: translateY(14px);
@@ -377,6 +553,9 @@
     animation: none;
   }
   .input, .submitBtn, .googleBtn, .link {
+    transition: none;
+  }
+  .cardFlip, .modeIndicator, .cardStage {
     transition: none;
   }
 }

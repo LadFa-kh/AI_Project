@@ -31,16 +31,23 @@
   gap: 8px;
 }
 
+/* Step indicator recolored to Nocturne purple (was Stardust orange) per
+   explicit request — this component is shared across /upload-resume,
+   /skill-assessment, /evaluation-result, so the change is intentionally
+   global to keep the step indicator one consistent color across the whole
+   upload → assessment → results flow, not just on /upload-resume. Note:
+   .page/.card above (and anything else in this file) were left untouched —
+   scope was step indicator only. */
 .stepLabel {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #FC8337;
+  color: #a78bfa;
   padding: 4px 10px;
   border-radius: 999px;
-  background: color-mix(in srgb, #FC8337 18%, transparent);
-  border: 1px solid color-mix(in srgb, #FC8337 40%, transparent);
+  background: color-mix(in srgb, #7c3aed 18%, transparent);
+  border: 1px solid color-mix(in srgb, #7c3aed 40%, transparent);
 }
 
 .stepTrack {
@@ -55,11 +62,11 @@
   height: 4px;
   flex: 1;
   border-radius: 2px;
-  background: color-mix(in srgb, #E5E0FF 16%, transparent);
+  background: color-mix(in srgb, #f5f3ff 16%, transparent);
 }
 
 .stepDotActive {
-  background: #FC8337;
+  background: linear-gradient(90deg, #7c3aed, #ec4899);
 }
 
 .headingBlock {
@@ -538,6 +545,19 @@
 /* Score ring / badge / pill                                              */
 /* ---------------------------------------------------------------------- */
 
+/* Registering --score-pct as an animatable <number> (rather than the default
+   untyped custom property) lets the browser interpolate it on change instead
+   of jumping instantly — that's what makes the ring below fill in smoothly
+   on mount rather than rendering already-complete. Supported in all
+   current-generation browsers (Safari 16.4+, Firefox 128+, Chromium); falls
+   back to an instant (non-animated) fill in older ones, which still shows
+   the correct score. */
+@property --score-pct {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
 .scoreRing {
   --score-pct: 0;
   --score-color: #FC8337;
@@ -552,6 +572,13 @@
     var(--score-color) calc(var(--score-pct) * 1%),
     color-mix(in srgb, #E5E0FF 12%, transparent) 0
   );
+  transition: background 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scoreRing {
+    transition: none;
+  }
 }
 
 .scoreRingInner {

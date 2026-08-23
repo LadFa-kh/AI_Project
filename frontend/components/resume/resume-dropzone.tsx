@@ -64,15 +64,14 @@ export function ResumeDropzone({ disabled, hasError, onFileSelected }: ResumeDro
       className={classNames}
     >
       <span className={styles.dropzoneIcon} aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
+        <svg width="22" height="22" viewBox="0 0 256 256" fill="currentColor">
           <path d="M224,152v56a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V152a8,8,0,0,1,16,0v56H208V152a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V152a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z" />
         </svg>
       </span>
-      <p className={styles.dropzoneTitle}>
-        Drag &amp; drop your resume, or click to browse
-      </p>
-      <p className={styles.dropzoneHint}>
-        Accepted formats: {RESUME_ACCEPTED_EXTENSIONS.join(", ")} · Max 5MB
+      <p className={styles.dropzoneTitle}>ลากไฟล์มาวางที่นี่</p>
+      <p className={styles.dropzoneHint}>หรือคลิกเพื่อเลือกไฟล์จากเครื่องของคุณ</p>
+      <p className={styles.dropzoneMeta}>
+        รองรับไฟล์: {RESUME_ACCEPTED_EXTENSIONS.join(", ")} · ขนาดไม่เกิน 5MB
       </p>
       <input
         ref={inputRef}
@@ -81,7 +80,7 @@ export function ResumeDropzone({ disabled, hasError, onFileSelected }: ResumeDro
         disabled={disabled}
         onChange={handleChange}
         className="sr-only"
-        aria-label="Choose resume file"
+        aria-label="เลือกไฟล์เรซูเม่"
       />
     </div>
   );

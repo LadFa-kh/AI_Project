@@ -1,14 +1,29 @@
-/* Stardust premium treatment — scoped to /internship-matches only.
-   Mirrors the /login and /register visual system (glassmorphism cards, glow,
-   focus states, staggered entrance) adapted for a list/grid page. This page
-   renders inside AppShell's sidebar layout (like /evaluation-result), so ambient
-   motion lives behind the content area, not as a full standalone page shell —
-   and there's no back-to-home link since the sidebar nav already has one.
-   Does NOT touch the shared nocturne.module.css, so other pages are unaffected. */
+/* Full-page structure rebuilt to match the demo
+   (seam-demo/internship-matches.html) — same page-chrome classes as
+   resume-upload.module.css / skill-assessment.module.css /
+   evaluation-result.module.css (particle canvas, blobs, split heading).
+   Class names used by matches-control-bar.tsx (.controlBar, .sortSelect,
+   .filterChips, .filterChip, .filterChipActive, .filterChipToggle) and
+   match-skeleton-card.tsx (.skeletonCard, .skeletonLine) are preserved
+   exactly so those two files needed zero changes — only their colors
+   changed here from Stardust orange to Nocturne. */
 
-/* Ambient drifting glow blobs behind the page content — decorative, low opacity */
+.page {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: #000000;
+}
+
+.particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .ambient {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -18,69 +33,97 @@
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.13;
+  filter: blur(100px);
+  opacity: 0.24;
   will-change: transform;
 }
 
 .blobOne {
-  width: 520px;
-  height: 520px;
-  top: -180px;
-  left: -140px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
-  animation: drift-one 28s ease-in-out infinite;
+  width: 480px;
+  height: 480px;
+  top: -150px;
+  right: -160px;
+  background: #7c3aed;
+  animation: drift-one 27s ease-in-out infinite;
 }
 
 .blobTwo {
-  width: 460px;
-  height: 460px;
-  bottom: -160px;
-  right: -120px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
-  opacity: 0.08;
-  animation: drift-two 34s ease-in-out infinite;
+  width: 440px;
+  height: 440px;
+  bottom: -170px;
+  left: -150px;
+  background: #3b82f6;
+  opacity: 0.2;
+  animation: drift-two 33s ease-in-out infinite;
 }
 
 @keyframes drift-one {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(36px, 26px) scale(1.06); }
+  50% { transform: translate(-30px, 24px) scale(1.06); }
 }
 
 @keyframes drift-two {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-28px, -20px) scale(1.04); }
+  50% { transform: translate(26px, -20px) scale(1.04); }
 }
 
-.contentLayer {
+.main {
   position: relative;
-  z-index: 1;
-}
-
-.headerRow {
+  z-index: 2;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 5rem) clamp(1.25rem, 4vw, 2.5rem) 6rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  text-align: center;
 }
 
-.pageHeading {
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+.splitHeading {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
-  font-weight: 600;
-  font-size: clamp(26px, 3.6vw, 32px);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  color: #FFFFFF;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.5rem);
+  font-weight: 800;
+  color: #ffffff;
 }
 
-.pageSubheading {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.55;
-  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+.splitWord {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(6px);
+  animation: word-in 0.6s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
 }
 
-/* Filter/sort bar — same elevation language as login/register form fields */
+@keyframes word-in {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.subtitle {
+  margin-top: 0.9rem;
+  font-size: 0.95rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+}
+
+.viewWrap {
+  width: 100%;
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: left;
+}
+
+/* ===== Filter/sort bar — class names unchanged from before (consumed
+   as-is by matches-control-bar.tsx), Nocturne colors ===== */
 .controlBar {
   display: flex;
   flex-wrap: wrap;
@@ -88,11 +131,10 @@
   gap: 12px;
   padding: 16px 18px;
   border-radius: 14px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid color-mix(in srgb, #E5E0FF 14%, transparent);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sortSelect {
@@ -100,20 +142,28 @@
   padding: 8px 12px;
   font: inherit;
   font-size: 13px;
-  color: #E5E0FF;
-  background: color-mix(in srgb, #0a0a0a 85%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  color: #f5f3ff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
   outline: none;
   cursor: pointer;
   transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out;
 }
-.sortSelect:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); }
+/* Native <option> elements don't inherit the select's dark background in
+   most browsers — without this, the open dropdown panel falls back to the
+   OS default (white/light), making the near-white .sortSelect text
+   unreadable against it. */
+.sortSelect option {
+  background: #120f1a;
+  color: #f5f3ff;
+}
+.sortSelect:hover { border-color: rgba(255, 255, 255, 0.35); }
 .sortSelect:focus-visible {
-  border-color: #FC8337;
-  outline: 2px solid #FC8337;
+  border-color: #7c3aed;
+  outline: 2px solid #7c3aed;
   outline-offset: 1px;
-  box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.16);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
 }
 
 .filterChips {
@@ -130,124 +180,182 @@
   padding: 6px 12px;
   font-size: 12.5px;
   font-weight: 500;
-  color: color-mix(in srgb, #E5E0FF 78%, transparent);
-  background: color-mix(in srgb, #0a0a0a 85%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
   cursor: pointer;
   transition: border-color 0.18s ease-out, background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
 }
-.filterChip:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); transform: translateY(-1px); }
-.filterChip:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(252, 131, 55, 0.14); }
+.filterChip:hover { border-color: rgba(255, 255, 255, 0.35); transform: translateY(-1px); }
+.filterChip:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16); }
 
 .filterChipActive {
-  color: #030303;
-  background: #FC8337;
-  border-color: #FC8337;
+  color: #ffffff;
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  border-color: transparent;
 }
 .filterChipActive:hover { transform: translateY(-1px); }
 
-/* Match grid */
-.matchGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+.filterChipToggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #c4b5fd;
+  background: transparent;
+  border: 1px dashed rgba(124, 58, 237, 0.55);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out;
 }
-
-@media (min-width: 700px) {
-  .matchGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.filterChipToggle:hover {
+  background: rgba(124, 58, 237, 0.12);
+  transform: translateY(-1px);
 }
+.filterChipToggle:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16); }
 
-@media (min-width: 1024px) {
-  .matchGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+/* ===== Match list — vertical stacked rows, matching the demo (not a
+   grid), each with a small score ring on the left ===== */
+.matchList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .matchCard {
   position: relative;
+  padding: clamp(1.4rem, 3vw, 1.9rem);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 24px;
-  border-radius: 16px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, border-color 0.18s ease-out;
+  gap: 1.4rem;
+  align-items: flex-start;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .matchCard:hover {
-  transform: translateY(-3px) scale(1.02);
-  border-color: color-mix(in srgb, #FC8337 45%, transparent);
-  box-shadow: 0 22px 48px -8px rgba(0, 0, 0, 0.5), 0 0 32px -12px rgba(252, 131, 55, 0.3);
+  transform: translateY(-3px);
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 18px 40px -20px rgba(124, 58, 237, 0.5);
 }
 
-.matchCardTop {
+@property --pct {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+.matchScore {
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  --pct: 0;
+  background: conic-gradient(var(--score-color, #7c3aed) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.08) 0);
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  transition: --pct 1s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.matchScore::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #0a0714;
 }
 
-.matchCardTitleBlock {
+.matchScoreInner {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.matchScoreValue {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--score-color, #7c3aed);
+}
+
+.matchScoreLabel {
+  font-size: 0.58rem;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  margin-top: -2px;
+}
+
+.matchBody {
+  flex: 1;
   min-width: 0;
 }
 
 .matchTitle {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #FFFFFF;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .matchCompany {
-  margin: 0;
-  font-size: 13px;
-  color: color-mix(in srgb, #E5E0FF 65%, transparent);
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+}
+
+.matchSkills {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .detailLink {
+  flex: none;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 16px;
-  font-size: 13.5px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #f5f3ff;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #030303;
-  background: #FC8337;
-  border: 1px solid #FC8337;
-  border-radius: 10px;
   text-decoration: none;
-  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+  white-space: nowrap;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 .detailLink:hover {
-  filter: brightness(1.08);
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 12px 24px -8px rgba(252, 131, 55, 0.5);
+  border-color: rgba(124, 58, 237, 0.5);
+  background: rgba(124, 58, 237, 0.08);
+  transform: translateY(-1px);
 }
-.detailLink:active { filter: brightness(0.96); transform: translateY(0) scale(1); }
-.detailLink:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
+.detailLink:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 
-/* Skeleton loading cards */
+@media (max-width: 640px) {
+  .matchCard { flex-direction: column; align-items: stretch; }
+  .detailLink { align-self: stretch; text-align: center; }
+}
+
+/* ===== Skeleton loading cards — class names unchanged, Nocturne colors ===== */
 .skeletonCard {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 24px;
-  border-radius: 16px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .skeletonLine {
@@ -255,9 +363,9 @@
   border-radius: 6px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, #E5E0FF 10%, transparent) 25%,
-    color-mix(in srgb, #E5E0FF 18%, transparent) 37%,
-    color-mix(in srgb, #E5E0FF 10%, transparent) 63%
+    color-mix(in srgb, #f5f3ff 10%, transparent) 25%,
+    color-mix(in srgb, #f5f3ff 18%, transparent) 37%,
+    color-mix(in srgb, #f5f3ff 10%, transparent) 63%
   );
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
@@ -267,7 +375,7 @@
   100% { background-position: 0 50%; }
 }
 
-/* Empty state */
+/* ===== Empty state ===== */
 .emptyBlock {
   display: flex;
   flex-direction: column;
@@ -275,11 +383,9 @@
   gap: 10px;
   padding: 56px 24px;
   text-align: center;
-  border-radius: 16px;
-  background: color-mix(in srgb, #0a0a0a 70%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px dashed color-mix(in srgb, #E5E0FF 20%, transparent);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
 }
 
 .emptyIcon {
@@ -288,14 +394,10 @@
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: #0a0a0a;
-  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.35);
-  color: #FC8337;
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  color: #ffffff;
 }
 
-/* Skill chip and score pill hover/focus states (chips/pills are shared components
-   from nocturne.module.css — this targets them by wrapping context, not by editing
-   the shared classes themselves) */
 .chipHoverable {
   transition: transform 0.15s ease-out, filter 0.15s ease-out;
 }
@@ -304,11 +406,37 @@
   filter: brightness(1.1);
 }
 
+.animateIn {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: fade-slide-up 0.6s ease-out forwards;
+}
+
+@keyframes fade-slide-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.delay3 { animation-delay: 0.45s; }
+
 @media (prefers-reduced-motion: reduce) {
   .blobOne, .blobTwo {
     animation: none;
   }
-  .matchCard, .detailLink, .filterChip, .sortSelect, .chipHoverable {
+  .animateIn {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .splitWord {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    animation: none;
+  }
+  .matchCard, .detailLink, .filterChip, .filterChipToggle, .sortSelect, .chipHoverable {
     transition: none;
+  }
+  .matchCard:hover, .detailLink:hover, .filterChip:hover, .filterChipToggle:hover {
+    transform: none;
   }
 }

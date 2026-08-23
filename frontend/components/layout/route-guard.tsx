@@ -2,8 +2,9 @@
 
 // Blocks every route except "/" until the user is authenticated. Redirects
 // to /login (which is exempt via AppShell's NO_NAV_ROUTES, so no loop).
-// Waits for auth-context's initial localStorage hydration (isLoading) before
-// deciding, so a logged-in user isn't bounced to /login on a hard refresh.
+// Waits for auth-context's initial GET /auth/me session check (isLoading)
+// before deciding, so a logged-in user (valid httpOnly cookie) isn't
+// bounced to /login on a hard refresh.
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";

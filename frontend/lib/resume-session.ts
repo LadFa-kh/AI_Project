@@ -9,6 +9,9 @@ const STORAGE_KEY = "resume-upload-result";
 export type StoredResumeUpload = {
   resumeId: string;
   questions: ResumeUploadQuestion[];
+  /** Carried over from the upload-resume form's "field of interest" input —
+   *  required by POST /assessments/submit, not accepted by /resumes/upload. */
+  desiredRoleName?: string;
 };
 
 export function writeResumeUploadResult(result: StoredResumeUpload) {

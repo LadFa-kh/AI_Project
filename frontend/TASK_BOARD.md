@@ -25,6 +25,7 @@
 - [x] Add loading, empty, and error states across MVP flow pages
 - [x] Add shared navbar/sidebar (AppShell) across all pages including Home
 - [x] Switch design system from Nocturne (dark purple) to Stardust (dark orange/flat) — tokens, navbar, all 7 pages, Home page merged into shared shell
+- [x] Home ("/") split back out of the shared sidebar shell — now has its own floating navbar + Nocturne-purple hero (`components/home/home-hero-demo.tsx`), per explicit request. New `--color-home-hero-accent-1/2/3` tokens added in `globals.css`, scoped to this component only. Every other route is unchanged (still Stardust sidebar).
 - [x] Fix `MatchCard` type mismatch and `.chipNeutral`/`.scorePill` missing styles (internship-matches list page)
 - [x] Build `/admin` dashboard (stat cards: resumes uploaded, assessments completed, matches generated, avg match score — mock data)
 

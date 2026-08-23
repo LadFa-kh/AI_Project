@@ -1,7 +1,16 @@
-// Resume upload API call. Endpoint confirmed against backend Swagger
+// Resume upload API call. Endpoint confirmed against backend README
 // (resume-controller):
-// POST /resumes/upload?userId={uuid}&desiredRoleName={string}  (multipart/form-data, field "file", PDF only, max 5MB)
+// POST /resumes/upload  (multipart/form-data, field "file", PDF only, max 5MB)
 // -> { resumeId, extractedSkills: string[], questions: { id, question, options: string[] }[] }
+//
+// userId is no longer sent — backend derives the user from the httpOnly
+// accessToken cookie and has fully removed the old userId-based fallback,
+// so this only works when the frontend is deployed same-site with the
+// backend (see auth-context.tsx). Requires the user to be logged in
+// (credentials: 'include' below), or the request gets 403.
+//
+// desiredRoleName is NOT accepted here anymore — it moved to
+// POST /assessments/submit (see resume-session.ts for how it's carried over).
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -17,18 +26,7 @@ export type ResumeUploadResult = {
   questions: ResumeUploadQuestion[];
 };
 
-export async function uploadResume(
-  userId: string,
-  file: File,
-  desiredRoleName?: string
-): Promise<ResumeUploadResult> {
-  // Always send desiredRoleName, even empty — backend's Swagger marks this
-  // query param as required and 500s when it's omitted entirely.
-  const params = new URLSearchParams({
-    userId,
-    desiredRoleName: desiredRoleName?.trim() ?? "",
-  });
-
+export async function uploadResume(file: File): Promise<ResumeUploadResult> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -36,9 +34,11 @@ export async function uploadResume(
   try {
     // NOTE: no Content-Type header here — the browser sets the multipart
     // boundary automatically. Unlike api-client's apiFetch, this endpoint
-    // takes query params + multipart body, not a JSON body.
-    response = await fetch(`${API_BASE_URL}/resumes/upload?${params.toString()}`, {
+    // takes a multipart body, not a JSON body. credentials: 'include' is
+    // still required so the accessToken cookie is sent.
+    response = await fetch(`${API_BASE_URL}/resumes/upload`, {
       method: "POST",
+      credentials: "include",
       body: formData,
     });
   } catch {

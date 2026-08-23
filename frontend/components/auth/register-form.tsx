@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
-import { register } from "@/lib/auth-service";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { register, loginWithGoogle } from "@/lib/auth-service";
 import { ApiError, NetworkError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { useGoogleSignIn } from "@/lib/use-google-signin";
 import styles from "./register.module.css";
 
 type FieldErrors = {
@@ -19,25 +20,25 @@ type FieldErrors = {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateName(value: string): string | null {
-  if (!value.trim()) return "Enter your full name.";
+  if (!value.trim()) return "กรุณากรอกชื่อ-นามสกุลของคุณ";
   return null;
 }
 
 function validateEmail(value: string): string | null {
-  if (!value.trim()) return "Enter your email address.";
-  if (!EMAIL_RE.test(value)) return "Enter a valid email address.";
+  if (!value.trim()) return "กรุณากรอกอีเมลของคุณ";
+  if (!EMAIL_RE.test(value)) return "กรุณากรอกอีเมลให้ถูกต้อง";
   return null;
 }
 
 function validatePassword(value: string): string | null {
-  if (!value) return "Enter a password.";
-  if (value.length < 8) return "Use at least 8 characters.";
+  if (!value) return "กรุณากรอกรหัสผ่าน";
+  if (value.length < 8) return "ใช้อย่างน้อย 8 ตัวอักษร";
   return null;
 }
 
 function validateConfirmPassword(password: string, confirm: string): string | null {
-  if (!confirm) return "Confirm your password.";
-  if (confirm !== password) return "Passwords don't match.";
+  if (!confirm) return "กรุณายืนยันรหัสผ่านของคุณ";
+  if (confirm !== password) return "รหัสผ่านไม่ตรงกัน";
   return null;
 }
 
@@ -50,9 +51,9 @@ function getPasswordStrength(value: string): { score: number; label: string; col
   if (/\d/.test(value)) score++;
   if (/[^A-Za-z0-9]/.test(value)) score++;
 
-  if (score <= 1) return { score: 1, label: "Weak", color: "oklch(70% 0.15 25)" };
-  if (score <= 3) return { score: 2, label: "Okay", color: "oklch(78% 0.14 85)" };
-  return { score: 3, label: "Strong", color: "oklch(75% 0.14 150)" };
+  if (score <= 1) return { score: 1, label: "อ่อน", color: "oklch(70% 0.15 25)" };
+  if (score <= 3) return { score: 2, label: "พอใช้", color: "oklch(78% 0.14 85)" };
+  return { score: 3, label: "แข็งแรง", color: "oklch(75% 0.14 150)" };
 }
 
 export function RegisterForm() {
@@ -76,7 +77,7 @@ export function RegisterForm() {
       email: validateEmail(email),
       password: validatePassword(password),
       confirmPassword: validateConfirmPassword(password, confirmPassword),
-      terms: agreedToTerms ? null : "You must accept the Terms and Privacy Policy.",
+      terms: agreedToTerms ? null : "คุณต้องยอมรับข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว",
     };
     setErrors(nextErrors);
     return Object.values(nextErrors).every((err) => !err);
@@ -100,28 +101,47 @@ export function RegisterForm() {
       setFormError(
         err instanceof ApiError || err instanceof NetworkError
           ? err.message
-          : "Something went wrong. Please try again."
+          : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
       );
     }
   }
 
-  function handleGoogleSignIn() {
-    // TODO: wire to backend auth API — POST /auth/google { idToken }
-  }
+  const handleGoogleIdToken = useCallback(
+    async (idToken: string) => {
+      setFormError(null);
+      setStatus("loading");
+      try {
+        const session = await loginWithGoogle(idToken);
+        setSession(session);
+        setStatus("default");
+        router.push("/");
+      } catch (err) {
+        setStatus("error");
+        setFormError(
+          err instanceof ApiError || err instanceof NetworkError
+            ? err.message
+            : "สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
+        );
+      }
+    },
+    [router, setSession]
+  );
+
+  const { start: handleGoogleSignIn, error: googleError } = useGoogleSignIn(handleGoogleIdToken);
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
-      {formError && (
+      {(formError || googleError) && (
         <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
             <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
           </svg>
-          {formError}
+          {formError || googleError}
         </p>
       )}
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
-        <label htmlFor="name">Full name</label>
+        <label htmlFor="name">ชื่อ-นามสกุล</label>
         <input
           id="name"
           name="name"
@@ -132,14 +152,14 @@ export function RegisterForm() {
           disabled={isLoading}
           aria-invalid={!!errors.name}
           aria-describedby={errors.name ? "name-error" : undefined}
-          placeholder="Jordan Lee"
+          placeholder="สมชาย ใจดี"
           className={`${styles.input} ${errors.name ? styles.inputInvalid : ""}`}
         />
         {errors.name && <p id="name-error" className={styles.fieldError}>{errors.name}</p>}
       </div>
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email">อีเมล</label>
         <input
           id="email"
           name="email"
@@ -157,7 +177,7 @@ export function RegisterForm() {
       </div>
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">รหัสผ่าน</label>
         <input
           id="password"
           name="password"
@@ -168,7 +188,7 @@ export function RegisterForm() {
           disabled={isLoading}
           aria-invalid={!!errors.password}
           aria-describedby={errors.password ? "password-error" : "password-strength"}
-          placeholder="At least 8 characters"
+          placeholder="อย่างน้อย 8 ตัวอักษร"
           className={`${styles.input} ${errors.password ? styles.inputInvalid : ""}`}
         />
         {errors.password ? (
@@ -189,7 +209,7 @@ export function RegisterForm() {
       </div>
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
-        <label htmlFor="confirmPassword">Confirm password</label>
+        <label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</label>
         <input
           id="confirmPassword"
           name="confirmPassword"
@@ -200,7 +220,7 @@ export function RegisterForm() {
           disabled={isLoading}
           aria-invalid={!!errors.confirmPassword}
           aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
-          placeholder="Re-enter your password"
+          placeholder="กรอกรหัสผ่านอีกครั้ง"
           className={`${styles.input} ${errors.confirmPassword ? styles.inputInvalid : ""}`}
         />
         {errors.confirmPassword && (
@@ -221,8 +241,8 @@ export function RegisterForm() {
           className={styles.checkbox}
         />
         <label htmlFor="terms" className={styles.checkLabel}>
-          I agree to the <a href="/terms" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>Terms of Service</a> and{" "}
-          <a href="/privacy" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>Privacy Policy</a>.
+          ฉันยอมรับ <a href="/terms" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>ข้อกำหนดการใช้งาน</a> และ{" "}
+          <a href="/privacy" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>นโยบายความเป็นส่วนตัว</a>
         </label>
       </div>
       {errors.terms && <p id="terms-error" className={styles.fieldError} style={{ marginTop: "-8px" }}>{errors.terms}</p>}
@@ -233,12 +253,12 @@ export function RegisterForm() {
         disabled={isLoading}
       >
         {isLoading && <span className={styles.spinner} aria-hidden="true" />}
-        {isLoading ? "Creating account…" : "Create account"}
+        {isLoading ? "กำลังสร้างบัญชี…" : "สร้างบัญชี"}
       </button>
 
       <div className={`${styles.divider} ${styles.animateIn} ${styles.delay4}`}>
         <span className={styles.dividerLine} />
-        <span className={styles.dividerText}>or</span>
+        <span className={styles.dividerText}>หรือ</span>
         <span className={styles.dividerLine} />
       </div>
 
@@ -254,7 +274,7 @@ export function RegisterForm() {
           <path fill="#FBBC05" d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58v-3.1h-4a12 12 0 0 0 0 10.79l4-3.11Z" />
           <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.62l4 3.1C6.22 6.86 8.87 4.75 12 4.75Z" />
         </svg>
-        Continue with Google
+        เข้าสู่ระบบด้วย Google
       </button>
     </form>
   );

@@ -12,7 +12,7 @@ export function StepIndicator({ currentStep, totalSteps, label }: StepIndicatorP
   return (
     <div className={styles.steps}>
       <span className={styles.stepLabel}>
-        Step {currentStep} of {totalSteps} — {label}
+        ขั้นตอนที่ {currentStep} จาก {totalSteps} — {label}
       </span>
       <div className={styles.stepTrack} role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={totalSteps}>
         {Array.from({ length: totalSteps }, (_, i) => (

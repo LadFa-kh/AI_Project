@@ -3,6 +3,7 @@ import pdfplumber
 import uuid
 import io
 import json
+import os
 from pydantic import BaseModel, Field
 from typing import List
 from google import genai
@@ -50,8 +51,13 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 # -------------------------------------------------------------
 # 3. Setup CometAPI Client
 # -------------------------------------------------------------
+# API key now read from the environment (set via docker-compose.yml / the
+# platform's secret store) instead of being hardcoded here — the previous
+# hardcoded value was a real committed secret and should be treated as
+# compromised: rotate/revoke it in the CometAPI dashboard regardless of this
+# code change, since it may already be in git history and on GitHub.
 BASE_URL = "https://api.cometapi.com"
-COMET_API_KEY = "5D7qu1s2K8C5zjqC0OR2Hp1jcFruu53pltn6YH8BxGmWJT62"
+COMET_API_KEY = os.environ["COMET_API_KEY"]
 
 client = genai.Client(
     http_options={"api_version": "v1beta", "base_url": BASE_URL},

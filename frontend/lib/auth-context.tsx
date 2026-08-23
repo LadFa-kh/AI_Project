@@ -1,11 +1,21 @@
 "use client";
 
-// Session persisted to localStorage so it survives a page refresh — stores
-// the accessToken/refreshToken/user backend already returns on login/register,
-// under a single JSON key (STORAGE_KEY) to avoid partial/mismatched reads.
-// NOTE: storing tokens in localStorage is readable by any JS on the page
-// (XSS risk) — acceptable tradeoff for this MVP per explicit product
-// decision; revisit with an httpOnly cookie if backend adds one later.
+// Session is no longer stored in localStorage — backend sets an httpOnly
+// `accessToken` cookie on login/register/google-login (unreadable by JS,
+// sent automatically by the browser via api-client.ts's
+// `credentials: 'include'`). Auth state here is instead hydrated by asking
+// the backend "who am I" (GET /auth/me) once on mount, and re-derived after
+// login/register/logout. The access token expires in 15 minutes with no
+// refresh mechanism yet — a 401 from a later request means the session has
+// expired and the user must log in again (RouteGuard handles the redirect).
+//
+// REQUIRES the frontend to be deployed same-site with the backend (a
+// subdomain of recommendation.site, e.g. app.recommendation.site — see the
+// repo-root Caddyfile/docker-compose.yml) — backend's cookie is
+// `SameSite=Lax` with no explicit `Domain=`, so a cross-site origin (like
+// localhost:3000 during local dev) never receives or sends it at all, and
+// every request below will resolve to a signed-out state / 401. This is a
+// known limitation until the app is actually deployed at its real domain.
 
 import {
   createContext,
@@ -17,101 +27,72 @@ import {
   type ReactNode,
 } from "react";
 import type { AuthSession, AuthUser } from "./auth-service";
-
-const STORAGE_KEY = "auth-session";
-
-type StoredSession = {
-  accessToken: string;
-  refreshToken: string;
-  user: AuthUser;
-};
-
-function readStoredSession(): StoredSession | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<StoredSession>;
-    if (!parsed.accessToken || !parsed.refreshToken || !parsed.user) return null;
-    return parsed as StoredSession;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredSession(session: StoredSession) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  } catch {
-    // Storage unavailable (private browsing, quota) — session still works
-    // in-memory for this tab, just won't survive a refresh.
-  }
-}
-
-function clearStoredSession() {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
+import { getCurrentUser, logout as logoutRequest } from "./auth-service";
 
 type AuthContextValue = {
-  accessToken: string | null;
-  refreshToken: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
-  /** True until the initial localStorage read completes (avoids a signed-out flash on first paint). */
+  /** True until the initial GET /auth/me session check completes (avoids a signed-out flash on first paint). */
   isLoading: boolean;
   setSession: (session: AuthSession) => void;
-  clearSession: () => void;
+  clearSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hydrate from localStorage once on mount (client-only — SSR has no window).
+  // Hydrate from the backend once on mount — the cookie (if any) travels
+  // automatically with this request.
   useEffect(() => {
-    const stored = readStoredSession();
-    if (stored) {
-      setAccessToken(stored.accessToken);
-      setRefreshToken(stored.refreshToken);
-      setUser(stored.user);
-    }
-    setIsLoading(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const current = await getCurrentUser();
+        if (!cancelled) setUser(current);
+      } catch {
+        // Network/server error on the session check — treat as signed-out
+        // rather than blocking the app indefinitely.
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  // Login/register responses already include the user fields inline, so we
+  // can set state directly without an extra /auth/me round-trip. The
+  // accessToken/refreshToken in the response are ignored — the cookie is
+  // the real credential now.
   const setSession = useCallback((session: AuthSession) => {
-    const { accessToken: token, refreshToken: refresh, ...rest } = session;
-    setAccessToken(token);
-    setRefreshToken(refresh);
+    const { accessToken: _accessToken, refreshToken: _refreshToken, ...rest } = session;
     setUser(rest);
-    writeStoredSession({ accessToken: token, refreshToken: refresh, user: rest });
   }, []);
 
-  const clearSession = useCallback(() => {
-    setAccessToken(null);
-    setRefreshToken(null);
+  const clearSession = useCallback(async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // Even if the server call fails (already expired, network hiccup),
+      // still clear local state below so the UI reflects signed-out.
+    }
     setUser(null);
-    clearStoredSession();
   }, []);
 
   const value = useMemo(
     () => ({
-      accessToken,
-      refreshToken,
       user,
-      isAuthenticated: !!accessToken,
+      isAuthenticated: !!user,
       isLoading,
       setSession,
       clearSession,
     }),
-    [accessToken, refreshToken, user, isLoading, setSession, clearSession]
+    [user, isLoading, setSession, clearSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

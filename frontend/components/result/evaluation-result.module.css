@@ -1,141 +1,361 @@
-/* Stardust premium treatment — page-scoped to /evaluation-result only.
-   Card-level only (glassmorphism, glow shadow, typography, micro-interactions,
-   staggered entrance). This page renders inside AppShell's sidebar layout (unlike
-   /login and /register, which are standalone), so no ambient background blobs,
-   glow halo, or back-to-home link here — those would clash with the sidebar and
-   duplicate the nav's existing Home link. Does NOT touch the shared
-   nocturne.module.css, so other pages (upload-resume, skill-assessment, matches)
-   are unaffected. */
+/* Full-page structure rebuilt to match the demo
+   (seam-demo/evaluation-result.html) — same page-chrome classes as
+   resume-upload.module.css / skill-assessment.module.css (particle canvas,
+   blobs, split heading). Shared full-page STATE blocks (loading, empty,
+   submit button, spinner) are imported directly from
+   resume-upload.module.css in evaluation-result-card.tsx instead of being
+   duplicated here — see that file's `fieldStyles` import. This file only
+   defines: page chrome + the score card + AI recommendation card + CTA row. */
 
-.card {
+.page {
   position: relative;
-  width: 100%;
-  max-width: min(640px, 90vw);
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding: clamp(28px, 4vw, 44px) clamp(24px, 4vw, 36px);
-  border-radius: 20px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(252, 131, 55, 0.08),
-    0 32px 80px rgba(0, 0, 0, 0.6),
-    0 0 60px -16px rgba(252, 131, 55, 0.3);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: #000000;
 }
 
-.headingBlock {
+.particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.24;
+  will-change: transform;
+}
+
+.blobOne {
+  width: 480px;
+  height: 480px;
+  top: -150px;
+  left: -150px;
+  background: #ec4899;
+  animation: drift-one 27s ease-in-out infinite;
+}
+
+.blobTwo {
+  width: 440px;
+  height: 440px;
+  bottom: -170px;
+  right: -150px;
+  background: #3b82f6;
+  opacity: 0.2;
+  animation: drift-two 33s ease-in-out infinite;
+}
+
+@keyframes drift-one {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 24px) scale(1.06); }
+}
+
+@keyframes drift-two {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-26px, -20px) scale(1.04); }
+}
+
+.main {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 5rem) clamp(1.25rem, 4vw, 2.5rem) 6rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
   text-align: center;
 }
 
-.heading {
-  margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
-  font-weight: 600;
-  font-size: clamp(22px, 3vw, 26px);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  color: #FFFFFF;
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  margin-bottom: 0.75rem;
 }
 
-.subheading {
+.splitHeading {
   margin: 0;
-  font-size: 14.5px;
-  line-height: 1.55;
-  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+  font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.5rem);
+  font-weight: 800;
+  color: #ffffff;
 }
 
-.formError {
+.splitWord {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(6px);
+  animation: word-in 0.6s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
+}
+
+@keyframes word-in {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.stepRow {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.resultWrap {
+  width: 100%;
+  margin-top: 2rem;
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  padding: 10px 13px;
-  border-radius: 10px;
-  font-size: 13px;
-  line-height: 1.45;
-  background: oklch(26% 0.05 25);
-  border: 1px solid oklch(42% 0.11 25);
-  color: oklch(85% 0.09 25);
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
 }
 
-.formError svg { flex: none; margin-top: 1px; }
+/* ===== Score card ===== */
+.scoreCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(2rem, 5vw, 3rem);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
 
-.submitBtn {
-  display: inline-flex;
+.scoreRow {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.scoreStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 108px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #f5f3ff 6%, transparent);
+  border: 1px solid color-mix(in srgb, #f5f3ff 12%, transparent);
+}
+
+.scoreStatValue {
+  font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: #ffffff;
+}
+
+.scoreStatLabel {
+  font-size: 12px;
+  color: color-mix(in srgb, #b8b0d9 70%, transparent);
+}
+
+/* ===== AI recommendation card — gradient border + sparkle + typewriter
+   reveal, ported from the demo ===== */
+.aiCard {
+  position: relative;
+  margin-top: 1.75rem;
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  border-radius: 20px;
+  background:
+    linear-gradient(#0a0714, #0a0714) padding-box,
+    linear-gradient(120deg, #7c3aed, #ec4899, #3b82f6) border-box;
+  border: 1px solid transparent;
+}
+
+.aiCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.aiSparkle {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  margin-top: 4px;
-  font-family: "Inter", system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 15px;
-  color: #030303;
-  background: #FC8337;
-  border: 1px solid #FC8337;
-  border-radius: 10px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  color: #ffffff;
+  animation: sparkle-pulse 2.4s ease-in-out infinite;
 }
-.submitBtn:hover:not(:disabled) {
-  filter: brightness(1.08);
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
-}
-.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
-.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
-.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.loadingBlock {
+@keyframes sparkle-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.5); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 6px rgba(124, 58, 237, 0); }
+}
+
+.aiCardTitle {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.aiCardBadge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.aiCardText {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.75;
+  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+  white-space: pre-line;
+}
+
+.aiCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #ec4899;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  animation: blink 0.9s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.recommendationList {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  padding: 24px 0;
-  text-align: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recommendationItem {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+}
+
+.recommendationItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #7c3aed, #ec4899);
 }
 
 .sectionBlock {
+  margin-top: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* Entrance animation — staggered fade + slide up */
+/* ===== CTA row ===== */
+.ctaRow {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btnPrimary,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.9rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.btnPrimary {
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  color: #ffffff;
+}
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -12px rgba(124, 58, 237, 0.55);
+}
+.btnPrimary:focus-visible {
+  outline: 2px solid #f9a8d4;
+  outline-offset: 2px;
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f5f3ff;
+}
+.btnGhost:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.btnGhost:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
 .animateIn {
   opacity: 0;
   transform: translateY(14px);
   animation: fade-slide-up 0.6s ease-out forwards;
 }
 
-.delay1 { animation-delay: 0.05s; }
-.delay2 { animation-delay: 0.15s; }
-.delay3 { animation-delay: 0.25s; }
-.delay4 { animation-delay: 0.35s; }
-.delay5 { animation-delay: 0.45s; }
-
 @keyframes fade-slide-up {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+.delay1 { animation-delay: 0.15s; }
+.delay2 { animation-delay: 0.35s; }
+.delay3 { animation-delay: 0.55s; }
+.delay4 { animation-delay: 0.75s; }
+
 @media (prefers-reduced-motion: reduce) {
+  .blobOne, .blobTwo, .aiSparkle, .aiCursor {
+    animation: none;
+  }
   .animateIn {
     opacity: 1;
     transform: none;
     animation: none;
   }
-  .submitBtn {
+  .splitWord {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    animation: none;
+  }
+  .btnPrimary, .btnGhost {
     transition: none;
+  }
+  .btnPrimary:hover {
+    transform: none;
   }
 }

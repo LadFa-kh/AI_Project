@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local scratch — files staged for deletion, not part of the project.
+    "_to_delete/**",
   ]),
 ]);
 

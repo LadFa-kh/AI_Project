@@ -1,19 +1,16 @@
-// Types for /admin dashboard. No backend endpoint exists yet — see
-// PROJECT_CONTEXT.md "5) Admin Dashboard (Requested)" for the contract
-// requested from backend. Mock data below stands in until it's wired.
+// UI-local types for /admin. Real data now comes from admin-service.ts
+// (GET /admin/dashboard, /admin/users, /admin/resumes, /admin/jobs — see
+// README_Admin_API.md). This file only keeps small view-layer types that
+// don't belong in the service layer.
 
-export type AdminStats = {
-  totalResumesUploaded: number;
-  totalAssessmentsCompleted: number;
-  totalMatchesGenerated: number;
-  averageMatchScore: number;
-};
+// Tabs shown on the admin page. "activity feed" / "7-day upload chart" from
+// the original demo were dropped — backend has no endpoint for either (see
+// README_Admin_API.md "สิ่งที่ยังไม่มี Endpoint").
+export type AdminTab = "dashboard" | "users" | "resumes" | "jobs";
 
-// Mock data until backend is wired
-// TODO: wire to backend — GET /admin/stats (see PROJECT_CONTEXT.md)
-export const MOCK_ADMIN_STATS: AdminStats = {
-  totalResumesUploaded: 128,
-  totalAssessmentsCompleted: 94,
-  totalMatchesGenerated: 356,
-  averageMatchScore: 78,
-};
+export const ADMIN_TABS: { key: AdminTab; label: string }[] = [
+  { key: "dashboard", label: "ภาพรวม" },
+  { key: "users", label: "ผู้ใช้งาน" },
+  { key: "resumes", label: "เรซูเม่" },
+  { key: "jobs", label: "ประกาศงาน" },
+];

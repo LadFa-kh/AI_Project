@@ -43,8 +43,20 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
+      // Backend authenticates via an httpOnly `accessToken` cookie (set
+      // automatically on login/register/google-login) instead of a
+      // client-managed JWT. `credentials: 'include'` is required on every
+      // request so the browser attaches that cookie — without it, protected
+      // endpoints return 403 even right after a successful login. Only
+      // works when the frontend is same-site with the backend (e.g. served
+      // from app.recommendation.site) — see auth-context.tsx.
+      credentials: "include",
       headers: {
-        "Content-Type": "application/json",
+        // Only set Content-Type when there's a body to describe — sending it
+        // on bodyless GETs forces an unnecessary CORS preflight (OPTIONS)
+        // that some backend endpoints (e.g. /skills/search) aren't
+        // configured to answer, which fails the whole request.
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
         ...init?.headers,
       },
     });

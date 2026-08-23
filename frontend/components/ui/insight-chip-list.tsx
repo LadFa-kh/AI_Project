@@ -8,11 +8,11 @@ type InsightChipListProps = {
 
 const ICONS: Record<InsightChipListProps["tone"], { path: string; label: string }> = {
   positive: {
-    label: "Strength",
+    label: "จุดแข็ง",
     path: "M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z",
   },
   warning: {
-    label: "Area to grow",
+    label: "สิ่งที่ควรพัฒนา",
     path: "M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z",
   },
 };

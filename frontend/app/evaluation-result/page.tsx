@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
-import { EvaluationResultCard } from "@/components/result/evaluation-result-card";
-import nocturne from "@/components/ui/nocturne.module.css";
+import { EvaluationResultFlow } from "@/components/result/evaluation-result-flow";
 
 export const metadata: Metadata = {
-  title: "Your evaluation",
+  title: "ผลการประเมิน",
 };
 
 export default function EvaluationResultPage() {
-  return (
-    <div className={nocturne.page}>
-      <EvaluationResultCard />
-    </div>
-  );
+  return <EvaluationResultFlow />;
 }

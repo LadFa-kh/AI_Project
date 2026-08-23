@@ -1,0 +1,7 @@
+# Root .gitignore for the AI_Project monorepo — frontend/ and backend/
+# each have their own scoped .gitignore for build artifacts; this one only
+# covers rules that apply across the whole repo.
+
+# Local scratch — files staged for deletion during cleanup, not part of
+# the project. Keeping these out of the repo/GitHub.
+/frontend/_to_delete/
