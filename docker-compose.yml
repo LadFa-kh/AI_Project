@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: resume_postgres
+    environment:
+      POSTGRES_DB: resumeAnalysisRecommendation
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Ratchapon6878
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: always
+
+  # 2. Python FastAPI Service
+  fastapi-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: resume_fastapi
+    environment:
+      - DATABASE_URL=postgresql://postgres:Ratchapon6878@postgres:5432/resumeAnalysisRecommendation
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+    restart: always
+
+  # 3. Spring Boot Backend Service (เปลี่ยนชื่อ Service เป็น recommendation-app ตามที่ Cloudflare เรียก)
+  recommendation-app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: recommendation_resume_system
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/resumeAnalysisRecommendation
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Ratchapon6878
+      - FASTAPI_BASE_URL=http://fastapi-ai:8000
+      - SERVER_FORWARD_HEADERS_STRATEGY=framework
+      - APP_COOKIE_SECURE=true
+      - APP_COOKIE_SAME_SITE=None
+      - GOOGLE_OAUTH_CLIENT_ID=312138387948-umkkpedimhs642hce0o53gi52jmgdef5.apps.googleusercontent.com
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+      - fastapi-ai
+    restart: always
+
+  # 4. Cloudflare Tunnel
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: resume_cloudflared
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiMGIzMjVjOTQyNzE3ODQ0MTIyMzk1YTEyOWIyYTA5NWIiLCJ0IjoiNDBlYzFlYzUtN2ZjNS00ZjRlLWFhMjUtZjQ1ZDIwNWVhMjlkIiwicyI6IllqRTVNV1UwTlRJdFlqRXlNaTAwTXpjNExUZ3dOamd0WkdFM1lqRTJZelE0TXpReSJ9
+    networks:
+      - app-network
+    depends_on:
+      - recommendation-app
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: resume_pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=ladfa.kg@rmuti.ac.th
+      - PGADMIN_DEFAULT_PASSWORD=AdminLadfaKh
+      - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+    restart: always
+
+volumes:
+  pgdata:
+  pgadmin_data:
+
+networks:
+  app-network:
+    driver: bridge

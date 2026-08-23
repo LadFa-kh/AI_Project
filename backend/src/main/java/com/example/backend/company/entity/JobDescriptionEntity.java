@@ -31,4 +31,16 @@ public class JobDescriptionEntity {
 
     @Column(name = "job_type")
     private String jobType;
+
+    @Column(name = "job_description", columnDefinition = "TEXT")
+    private String jobDescription;
+
+    @Column(name = "duration")
+    private String duration;
+
+    @Column(name = "salary")
+    private String salary;
+
+    @Column(name = "contact_link", length = 500)
+    private String contactLink;
 }

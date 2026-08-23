@@ -13,13 +13,23 @@ import java.util.List;
 public interface SoftwareSkillRepository extends JpaRepository<SoftwareSkillEntity, Long> {
 
     @Query(value = """
-            SELECT DISTINCT CONCAT(s.workplace_example, ' [หมวดหมู่: ', s.element_name, ']')
-            FROM software_skills s
-            WHERE s.title ILIKE CONCAT('%', :query, '%')
-            ORDER BY 1
-            LIMIT 50
-            """, nativeQuery = true)
-    List<String> findComprehensiveSkillsByQuery(@Param("query") String query);
+    SELECT DISTINCT s.workplace_example
+    FROM software_skills s
+    WHERE s.onet_soc_code LIKE '15-12%'
+      AND s.workplace_example IS NOT NULL
+    ORDER BY s.workplace_example ASC
+    """, nativeQuery = true)
+    List<String> findAllComputerEngineeringSkillNames();
+
+    @Query(value = """
+    SELECT DISTINCT s.workplace_example
+    FROM software_skills s
+    WHERE s.onet_soc_code LIKE '15-12%'
+      AND s.workplace_example IS NOT NULL
+      AND s.workplace_example ILIKE CONCAT('%', :searchSkill, '%')
+    ORDER BY s.workplace_example ASC
+    """, nativeQuery = true)
+    List<String> searchComputerEngineeringSkills(@Param("searchSkill") String searchSkill);
 
     @Query(value = """
         SELECT DISTINCT s.workplace_example

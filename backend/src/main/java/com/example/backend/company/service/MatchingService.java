@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,33 +25,37 @@ public class MatchingService {
 
     public List<JobMatchResponseDto> getMatchedJobs(UUID userId, UUID resumeId) {
         FinalScoreEntity finalScoreEntity = finalScoreRepository.findByUserIdAndResumeId(userId, resumeId)
-                .orElseThrow(() -> new RuntimeException("Final score not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "ไม่พบผลคะแนนของ resume นี้ — resume ต้องทำแบบประเมินให้เสร็จก่อนถึงจะจับคู่บริษัทได้"
+                ));
         BigDecimal userFinalScore = finalScoreEntity.getFinalScore();
 
         List<String> userSkills = resumeSkillRepository.findByResumeEntityId(resumeId)
                 .stream()
                 .map(ResumeSkillEntity::getSkillName)
-                .map(String::toLowerCase)
-                .map(String::trim)
+                .map(this::normalize)   // [FIX] normalize เหมือน SkillTaxonomyService
                 .collect(Collectors.toList());
 
         List<JobDescriptionEntity> allJobs = jobDescriptionRepository.findAll();
 
-        // ใช้ record ชั่วคราวเก็บ DTO คู่กับ % ไว้ sort เท่านั้น ไม่ expose ออกไป
         record ScoredMatch(JobMatchResponseDto dto, double matchPercentage) {}
 
         List<ScoredMatch> scored = new ArrayList<>();
 
         for (JobDescriptionEntity job : allJobs) {
-            List<String> requiredSkills = parseRequiredSkills(String.valueOf(job.getRequiredSkills()));
-            if (requiredSkills.isEmpty()) continue; // กัน job ที่ยังไม่ได้กรอก skill เลย
+            List<String> requiredSkills = parseRequiredSkills(job.getRequiredSkills());
+            if (requiredSkills.isEmpty()) continue;
 
             List<String> matchedSkills = new ArrayList<>();
             List<String> missingSkills = new ArrayList<>();
 
             for (String reqSkill : requiredSkills) {
-                String normalizedReqSkill = reqSkill.toLowerCase().trim();
-                if (userSkills.contains(normalizedReqSkill)) {
+                String normalizedReqSkill = normalize(reqSkill);
+                boolean isMatched = userSkills.stream()
+                        .anyMatch(userSkill -> isWordBoundaryMatch(normalizedReqSkill, userSkill)
+                                || isWordBoundaryMatch(userSkill, normalizedReqSkill));
+
+                if (isMatched) {
                     matchedSkills.add(reqSkill);
                 } else {
                     missingSkills.add(reqSkill);
@@ -76,6 +81,21 @@ public class MatchingService {
                 .map(ScoredMatch::dto)
                 .limit(5)
                 .collect(Collectors.toList());
+    }
+
+    // [NEW] คัดลอกมาจาก SkillTaxonomyService เพื่อความสม่ำเสมอ
+    private String normalize(String skillName) {
+        return skillName
+                .replaceAll("\\(.*?\\)", "")
+                .replaceAll("[^a-zA-Z0-9\\s.#+]", "")
+                .trim()
+                .toLowerCase();
+    }
+
+    private boolean isWordBoundaryMatch(String shorter, String longer) {
+        if (shorter.isEmpty()) return false;
+        String pattern = "\\b" + Pattern.quote(shorter) + "\\b";
+        return Pattern.compile(pattern).matcher(longer).find();
     }
 
     private List<String> parseRequiredSkills(String rawSkills) {

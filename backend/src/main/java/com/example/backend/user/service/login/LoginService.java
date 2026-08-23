@@ -1,6 +1,6 @@
 package com.example.backend.user.service.login;
 
-import com.example.backend.handle.JwtTokenProvider;
+import com.example.backend.handle.jwt.JwtTokenProvider;
 import com.example.backend.handle.repository.RefreshTokenRepository;
 import com.example.backend.user.dto.request.LoginRequestDto;
 import com.example.backend.user.dto.response.AuthenticationResponseDto;

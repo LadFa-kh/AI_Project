@@ -14,5 +14,6 @@ public class AssessmentScoreResponseDto {
     private BigDecimal assessmentScore;  // คะแนนประเมินตนเอง (เช่น 75.00)
     private BigDecimal finalScore;       // คะแนนรวมสรุป (เช่น 78.00)
     private List<String> missingSkills;
-    private String recommendation;
+    private String recommendationSummary;
+    private List<String> recommendationItems;
 }

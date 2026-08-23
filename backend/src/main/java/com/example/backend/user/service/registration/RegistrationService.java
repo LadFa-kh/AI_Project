@@ -1,6 +1,6 @@
 package com.example.backend.user.service.registration;
 
-import com.example.backend.handle.JwtTokenProvider;
+import com.example.backend.handle.jwt.JwtTokenProvider;
 import com.example.backend.handle.repository.RefreshTokenRepository;
 import com.example.backend.user.dto.request.RegisterRequestDto;
 import com.example.backend.user.dto.response.AuthenticationResponseDto;
@@ -8,7 +8,6 @@ import com.example.backend.user.entity.UserEntity;
 import com.example.backend.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
