@@ -7,6 +7,8 @@
 - [ ] Delete unused duplicate home components: `hero-section.tsx`, `how-it-works-section.tsx`
 - [ ] Backend contract request: add per-skill match/gap indicator to `GET /internships/matches` list response (currently only the detail endpoint distinguishes matched vs. gap skills — list cards show all skills as "match" as a placeholder)
 - [ ] Consolidate `lib/match-types.ts` and `lib/internship-match-types.ts` (duplicate/divergent types for the same domain — risk of prop-type mismatches, see AGENTS.md)
+- [ ] Backend contract request: `GET /admin/stats` for `/admin` dashboard (see PROJECT_CONTEXT.md #5) — currently mock data only
+- [ ] Add auth/role guard to `/admin` once backend supports admin roles (no access control yet — anyone can reach the route)
 
 ## In Progress
 - [ ] Visual QA pass on Stardust theme across all 7 pages + shared navbar (spacing/sizing of reconstructed sidebar, score-ring, chip, wide-shell rules was inferred, not pixel-recovered from the original Nocturne file)
@@ -23,7 +25,9 @@
 - [x] Add loading, empty, and error states across MVP flow pages
 - [x] Add shared navbar/sidebar (AppShell) across all pages including Home
 - [x] Switch design system from Nocturne (dark purple) to Stardust (dark orange/flat) — tokens, navbar, all 7 pages, Home page merged into shared shell
+- [x] Home ("/") split back out of the shared sidebar shell — now has its own floating navbar + Nocturne-purple hero (`components/home/home-hero-demo.tsx`), per explicit request. New `--color-home-hero-accent-1/2/3` tokens added in `globals.css`, scoped to this component only. Every other route is unchanged (still Stardust sidebar).
 - [x] Fix `MatchCard` type mismatch and `.chipNeutral`/`.scorePill` missing styles (internship-matches list page)
+- [x] Build `/admin` dashboard (stat cards: resumes uploaded, assessments completed, matches generated, avg match score — mock data)
 
 ## Team Working Notes
 - Frontend changes only in `frontend/`.

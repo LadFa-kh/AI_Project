@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState, type FormEvent } from "react";
+import { login, loginWithGoogle } from "@/lib/auth-service";
+import { ApiError, NetworkError } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+import { useGoogleSignIn } from "@/lib/use-google-signin";
 import styles from "./login.module.css";
 
 type FieldErrors = {
@@ -12,17 +17,19 @@ type FieldErrors = {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateEmail(value: string): string | null {
-  if (!value.trim()) return "Enter your email address.";
-  if (!EMAIL_RE.test(value)) return "Enter a valid email address.";
+  if (!value.trim()) return "กรุณากรอกอีเมลของคุณ";
+  if (!EMAIL_RE.test(value)) return "กรุณากรอกอีเมลให้ถูกต้อง";
   return null;
 }
 
 function validatePassword(value: string): string | null {
-  if (!value) return "Enter your password.";
+  if (!value) return "กรุณากรอกรหัสผ่านของคุณ";
   return null;
 }
 
 export function LoginForm() {
+  const router = useRouter();
+  const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -48,34 +55,56 @@ export function LoginForm() {
 
     setStatus("loading");
     try {
-      // TODO: wire to backend auth API — POST /auth/login { email, password } (see PROJECT_CONTEXT.md)
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => reject(new Error("invalid_credentials")), 800)
-      );
+      const session = await login(email, password);
+      setSession(session);
       setStatus("default");
-    } catch {
+      router.push("/");
+    } catch (err) {
       setStatus("error");
-      setFormError("Incorrect email or password. Please try again.");
+      setFormError(
+        err instanceof ApiError || err instanceof NetworkError
+          ? err.message
+          : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+      );
     }
   }
 
-  function handleGoogleSignIn() {
-    // TODO: wire to backend auth API — POST /auth/google { idToken }
-  }
+  const handleGoogleIdToken = useCallback(
+    async (idToken: string) => {
+      setFormError(null);
+      setStatus("loading");
+      try {
+        const session = await loginWithGoogle(idToken);
+        setSession(session);
+        setStatus("default");
+        router.push("/");
+      } catch (err) {
+        setStatus("error");
+        setFormError(
+          err instanceof ApiError || err instanceof NetworkError
+            ? err.message
+            : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
+        );
+      }
+    },
+    [router, setSession]
+  );
+
+  const { start: handleGoogleSignIn, error: googleError } = useGoogleSignIn(handleGoogleIdToken);
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
-      {formError && (
+      {(formError || googleError) && (
         <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
             <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
           </svg>
-          {formError}
+          {formError || googleError}
         </p>
       )}
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email">อีเมล</label>
         <input
           id="email"
           name="email"
@@ -95,7 +124,7 @@ export function LoginForm() {
       </div>
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">รหัสผ่าน</label>
         <input
           id="password"
           name="password"
@@ -106,7 +135,7 @@ export function LoginForm() {
           disabled={isLoading}
           aria-invalid={!!errors.password}
           aria-describedby={errors.password ? "password-error" : undefined}
-          placeholder="Enter your password"
+          placeholder="กรอกรหัสผ่านของคุณ"
           className={`${styles.input} ${errors.password ? styles.inputInvalid : ""}`}
         />
         {errors.password && (
@@ -115,7 +144,7 @@ export function LoginForm() {
       </div>
 
       <div className={`${styles.helpRow} ${styles.animateIn} ${styles.delay3}`}>
-        <Link href="/forgot-password" className={styles.link}>Forgot password?</Link>
+        <Link href="/forgot-password" className={styles.link}>ลืมรหัสผ่าน?</Link>
       </div>
 
       <button
@@ -124,12 +153,12 @@ export function LoginForm() {
         disabled={isLoading}
       >
         {isLoading && <span className={styles.spinner} aria-hidden="true" />}
-        {isLoading ? "Logging in…" : "Log in"}
+        {isLoading ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
       </button>
 
       <div className={`${styles.divider} ${styles.animateIn} ${styles.delay4}`}>
         <span className={styles.dividerLine} />
-        <span className={styles.dividerText}>or</span>
+        <span className={styles.dividerText}>หรือ</span>
         <span className={styles.dividerLine} />
       </div>
 
@@ -145,7 +174,7 @@ export function LoginForm() {
           <path fill="#FBBC05" d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58v-3.1h-4a12 12 0 0 0 0 10.79l4-3.11Z" />
           <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.62l4 3.1C6.22 6.86 8.87 4.75 12 4.75Z" />
         </svg>
-        Continue with Google
+        เข้าสู่ระบบด้วย Google
       </button>
     </form>
   );

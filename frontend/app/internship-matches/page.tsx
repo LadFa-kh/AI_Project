@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { InternshipMatchesView } from "@/components/matches/internship-matches-view";
+import { InternshipMatchesFlow } from "@/components/matches/internship-matches-flow";
 
 export const metadata: Metadata = {
-  title: "Your internship matches",
+  title: "ตำแหน่งฝึกงานที่แนะนำ",
 };
 
 export default function InternshipMatchesPage() {
-  return <InternshipMatchesView />;
+  return <InternshipMatchesFlow />;
 }

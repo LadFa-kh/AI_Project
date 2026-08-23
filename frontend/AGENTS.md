@@ -5,9 +5,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 ## Design system
-- Current design system is **Stardust** (dark, flat, no gradients): background `#030303`, card/surface `#0a0a0a`, primary/accent `#FC8337`, heading `#FFFFFF`, body `#E5E0FF`.
-- Shared tokens/components live in `components/ui/nocturne.module.css` (filename kept for history — do not rename without updating every import).
-- **Never hardcode Nocturne-era purple hex values** (`#9184d9`, `#a7a1db`, `#161826`, `#353b80`, `#2b2741`, `#262a3a`, `#e9e9ed`, etc.) — those are deprecated. Always reuse existing Stardust classes/tokens from `nocturne.module.css` or the `--color-home-*` CSS variables in `app/globals.css`.
+- The project is undergoing a full visual redesign (started 2026-08) — do not assume the previous "Stardust" palette (`#030303`/`#0a0a0a`/`#FC8337`/etc.) is still current. Check `app/globals.css`'s `@theme inline` block for the live color tokens before styling anything; that block is the source of truth for whatever theme is active.
+- Shared tokens/components live in `components/ui/nocturne.module.css` (filename kept for history from an even older "Nocturne" theme — do not rename without updating every import).
+- **Single source of truth for color, always** — this is the part of the old rule that still matters regardless of which visual theme is active. Never hardcode a raw hex/rgb color value directly in a component or CSS Module. Always reference a token: the `--color-*` CSS variables in `app/globals.css`'s `@theme inline` block (Tailwind utility classes like `bg-home-primary`), or the shared classes in `nocturne.module.css`. When the redesign introduces new colors, add them as new tokens in one of those two places first, then consume the token everywhere — never paste the literal hex into individual files. This is what makes a future palette change a one-file edit instead of a repo-wide hunt.
 - Composite classes are split by design (e.g. `.chip` = shape/layout, `.chipNeutral`/`.chipPositive`/etc. = color only). Always apply both together — a color-only class alone (e.g. `nocturne.chipNeutral` by itself) renders with no border-radius/padding. Check the class definition before assuming it's self-contained.
 
 ## Type contracts — avoid duplicate/mismatched types

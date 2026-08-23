@@ -1,47 +1,143 @@
 "use client";
 
-import { useState } from "react";
+// Full-page structure rebuilt to match the Stepper demo
+// (seam-demo/skill-assessment-stepper.html) — same page chrome pattern as
+// upload-resume-flow.tsx (full-viewport particle canvas, no card wrapper,
+// split-word heading), Nocturne palette, per explicit request to keep the
+// upload → assessment visual system consistent. No intro/landing screen —
+// StepIntroScreen is no longer used here, same as upload-resume.
+//
+// All real business logic (question source, answer state, submit API call,
+// error handling, session hand-off to /evaluation-result) lives in
+// SkillAssessmentCard, untouched by this restructure — this file only owns
+// the page-level chrome: particle canvas background, decorative blobs,
+// split-word heading, and mounting the overall StepIndicator + card content.
+
+import { useEffect, useMemo, useRef } from "react";
+import { StepIndicator } from "@/components/ui/step-indicator";
 import { SkillAssessmentCard } from "./skill-assessment-card";
-import { StepIntroScreen } from "@/components/ui/step-intro-screen";
 import styles from "./skill-assessment.module.css";
 
-/** Client wrapper: toggles between the intro/landing screen and the actual
- *  assessment form. Kept separate from page.tsx so page.tsx can stay a
- *  server component and export metadata. */
+const HEADING = "มาประเมินทักษะของคุณกันเถอะ";
+
+// ===== Particle field background — identical pattern to /upload-resume,
+// /login, and Home's hero (try/catch, full cleanup). =====
+function useParticleCanvas(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
+  useEffect(() => {
+    let raf = 0;
+    let resizeHandler: (() => void) | null = null;
+    try {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) return;
+
+      const COLORS = ["#7c3aed", "#ec4899", "#3b82f6"];
+      type Particle = {
+        x: number; y: number; r: number; speed: number; drift: number;
+        color: string; opacity: number;
+      };
+      let particles: Particle[] = [];
+
+      function resize() {
+        if (!canvas) return;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resizeHandler = resize;
+      window.addEventListener("resize", resize);
+      resize();
+
+      function spawn(): Particle {
+        return {
+          x: Math.random() * canvas!.width,
+          y: canvas!.height + 20,
+          r: 1 + Math.random() * 2.5,
+          speed: 0.3 + Math.random() * 0.6,
+          drift: (Math.random() - 0.5) * 0.4,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          opacity: 0.15 + Math.random() * 0.35,
+        };
+      }
+
+      const COUNT = 46;
+      particles = Array.from({ length: COUNT }, () => {
+        const p = spawn();
+        p.y = Math.random() * canvas.height;
+        return p;
+      });
+
+      function frame() {
+        if (!ctx || !canvas) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach((p) => {
+          p.y -= p.speed;
+          p.x += p.drift;
+          if (p.y < -20) Object.assign(p, spawn());
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.opacity;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = p.color;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        });
+        raf = requestAnimationFrame(frame);
+      }
+      raf = requestAnimationFrame(frame);
+    } catch (e) {
+      console.error("Particle init failed:", e);
+    }
+
+    return () => {
+      if (resizeHandler) window.removeEventListener("resize", resizeHandler);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [canvasRef]);
+}
+
+// ===== Word-by-word split heading — one-shot reveal on mount =====
+function SplitHeading({ text }: { text: string }) {
+  const words = useMemo(() => text.split(" "), [text]);
+  return (
+    <h1 className={styles.splitHeading}>
+      {words.map((w, i) => (
+        <span
+          key={i}
+          className={styles.splitWord}
+          style={{ animationDelay: `${i * 0.07}s` }}
+        >
+          {w}
+          {i < words.length - 1 ? " " : ""}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
 export function SkillAssessmentFlow() {
-  const [started, setStarted] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useParticleCanvas(canvasRef);
 
   return (
     <div className={styles.page}>
+      <canvas ref={canvasRef} className={styles.particleCanvas} aria-hidden="true" />
       <div className={styles.ambient} aria-hidden="true">
         <div className={`${styles.blob} ${styles.blobOne}`} />
         <div className={`${styles.blob} ${styles.blobTwo}`} />
       </div>
 
-      <div className={styles.cardWrap}>
-        <div className={styles.halo} aria-hidden="true" />
-        {started ? (
-          <SkillAssessmentCard />
-        ) : (
-          <StepIntroScreen
-            styles={styles}
-            icon={
-              <svg width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                <path d="M226.76,69.66l-48-32a8,8,0,0,0-8.72,0L128,63.87,85.96,37.66a8,8,0,0,0-8.72,0l-48,32A8,8,0,0,0,26,76.14l6,3.75V176a8,8,0,0,0,3.58,6.66l88,58.67a8,8,0,0,0,8.84,0l88-58.67A8,8,0,0,0,224,176V79.89l6-3.75a8,8,0,0,0-3.24-14.48ZM128,79.6,159.71,88,128,108.13,96.29,88ZM120,224.4,48,176.7V89.51l72,45ZM128,120.13,196,76.66l17.16,11.4L128,142.13,42.84,88.06,60,76.66Zm8,104.27V134.51l72-45v87.19Z" />
-              </svg>
-            }
-            heading="Rate your skills"
-            subheading="A few quick questions based on the skills we found in your resume — be honest, this helps us match you better."
-            points={[
-              "Answer for each skill we detected from your resume",
-              "Pick the level that honestly reflects your ability",
-              "Takes about 2 minutes — you can review before submitting",
-            ]}
-            ctaLabel="Start assessment"
-            onStart={() => setStarted(true)}
-          />
-        )}
-      </div>
+      <main className={styles.main}>
+        <div className={`${styles.eyebrow} ${styles.animateIn}`}>AI_PROJECT — SKILL ASSESSMENT</div>
+        <SplitHeading text={HEADING} />
+
+        <div className={`${styles.stepRow} ${styles.animateIn} ${styles.delay3}`}>
+          <StepIndicator currentStep={2} totalSteps={3} label="แบบประเมินทักษะ" />
+        </div>
+
+        <SkillAssessmentCard />
+      </main>
     </div>
   );
 }

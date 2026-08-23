@@ -1,96 +1,126 @@
-version: '3.8'
+# Local/self-hosted deploy for the full stack: Postgres, the Spring Boot
+# backend, the FastAPI resume-processing service (main.py), the Next.js
+# frontend, and a Caddy reverse proxy that exposes the frontend publicly at
+# app.recommendation.site with automatic HTTPS. All secrets/config are
+# pulled from a .env file at this same directory (see .env.example for the
+# required keys) — docker compose loads it automatically, nothing here
+# should ever hold a real credential.
+#
+# Domain note: this compose file only hosts the FRONTEND at
+# app.recommendation.site. The backend is assumed to already be deployed
+# and reachable at recommendation.site (per NEXT_PUBLIC_API_BASE_URL below)
+# — the backend/postgres/resume-service services here are for running the
+# full stack locally end-to-end, not necessarily how production is
+# actually split across machines. If backend/postgres end up NOT running
+# via this same compose file in production, just don't start those
+# services there — `docker compose up caddy frontend` is enough to serve
+# the frontend alone.
 
 services:
-  # 1. PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
-    container_name: resume_postgres
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: resumeAnalysisRecommendation
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Ratchapon6878
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - app-network
-    restart: always
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Exposed to the host only for local debugging (psql/DBeaver) — remove
+      # this mapping in production so Postgres is reachable only from other
+      # containers on the compose network.
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # 2. Python FastAPI Service
-  fastapi-ai:
+  resume-service:
     build:
       context: .
-      dockerfile: Dockerfile.python
-    container_name: resume_fastapi
+      dockerfile: main-py.Dockerfile
+    restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql://postgres:Ratchapon6878@postgres:5432/resumeAnalysisRecommendation
+      COMET_API_KEY: ${COMET_API_KEY}
     ports:
       - "8000:8000"
-    networks:
-      - app-network
-    depends_on:
-      - postgres
-    restart: always
 
-  # 3. Spring Boot Backend Service (เปลี่ยนชื่อ Service เป็น recommendation-app ตามที่ Cloudflare เรียก)
-  recommendation-app:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: recommendation_resume_system
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      resume-service:
+        condition: service_started
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/resumeAnalysisRecommendation
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=Ratchapon6878
-      - FASTAPI_BASE_URL=http://fastapi-ai:8000
-      - SERVER_FORWARD_HEADERS_STRATEGY=framework
-      - APP_COOKIE_SECURE=true
-      - APP_COOKIE_SAME_SITE=None
-      - GOOGLE_OAUTH_CLIENT_ID=312138387948-umkkpedimhs642hce0o53gi52jmgdef5.apps.googleusercontent.com
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Backend calls this FastAPI service by its compose service name, not
+      # localhost — "resume-service" resolves via Docker's internal DNS.
+      # NOTE: verify this matches the actual @Value/property name the
+      # backend code reads for the FastAPI base URL (could not confirm the
+      # exact property name from ResumeService.java in this session) —
+      # check application.properties or a WebClient bean for the real key
+      # and rename this if it differs.
+      NLP_SERVICE_URL: http://resume-service:8000
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
-    networks:
-      - app-network
-    depends_on:
-      - postgres
-      - fastapi-ai
-    restart: always
 
-  # 4. Cloudflare Tunnel
-  cloudflare-tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: resume_cloudflared
-    restart: always
-    command: tunnel run
-    environment:
-      - TUNNEL_TOKEN=eyJhIjoiMGIzMjVjOTQyNzE3ODQ0MTIyMzk1YTEyOWIyYTA5NWIiLCJ0IjoiNDBlYzFlYzUtN2ZjNS00ZjRlLWFhMjUtZjQ1ZDIwNWVhMjlkIiwicyI6IllqRTVNV1UwTlRJdFlqRXlNaTAwTXpjNExUZ3dOamd0WkdFM1lqRTJZelE0TXpReSJ9
-    networks:
-      - app-network
+  frontend:
+    build:
+      context: ./frontend
+      # frontend.Dockerfile lives INSIDE frontend/, not one level above it —
+      # this path is relative to `context:` above (per Compose spec), so it
+      # must be "frontend.Dockerfile", not "../frontend.Dockerfile" (that
+      # would resolve to a repo-root file that doesn't exist and fail the
+      # build with "no such file or directory").
+      dockerfile: frontend.Dockerfile
+      args:
+        # Baked into the JS bundle at build time (browser-side env var) —
+        # must point at wherever the backend is actually reachable from the
+        # end user's browser (recommendation.site), NOT the "backend"
+        # compose hostname (that only resolves inside the Docker network).
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        # Google Identity Services Client ID for "Sign in with Google" (see
+        # frontend/lib/use-google-signin.ts). Also baked in at build time.
+        # Must have this deploy's origin (https://app.recommendation.site)
+        # listed under "Authorized JavaScript origins" in the Google Cloud
+        # Console credential, or the Google sign-in popup will fail.
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+    restart: unless-stopped
     depends_on:
-      - recommendation-app
+      - backend
+    # No `ports:` mapping here on purpose — the frontend is reached only
+    # through Caddy below (compose-internal network), so port 3000 is never
+    # exposed to the host/internet directly. Change this back to
+    # `ports: ["3000:3000"]` temporarily if you need to hit it directly
+    # while debugging.
+    expose:
+      - "3000"
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: resume_pgadmin
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=ladfa.kg@rmuti.ac.th
-      - PGADMIN_DEFAULT_PASSWORD=AdminLadfaKh
-      - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
     ports:
-      - "5050:80"
+      # 80 required for the Let's Encrypt ACME HTTP-01 challenge; Caddy
+      # auto-redirects plain HTTP traffic to HTTPS afterwards.
+      - "80:80"
+      - "443:443"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - app-network
-    depends_on:
-      - postgres
-    restart: always
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
-  pgdata:
-  pgadmin_data:
-
-networks:
-  app-network:
-    driver: bridge
+  postgres_data:
+  caddy_data:
+  caddy_config:

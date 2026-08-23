@@ -1,0 +1,122 @@
+/* Signed-in user card + dropdown in the sidebar/mobile-drawer footer.
+   Signed-out state reuses nocturne.module.css's existing sidebarAuthBtn/
+   sidebarAuthBtnPrimary/sidebarGoogleBtn tokens directly (see auth-status.tsx). */
+
+.userCard {
+  position: relative;
+}
+
+.userCardTrigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.userCardTrigger:hover {
+  background: color-mix(in srgb, #E5E0FF 6%, transparent);
+  border-color: color-mix(in srgb, #E5E0FF 14%, transparent);
+}
+
+.userCardTrigger:focus-visible {
+  outline: 2px solid #FC8337;
+  outline-offset: 2px;
+}
+
+.avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #FC8337 22%, transparent);
+  color: #FC8337;
+  font-family: "Poppins", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.userCardText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.userName {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userRole {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 11.5px;
+  color: color-mix(in srgb, #E5E0FF 62%, transparent);
+}
+
+.userCardChevron {
+  flex: none;
+  display: inline-flex;
+  color: color-mix(in srgb, #E5E0FF 55%, transparent);
+}
+
+.userMenu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: #0a0a0a;
+  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+
+.userMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #E5E0FF;
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.userMenuItem:hover {
+  background: color-mix(in srgb, #E5E0FF 8%, transparent);
+  color: #FFFFFF;
+}
+
+.userMenuItemDanger {
+  color: #f0a256;
+}
+
+.userMenuItemDanger:hover {
+  background: color-mix(in srgb, #FC8337 14%, transparent);
+  color: #FC8337;
+}

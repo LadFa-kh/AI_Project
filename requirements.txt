@@ -1,8 +1,6 @@
 fastapi
-uvicorn
-google-genai
-pdfplumber
+uvicorn[standard]
 python-multipart
-requests
+pdfplumber
 pydantic
-pythainlp
+google-genai

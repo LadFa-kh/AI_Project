@@ -1,0 +1,43 @@
+# Caddy reverse-proxy config for the frontend, exposed publicly at
+# app.recommendation.site. Caddy automatically obtains and renews a
+# Let's Encrypt TLS certificate for this domain the first time it starts —
+# no manual cert setup needed, as long as:
+#   1. DNS: an A (or CNAME) record for app.recommendation.site points at
+#      this server's public IP (set up outside of this repo — ask
+#      whoever manages the recommendation.site DNS zone).
+#   2. Ports 80 and 443 on this server are reachable from the internet
+#      (80 is needed for the ACME HTTP-01 challenge Caddy uses to prove
+#      domain ownership to Let's Encrypt; it auto-redirects to 443 after).
+#
+# Why this still matters for auth (updated after backend switched the
+# accessToken cookie to `SameSite=None; Secure` — confirmed working
+# cross-site from localhost:3000 as of the latest test): SameSite=None lets
+# ANY origin send the cookie today, so this subdomain deploy is no longer
+# required to make login/upload work. It's still worth doing because:
+#   1. Chrome is progressively phasing out third-party (cross-site) cookies
+#      even when SameSite=None — a same-site deploy (app.recommendation.site,
+#      same eTLD+1 as recommendation.site) is immune to that phase-out and
+#      lets the cookie eventually move back to the stricter `SameSite=Lax`.
+#   2. A stable public HTTPS URL for the frontend, separate from whoever's
+#      laptop happens to be running `npm run dev`.
+# This only works over HTTPS on both sides (the cookie is also `Secure`),
+# which is exactly what this Caddyfile provides.
+
+app.recommendation.site {
+	reverse_proxy frontend:3000
+
+	encode gzip
+
+	header {
+		# Baseline hardening — safe defaults, adjust if the app needs to be
+		# framed/embedded somewhere or loads cross-origin resources Caddy
+		# should know about.
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	log {
+		output file /var/log/caddy/app.recommendation.site.log
+	}
+}

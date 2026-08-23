@@ -1,28 +1,30 @@
-/* Stardust premium treatment — scoped to /skill-assessment only.
-   Mirrors the /login, /register, /internship-matches visual system (glassmorphism
-   card, ambient glow behind content, focus states, staggered entrance). This page
-   renders inside AppShell's sidebar layout (like /evaluation-result and
-   /internship-matches), so there's no back-to-home link or full-page ambient shell
-   — ambient motion stays behind the card only. Does NOT touch the shared
-   nocturne.module.css, so other pages are unaffected.
-
-   Also fixes a latent bug: the previous version of this file referenced
-   nocturne.progressBar / nocturne.progressFill, which don't exist in
-   nocturne.module.css — those classes are now defined locally below. */
+/* Full-page structure rebuilt to match the Stepper demo
+   (seam-demo/skill-assessment-stepper.html) — same page-chrome classes as
+   resume-upload.module.css (particle canvas, blobs, split heading), kept as
+   a separate module rather than importing that file directly so this page
+   can evolve independently; shared full-page STATE blocks (loading,
+   success, empty, submit button, spinner) are imported directly from
+   resume-upload.module.css in skill-assessment-card.tsx instead of being
+   duplicated here — see that file's `fieldStyles` import. This file only
+   defines: page chrome + the stepper itself (indicators, connectors,
+   step content, per-question option grid, footer nav). */
 
 .page {
   position: relative;
   min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(24px, 6vw, 48px) 16.8px;
-  overflow: hidden;
+  overflow-x: hidden;
+  background: #000000;
 }
 
-/* Ambient drifting glow blobs behind the card — decorative, low opacity */
+.particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .ambient {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -32,147 +34,180 @@
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.13;
+  filter: blur(100px);
+  opacity: 0.24;
   will-change: transform;
 }
 
 .blobOne {
-  width: 480px;
-  height: 480px;
-  top: -160px;
-  left: -120px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
+  width: 460px;
+  height: 460px;
+  top: -140px;
+  right: -140px;
+  background: #3b82f6;
   animation: drift-one 27s ease-in-out infinite;
 }
 
 .blobTwo {
   width: 420px;
   height: 420px;
-  bottom: -150px;
-  right: -110px;
-  background: radial-gradient(circle, #FC8337 0%, transparent 70%);
-  opacity: 0.09;
+  bottom: -160px;
+  left: -140px;
+  background: #ec4899;
+  opacity: 0.2;
   animation: drift-two 33s ease-in-out infinite;
 }
 
 @keyframes drift-one {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(36px, 28px) scale(1.07); }
+  50% { transform: translate(-32px, 26px) scale(1.06); }
 }
 
 @keyframes drift-two {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-28px, -22px) scale(1.04); }
+  50% { transform: translate(28px, -22px) scale(1.04); }
 }
 
-.cardWrap {
+.main {
   position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 600px;
-}
-
-.halo {
-  position: absolute;
-  inset: -40px;
-  z-index: 0;
-  background: radial-gradient(closest-side, rgba(252, 131, 55, 0.2), transparent 72%);
-  filter: blur(20px);
-  pointer-events: none;
-}
-
-.card {
-  position: relative;
-  z-index: 1;
-  width: 100%;
+  z-index: 2;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 5rem) clamp(1.25rem, 4vw, 2.5rem) 6rem;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: clamp(28px, 4vw, 44px) clamp(24px, 4vw, 36px);
-  border-radius: 20px;
-  background: color-mix(in srgb, #0a0a0a 78%, transparent);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid color-mix(in srgb, #E5E0FF 12%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(252, 131, 55, 0.08),
-    0 32px 80px rgba(0, 0, 0, 0.6),
-    0 0 60px -16px rgba(252, 131, 55, 0.3);
-}
-
-.headingBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
   text-align: center;
 }
 
-.heading {
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+/* Kept on one line per request (nowrap); font-size clamp's lower bound
+   tuned down slightly so it still fits narrow viewports without
+   overflowing horizontally. */
+.splitHeading {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
-  font-weight: 600;
-  font-size: clamp(24px, 3.4vw, 28px);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  color: #FFFFFF;
+  font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(1.3rem, 1rem + 1.6vw, 2.5rem);
+  font-weight: 800;
+  white-space: nowrap;
+  color: #ffffff;
 }
 
-.subheading {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.55;
-  color: color-mix(in srgb, #E5E0FF 68%, transparent);
+.splitWord {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(6px);
+  animation: word-in 0.6s cubic-bezier(0.2, 0.65, 0.3, 1) forwards;
 }
 
-.form {
+@keyframes word-in {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.stepRow {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ===== Stepper card shell ===== */
+.stepperCard {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin-top: 2.5rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+  text-align: left;
+}
+
+.stepIndicators {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  align-items: center;
+  padding: 1.75rem 2rem 1.5rem;
 }
 
-/* Intro/landing screen (shown before the actual form) */
-.introIconWrap {
-  align-self: center;
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: color-mix(in srgb, #FC8337 14%, transparent);
-  box-shadow: 0 0 0 1px rgba(252, 131, 55, 0.3), 0 0 32px -8px rgba(252, 131, 55, 0.45);
-  color: #FC8337;
-}
-
-.introList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.introListItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: color-mix(in srgb, #E5E0FF 82%, transparent);
-}
-
-.introListItem svg {
+.stepCircleWrap {
+  position: relative;
   flex: none;
-  margin-top: 3px;
-  color: #FC8337;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.stepCircleWrap.stepCircleLocked,
+.stepCircleLocked {
+  cursor: not-allowed;
+}
+.stepCircleWrap:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.stepCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #222;
+  color: #a3a3a3;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stepCircleActive .stepCircle {
+  background: #7c3aed;
+  transform: scale(1.1);
+}
+
+.stepCircleDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #120f17;
+  display: block;
+}
+
+.stepCircleComplete .stepCircle {
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  color: white;
+}
+
+.stepConnector {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin: 0 0.5rem;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.stepConnectorFill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #7c3aed, #ec4899);
+  transition: width 0.4s ease;
 }
 
 .formError {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 0;
+  margin: 0 2rem 1rem;
   padding: 10px 13px;
   border-radius: 10px;
   font-size: 13px;
@@ -181,199 +216,224 @@
   border: 1px solid oklch(42% 0.11 25);
   color: oklch(85% 0.09 25);
 }
-
 .formError svg { flex: none; margin-top: 1px; }
 
-.skillList {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.skillRow {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 18px 20px;
-  border-radius: 14px;
-  background: color-mix(in srgb, #0a0a0a 60%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 14%, transparent);
-  transition: border-color 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out;
-}
-
-.skillRow:hover {
-  border-color: color-mix(in srgb, #E5E0FF 30%, transparent);
-  background: color-mix(in srgb, #0a0a0a 72%, transparent);
-}
-
-.skillRowRated {
-  border-color: color-mix(in srgb, #FC8337 45%, transparent);
-}
-.skillRowRated:hover {
-  border-color: color-mix(in srgb, #FC8337 60%, transparent);
-}
-
-.skillName {
-  margin: 0;
-  font-size: 14.5px;
-  font-weight: 600;
-  color: #E5E0FF;
-}
-
-/* Segmented control (radiogroup) */
-.levelGroup {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-@media (min-width: 480px) {
-  .levelGroup {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.levelOption {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 8px 6px;
-  font-size: 12.5px;
-  font-weight: 500;
-  text-align: center;
-  color: color-mix(in srgb, #E5E0FF 75%, transparent);
-  background: color-mix(in srgb, #0a0a0a 85%, transparent);
-  border: 1px solid color-mix(in srgb, #E5E0FF 16%, transparent);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: border-color 0.18s ease-out, background 0.18s ease-out, color 0.18s ease-out,
-    transform 0.18s ease-out, box-shadow 0.18s ease-out;
-}
-
-.levelOption:hover { border-color: color-mix(in srgb, #E5E0FF 40%, transparent); transform: translateY(-1px); }
-.levelOption:focus-visible { outline: 2px solid #FC8337; outline-offset: 2px; }
-
-.levelOptionSelected {
-  color: #030303;
-  background: #FC8337;
-  border-color: #FC8337;
-  transform: scale(1.04);
-  box-shadow: 0 8px 20px -6px rgba(252, 131, 55, 0.55);
-}
-.levelOptionSelected:hover { border-color: #FC8337; transform: scale(1.04); }
-
-/* Progress summary — local replacements for the previously-missing
-   nocturne.progressBar / nocturne.progressFill */
-.progressRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: color-mix(in srgb, #E5E0FF 68%, transparent);
-}
-
-.progressBar {
-  height: 6px;
-  width: 100%;
-  border-radius: 999px;
+/* ===== Step content — height-animated wrapper (see useLayoutEffect in
+   skill-assessment-card.tsx), slide transition on step change ===== */
+.stepContentWrap {
+  position: relative;
   overflow: hidden;
-  background: color-mix(in srgb, #E5E0FF 14%, transparent);
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.progressFill {
-  height: 100%;
-  border-radius: 999px;
-  background: #FC8337;
-  transition: width 0.25s ease-out;
+.stepContent {
+  padding: 0 2rem 2rem;
+  animation: settle 0.4s ease forwards;
 }
 
-.submitBtn {
+.enterNext {
+  transform: translateX(2.5%);
+  opacity: 0;
+}
+.enterPrev {
+  transform: translateX(-2.5%);
+  opacity: 0;
+}
+
+@keyframes settle {
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.questionNumber {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  margin-top: 4px;
-  font-family: "Inter", system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 15px;
-  color: #030303;
-  background: #FC8337;
-  border: 1px solid #FC8337;
-  border-radius: 10px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: filter 0.18s ease-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  margin-bottom: 1rem;
 }
-.submitBtn:hover:not(:disabled) {
-  filter: brightness(1.08);
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 12px 28px -10px rgba(252, 131, 55, 0.55);
-}
-.submitBtn:active:not(:disabled) { filter: brightness(0.96); transform: translateY(0) scale(1); }
-.submitBtn:focus-visible { outline: 2px solid #ffb88a; outline-offset: 2px; }
-.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.spinner {
-  width: 16px;
-  height: 16px;
+.questionDotTag {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  border: 2px solid rgba(3, 3, 3, 0.35);
-  border-top-color: #030303;
-  animation: spin 0.7s linear infinite;
+  background: #ec4899;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Full-card loading state (shown while submitting the assessment) */
-.loadingBlock {
+.questionText {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+.questionHint {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+}
+
+/* Option grid — flexible column count since real options are dynamic-length
+   text (e.g. "1. พอใช้"), not a fixed 5-slot numeric slider like the demo.
+   minmax lowered from 120px so 4 short options (the common case) fit on one
+   row instead of wrapping 3+1; longer/more options still wrap gracefully. */
+.levelSelector {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 0.5rem;
+}
+
+.levelBtn {
+  padding: 0.85rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+  border-radius: 12px;
+  text-align: center;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.levelBtn:hover {
+  border-color: color-mix(in srgb, #7c3aed 55%, transparent);
+  background: rgba(124, 58, 237, 0.08);
+}
+.levelBtn:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+.levelBtnActive {
+  color: #ffffff;
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px rgba(124, 58, 237, 0.6);
+}
+.levelBtnActive:hover {
+  border-color: transparent;
+}
+
+.footerRow {
+  margin-top: 2rem;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  padding: 24px 0;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.footerRowOnlyNext {
+  justify-content: flex-end;
+}
+
+.navBtnPrev,
+.navBtnNext {
+  padding: 0.85rem 1.6rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.navBtnPrev {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f5f3ff;
+}
+.navBtnPrev:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.navBtnPrev:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.navBtnNext {
+  background: linear-gradient(120deg, #7c3aed, #ec4899);
+  color: #ffffff;
+  margin-left: auto;
+}
+.navBtnNext:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -12px rgba(124, 58, 237, 0.55);
+}
+.navBtnNext:focus-visible {
+  outline: 2px solid #f9a8d4;
+  outline-offset: 2px;
+}
+.navBtnNext:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ===== Review step — shown after the last question is answered, before
+   the actual submit call ===== */
+.reviewBlock {
+  padding: 1rem 0 0;
   text-align: center;
 }
 
-.loadingSpinner {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 3px solid rgba(229, 224, 255, 0.2);
-  border-top-color: #FC8337;
-  animation: spin 0.7s linear infinite;
+.completeIcon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1.25rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #ffffff;
 }
 
-/* Entrance animation — staggered fade + slide up, top to bottom */
+.completeTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.completeSub {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+}
+
 .animateIn {
   opacity: 0;
   transform: translateY(14px);
-  animation: fade-slide-up 0.5s ease-out forwards;
+  animation: fade-slide-up 0.6s ease-out forwards;
 }
 
 @keyframes fade-slide-up {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  to { opacity: 1; transform: translateY(0); }
 }
+
+.delay1 { animation-delay: 0.15s; }
+.delay3 { animation-delay: 0.45s; }
 
 @media (prefers-reduced-motion: reduce) {
   .blobOne, .blobTwo {
     animation: none;
   }
-  .animateIn {
+  .animateIn, .stepContent {
     opacity: 1;
     transform: none;
     animation: none;
   }
-  .skillRow, .levelOption, .submitBtn {
+  .splitWord {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    animation: none;
+  }
+  .navBtnPrev, .navBtnNext, .levelBtn {
     transition: none;
   }
-  .levelOptionSelected {
+  .navBtnNext:hover:not(:disabled), .levelBtnActive {
     transform: none;
   }
 }

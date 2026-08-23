@@ -11,6 +11,9 @@ Build a frontend experience for students to:
 - This document governs frontend collaboration under `frontend/` only.
 - Backend implementation is out of scope; backend needs must be documented as contracts/checklists.
 
+## Frontend Scope Note
+- `/admin` is an internal dashboard added to the frontend scope (mock data only — no backend endpoint exists yet; see contract #5 below). No access control is implemented yet; this is a known gap, not an oversight — add an auth/role guard once backend supports admin roles.
+
 ## User Flow
 1. User signs in (email/password or Google).
 2. User uploads resume file (`.pdf`, `.doc`, `.docx`).
@@ -55,6 +58,13 @@ Build a frontend experience for students to:
 - **Requested addition (not yet implemented by backend):** the list endpoint's `requiredSkills` is currently a flat `string[]` with no way to tell which skills the student already matches vs. gaps in — the detail page/endpoint has this distinction but the list does not. Frontend list cards (`MatchCard`) currently render every skill chip as "matched" as a placeholder. Requested shape:
   - `requiredSkills: [{ skillName: string, isMatch: boolean }]` (replacing the plain `string[]`)
   - Until this ships, frontend will keep treating all list-view skill chips as matched.
+
+### 5) Admin Dashboard (Requested — not yet implemented by backend)
+- Request example:
+  - `GET /admin/stats`
+- Response shape (requested):
+  - `{ totalResumesUploaded, totalAssessmentsCompleted, totalMatchesGenerated, averageMatchScore }`
+- Until this ships, `/admin` renders `MOCK_ADMIN_STATS` from `lib/admin-types.ts`.
 
 ## Token-Saving Prompting Constraints
 - Always read `frontend/PROJECT_CONTEXT.md`, `frontend/TASK_BOARD.md`, and `frontend/AGENTS.md` first.

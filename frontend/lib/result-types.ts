@@ -1,3 +1,5 @@
+// Score-level helpers used by ScoreBadge — thresholds apply to any of the
+// three 0-100 scores the backend returns (resumeScore/assessmentScore/finalScore).
 export type ScoreLevel = "developing" | "good" | "excellent";
 
 export function getScoreLevel(score: number): ScoreLevel {
@@ -7,9 +9,9 @@ export function getScoreLevel(score: number): ScoreLevel {
 }
 
 export const SCORE_LEVEL_LABEL: Record<ScoreLevel, string> = {
-  developing: "Developing",
-  good: "Good",
-  excellent: "Excellent",
+  developing: "กำลังพัฒนา",
+  good: "ดี",
+  excellent: "ยอดเยี่ยม",
 };
 
 // Maps to a CSS custom property consumed by .scoreRing / .scoreBadge in nocturne.module.css
@@ -19,29 +21,7 @@ export const SCORE_LEVEL_COLOR: Record<ScoreLevel, string> = {
   excellent: "#7fd88f",
 };
 
-export type EvaluationResult = {
-  assessmentId: string;
-  overallScore: number;
-  strengths: string[];
-  gaps: string[];
-  recommendations: string[];
-};
-
-// Mock data until backend evaluation is wired
-// GET response per PROJECT_CONTEXT.md: { assessmentId, overallScore, recommendations, strengths, gaps }
-export const MOCK_EVALUATION_RESULT: EvaluationResult = {
-  assessmentId: "mock-assessment-1",
-  overallScore: 78,
-  strengths: [
-    "Strong grasp of JavaScript fundamentals",
-    "Clear, collaborative communication style",
-  ],
-  gaps: [
-    "Limited hands-on experience with advanced SQL",
-    "Hasn't yet used React in a production-scale project",
-  ],
-  recommendations: [
-    "Build a small React project to strengthen your portfolio",
-    "Review SQL query fundamentals and basic database design",
-  ],
-};
+// Matches POST /assessments/submit's response exactly (see README §5) —
+// this is also what AssessmentSubmitResult in assessment-service.ts is,
+// re-exported here under the page-facing name evaluation-result uses.
+export type { AssessmentSubmitResult as EvaluationResult } from "./assessment-service";

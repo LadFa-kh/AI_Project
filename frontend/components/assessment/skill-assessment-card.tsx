@@ -1,156 +1,348 @@
 "use client";
 
+// Stepper UX — ported from the React Bits "Stepper" component demo
+// (seam-demo/skill-assessment-stepper.html): one question per step, circle
+// indicators + fill-connectors above, slide transition between steps,
+// Back/Next footer, click-to-jump on already-answered steps. Unlike the
+// demo (which hardcoded 5 questions with a fixed 1-5 numeric scale), real
+// questions come from the backend as a dynamic-length list of
+// { id, question, options[] } — option count/labels are whatever the
+// backend sends (e.g. "1. พอใช้"), so the per-step option grid renders
+// `options` directly instead of a fixed 5-slot slider.
+//
+// Business logic (question source, answer state, submit API call, error
+// handling, session hand-off to /evaluation-result) is 100% unchanged from
+// the previous single-page-of-questions layout — only the step-by-step
+// presentation is new.
+//
+// desiredRoleName: per explicit confirmation, this page does NOT re-ask for
+// it — it's read once from the upload-resume session hand-off (optional
+// there) and submitted as-is, even if empty. The backend team confirmed an
+// empty desiredRoleName is acceptable; if that changes, describeSubmitError
+// below already surfaces the backend's own message for it.
+
 import Link from "next/link";
-import { useState } from "react";
-import { StepIndicator } from "@/components/ui/step-indicator";
-import { SkillLevelGroup } from "./skill-level-group";
-import { MOCK_SKILLS, type SkillAnswers, type SkillLevel } from "@/lib/assessment-types";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { readResumeUploadResult } from "@/lib/resume-session";
+import { submitAssessment } from "@/lib/assessment-service";
+import { writeAssessmentResult } from "@/lib/assessment-session";
+import { useAuth } from "@/lib/auth-context";
+import { ApiError } from "@/lib/api-client";
+import type { AssessmentAnswers, AssessmentQuestion } from "@/lib/assessment-types";
 import styles from "./skill-assessment.module.css";
+import fieldStyles from "@/components/resume/resume-upload.module.css";
+
+function describeSubmitError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.message.includes("ทำแบบประเมินไปแล้ว")) {
+      return "เรซูเม่นี้ทำแบบประเมินไปแล้ว ไม่สามารถส่งซ้ำได้";
+    }
+    if (err.message.includes("ตำแหน่งงานที่ต้องการ")) {
+      return "กรุณาระบุตำแหน่งงานที่ต้องการก่อนส่งแบบประเมิน";
+    }
+    return err.message;
+  }
+  return err instanceof Error ? err.message : "ส่งแบบประเมินไม่สำเร็จ กรุณาลองใหม่";
+}
 
 type Status = "default" | "loading" | "error" | "success";
+type Direction = "next" | "prev";
 
 export function SkillAssessmentCard() {
-  const skills = MOCK_SKILLS;
-  const [answers, setAnswers] = useState<SkillAnswers>({});
+  const { user } = useAuth();
+  const [questions, setQuestions] = useState<AssessmentQuestion[] | null>(null);
+  const [answers, setAnswers] = useState<AssessmentAnswers>({});
+  const [resumeId, setResumeId] = useState<string | null>(null);
+  const [desiredRoleName, setDesiredRoleName] = useState("");
   const [status, setStatus] = useState<Status>("default");
   const [formError, setFormError] = useState<string | null>(null);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState<Direction>("next");
 
+  const contentWrapRef = useRef<HTMLDivElement>(null);
+  const contentInnerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = readResumeUploadResult();
+    setQuestions(stored?.questions ?? []);
+    setResumeId(stored?.resumeId ?? null);
+    setDesiredRoleName(stored?.desiredRoleName ?? "");
+  }, []);
+
+  const total = questions?.length ?? 0;
+  const isReviewStep = questions !== null && total > 0 && stepIndex === total;
+  const currentQuestion = questions && stepIndex < total ? questions[stepIndex] : null;
   const answeredCount = Object.keys(answers).length;
-  const isComplete = answeredCount === skills.length;
+  const isComplete = questions !== null && total > 0 && answeredCount === total;
   const isLoading = status === "loading";
   const isSuccess = status === "success";
-  const canSubmit = isComplete && !isLoading;
+  const canSubmit = isComplete && !isLoading && !!user && !!resumeId;
 
-  function handleSelect(skillName: string, level: SkillLevel) {
-    setAnswers((prev) => ({ ...prev, [skillName]: level }));
+  // Height-animate the step content wrapper to the active step's measured
+  // height, same idea as the real Stepper's StepContentWrapper
+  // (useLayoutEffect + offsetHeight) — steps with different content
+  // lengths animate smoothly instead of jumping.
+  useLayoutEffect(() => {
+    const wrap = contentWrapRef.current;
+    const inner = contentInnerRef.current;
+    if (!wrap || !inner) return;
+    wrap.style.height = `${inner.offsetHeight}px`;
+  }, [stepIndex, isReviewStep, questions]);
+
+  function goToStep(next: number, dir: Direction) {
+    setDirection(dir);
+    setStepIndex(next);
+  }
+
+  function handleSelect(option: string) {
+    if (!currentQuestion) return;
+    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: option }));
     setFormError(null);
+  }
+
+  function handleNext() {
+    if (!currentQuestion || !answers[currentQuestion.id]) return;
+    goToStep(stepIndex + 1, "next");
+  }
+
+  function handleBack() {
+    if (stepIndex === 0) return;
+    goToStep(stepIndex - 1, "prev");
+  }
+
+  function handleJump(target: number) {
+    if (target === stepIndex) return;
+    if (target > stepIndex) return; // no skipping ahead of unanswered steps
+    goToStep(target, "prev");
   }
 
   async function handleSubmit() {
     if (!isComplete) return;
+    if (!user || !resumeId || questions === null) {
+      setFormError("ไม่พบข้อมูลเรซูเม่ กรุณาอัปโหลดเรซูเม่ใหม่อีกครั้ง");
+      return;
+    }
     setStatus("loading");
     setFormError(null);
     try {
-      // TODO: wire to backend — POST /assessments
-      // body: { resumeId, answers: [{ skillName, level }] }
-      // -> { assessmentId, overallScore, recommendations, strengths, gaps } (see PROJECT_CONTEXT.md)
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => reject(new Error("submit_failed")), 1000)
+      const result = await submitAssessment(
+        resumeId,
+        desiredRoleName.trim(),
+        questions,
+        answers
       );
+      writeAssessmentResult(result);
       setStatus("success");
-    } catch {
+    } catch (err) {
       setStatus("error");
-      setFormError("Couldn't submit your assessment. Please try again.");
+      setFormError(describeSubmitError(err));
     }
   }
 
-  if (isLoading) {
+  // ===== Loading (initial) — reading the upload-resume session hand-off =====
+  if (questions === null) {
     return (
-      <div className={styles.card}>
-        <div className={`${styles.animateIn} ${styles.delay1}`}>
-          <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
-        </div>
-        <div className={`${styles.loadingBlock} ${styles.animateIn} ${styles.delay2}`}>
-          <span className={styles.loadingSpinner} aria-hidden="true" />
-          <p className={styles.subheading}>Submitting your assessment…</p>
+      <div className={fieldStyles.stateBlock}>
+        <div className={`${fieldStyles.loadingBlock} ${fieldStyles.animateIn}`}>
+          <span className={fieldStyles.loadingSpinner} aria-hidden="true" />
         </div>
       </div>
     );
   }
 
-  if (isSuccess) {
+  // ===== No questions — resume hasn't been uploaded yet in this session =====
+  if (questions.length === 0) {
     return (
-      <div className={styles.card}>
-        <div className={styles.animateIn}>
-          <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
-        </div>
-        <div className={`${styles.headingBlock} ${styles.animateIn}`} style={{ animationDelay: "60ms" }}>
-          <h1 className={styles.heading}>Assessment submitted</h1>
-          <p className={styles.subheading}>
-            Thanks — we&apos;ve recorded your skill ratings.
+      <div className={fieldStyles.stateBlock}>
+        <div className={`${fieldStyles.headingBlock} ${fieldStyles.animateIn}`}>
+          <h1 className={fieldStyles.heading}>ไม่พบคำถามประเมิน</h1>
+          <p className={fieldStyles.subheading}>
+            กรุณาอัปโหลดเรซูเม่ของคุณก่อน เราจะสร้างคำถามเหล่านี้จากเรซูเม่ของคุณ
           </p>
         </div>
         <Link
-          href="/evaluation-result"
-          className={`${styles.submitBtn} ${styles.animateIn}`}
-          style={{ animationDelay: "120ms" }}
+          href="/upload-resume"
+          className={`${fieldStyles.submitBtn} ${fieldStyles.animateIn} ${fieldStyles.delay1}`}
         >
-          View your results
+          ไปอัปโหลดเรซูเม่
         </Link>
       </div>
     );
   }
 
-  return (
-    <div className={styles.card}>
-      <div className={styles.animateIn}>
-        <StepIndicator currentStep={2} totalSteps={3} label="Skill assessment" />
+  // ===== Submitting =====
+  if (isLoading) {
+    return (
+      <div className={fieldStyles.stateBlock}>
+        <div className={`${fieldStyles.loadingBlock} ${fieldStyles.animateIn}`}>
+          <span className={fieldStyles.loadingSpinner} aria-hidden="true" />
+          <p className={fieldStyles.subheading}>กำลังส่งแบบประเมินของคุณ…</p>
+        </div>
       </div>
+    );
+  }
 
-      <div className={`${styles.headingBlock} ${styles.animateIn}`} style={{ animationDelay: "60ms" }}>
-        <h1 className={styles.heading}>Rate your skills</h1>
-        <p className={styles.subheading}>
-          These skills came from your resume — select the level that honestly reflects your ability.
-        </p>
-      </div>
-
-      <div className={styles.form}>
-        {formError && (
-          <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
-            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-              <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
+  // ===== Submitted successfully =====
+  if (isSuccess) {
+    return (
+      <div className={fieldStyles.stateBlock}>
+        <div className={`${fieldStyles.successBlock} ${fieldStyles.animateIn}`}>
+          <span className={fieldStyles.successIcon} aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z" />
             </svg>
-            {formError}
-          </p>
-        )}
+          </span>
+          <h1 className={fieldStyles.heading}>ส่งแบบประเมินสำเร็จ</h1>
+          <p className={fieldStyles.subheading}>ขอบคุณ เราได้บันทึกระดับทักษะของคุณเรียบร้อยแล้ว</p>
+        </div>
+        <Link
+          href="/evaluation-result"
+          className={`${fieldStyles.submitBtn} ${fieldStyles.animateIn} ${fieldStyles.delay1}`}
+        >
+          ดูผลการประเมินของคุณ
+        </Link>
+      </div>
+    );
+  }
 
-        <div className={styles.skillList}>
-          {skills.map((skill, index) => {
-            const selected = answers[skill.skillName] ?? null;
-            return (
+  // ===== Stepper — one question per step =====
+  return (
+    <div className={`${styles.stepperCard} ${styles.animateIn} ${styles.delay1}`}>
+      <div className={styles.stepIndicators}>
+        {questions.map((q, i) => {
+          const isActive = !isReviewStep && i === stepIndex;
+          const isDone = isReviewStep || i < stepIndex;
+          const isLocked = i > stepIndex;
+          return (
+            <div key={q.id} style={{ display: "contents" }}>
               <div
-                key={skill.skillName}
-                className={`${styles.skillRow} ${selected ? styles.skillRowRated : ""} ${styles.animateIn}`}
-                style={{ animationDelay: `${120 + index * 60}ms` }}
+                role="button"
+                tabIndex={isLocked ? -1 : 0}
+                aria-current={isActive ? "step" : undefined}
+                aria-label={`คำถามที่ ${i + 1}`}
+                className={`${styles.stepCircleWrap} ${isActive ? styles.stepCircleActive : ""} ${
+                  isDone ? styles.stepCircleComplete : ""
+                } ${isLocked ? styles.stepCircleLocked : ""}`}
+                onClick={() => handleJump(i)}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && !isLocked) {
+                    e.preventDefault();
+                    handleJump(i);
+                  }
+                }}
               >
-                <p className={styles.skillName}>{skill.skillName}</p>
-                <SkillLevelGroup
-                  skillName={skill.skillName}
-                  selected={selected}
-                  disabled={isLoading}
-                  onSelect={(level) => handleSelect(skill.skillName, level)}
-                />
+                <span className={styles.stepCircle}>
+                  {isDone ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : isActive ? (
+                    <span className={styles.stepCircleDot} />
+                  ) : (
+                    i + 1
+                  )}
+                </span>
               </div>
-            );
-          })}
-        </div>
+              {i < questions.length - 1 && (
+                <div className={styles.stepConnector}>
+                  <div
+                    className={styles.stepConnectorFill}
+                    style={{ width: (isReviewStep || i < stepIndex) ? "100%" : "0%" }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
+      {formError && (
+        <p className={`${styles.formError} ${fieldStyles.animateIn}`} role="alert">
+          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
+          </svg>
+          {formError}
+        </p>
+      )}
+
+      <div className={styles.stepContentWrap} ref={contentWrapRef}>
         <div
-          className={`${styles.animateIn}`}
-          style={{ animationDelay: `${120 + skills.length * 60 + 60}ms` }}
+          key={isReviewStep ? "review" : stepIndex}
+          ref={contentInnerRef}
+          className={`${styles.stepContent} ${direction === "next" ? styles.enterNext : styles.enterPrev}`}
         >
-          <div className={styles.progressRow}>
-            <span>
-              {answeredCount} of {skills.length} rated
-            </span>
-          </div>
-          <div className={styles.progressBar}>
-            <div
-              className={styles.progressFill}
-              style={{ width: `${(answeredCount / skills.length) * 100}%` }}
-            />
-          </div>
-        </div>
+          {isReviewStep ? (
+            <div className={styles.reviewBlock}>
+              <div className={styles.completeIcon} aria-hidden="true">✓</div>
+              <p className={styles.completeTitle}>ประเมินครบทุกข้อแล้ว</p>
+              <p className={styles.completeSub}>ตรวจสอบคำตอบของคุณอีกครั้ง หรือกดส่งแบบประเมินได้เลย</p>
+              <div className={styles.footerRow} style={{ justifyContent: "center" }}>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className={styles.navBtnPrev}
+                >
+                  ← ย้อนกลับ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className={styles.navBtnNext}
+                >
+                  ส่งแบบประเมิน
+                </button>
+              </div>
+            </div>
+          ) : currentQuestion ? (
+            <>
+              <div className={styles.questionNumber}>
+                <span className={styles.questionDotTag} aria-hidden="true" />
+                <span>คำถามที่ {stepIndex + 1} / {total}</span>
+              </div>
+              <p className={styles.questionText}>{currentQuestion.question}</p>
+              <p className={styles.questionHint}>เลือกตัวเลือกที่ตรงกับความสามารถของคุณ</p>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className={`${styles.submitBtn} ${styles.animateIn}`}
-          style={{ animationDelay: `${120 + skills.length * 60 + 120}ms` }}
-        >
-          Submit assessment
-        </button>
+              <div
+                role="radiogroup"
+                aria-label={`คำตอบสำหรับคำถาม ${currentQuestion.id}`}
+                className={styles.levelSelector}
+              >
+                {currentQuestion.options.map((option) => {
+                  const isSelected = answers[currentQuestion.id] === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => handleSelect(option)}
+                      className={`${styles.levelBtn} ${isSelected ? styles.levelBtnActive : ""}`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className={`${styles.footerRow} ${stepIndex === 0 ? styles.footerRowOnlyNext : ""}`}>
+                {stepIndex !== 0 && (
+                  <button type="button" onClick={handleBack} className={styles.navBtnPrev}>
+                    ← ย้อนกลับ
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!answers[currentQuestion.id]}
+                  className={styles.navBtnNext}
+                >
+                  {stepIndex === total - 1 ? "เสร็จสิ้น" : "ถัดไป →"}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   );
