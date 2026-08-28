@@ -119,7 +119,7 @@ export function AdminDashboardFlow() {
       <main className={styles.main}>
         <div className={`${styles.headerRow} ${styles.animateIn} ${styles.delay1}`}>
           <div>
-            <span className={styles.eyebrow}>AI_PROJECT — ADMIN</span>
+            <span className={styles.eyebrow}>RESUMATE — ADMIN</span>
             <SplitHeading text={HEADING} />
             <p className={styles.pageSubheading}>
               ภาพรวมการอัปโหลดเรซูเม่ การประเมินทักษะ การจับคู่ตำแหน่งฝึกงาน และผู้ใช้งานในระบบ

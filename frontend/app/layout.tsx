@@ -33,8 +33,19 @@ const notoSansThai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "AI_Project — วิเคราะห์เรซูเม่ จับคู่ฝึกงาน",
+  title: "ResuMate — วิเคราะห์เรซูเม่ จับคู่ฝึกงาน",
   description: "แพลตฟอร์มวิเคราะห์เรซูเม่และจับคู่ตำแหน่งฝึกงานด้วย AI สำหรับนักศึกษา",
+  // favicon.ico in this same app/ folder is auto-detected by Next's
+  // file convention. apple-touch-icon.png / icon-192.png / icon-512.png
+  // live in public/ under non-convention names, so they need to be listed
+  // explicitly here or browsers/iOS/Android never pick them up.
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

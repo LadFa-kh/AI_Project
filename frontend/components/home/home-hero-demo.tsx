@@ -294,7 +294,7 @@ export function HomeHeroDemo() {
         />
         <div className="relative z-10 flex flex-col items-center">
           <div className="mb-4 text-xs font-semibold uppercase tracking-[0.15em] text-white/60">
-            AI_PROJECT
+            RESUMATE
           </div>
           <h1 className="min-h-[2.4em] max-w-[820px] whitespace-pre-wrap text-[clamp(2.2rem,1.6rem+3vw,4rem)] font-extrabold leading-[1.15] text-white">
             <span ref={typeTextRef} />

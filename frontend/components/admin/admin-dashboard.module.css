@@ -401,6 +401,10 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
 }
+/* Used by JobFormModal (create/edit job — ~9 fields) so it doesn't feel as
+   cramped/scroll-heavy as the narrower default modalCard. */
+.modalCardWide { max-width: 640px; }
+
 .modalTitle { margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #ffffff; }
 .formField { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .formLabel { font-size: 12.5px; font-weight: 600; color: color-mix(in srgb, #b8b0d9 85%, transparent); }
@@ -414,6 +418,16 @@
   border-radius: 9px;
 }
 .formTextarea { resize: vertical; min-height: 70px; }
+/* The closed <select> inherits the dark theme above fine, but its open
+   option list is a native OS/browser popup — color:#ffffff was cascading
+   into <option> too, so on browsers that render that popup with a white
+   background (white text on white bg) the choices were unreadable.
+   Options can't be fully re-themed cross-browser, so just force readable
+   dark-on-light for them specifically. */
+.formSelect option {
+  color: #0d0a17;
+  background: #ffffff;
+}
 .formInput:focus-visible, .formSelect:focus-visible, .formTextarea:focus-visible { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 1px; }
 .modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .btnGhost {

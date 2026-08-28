@@ -19,6 +19,7 @@
 // it — see globals.css `--top-nav-height` / .pageWithTopNav usage in
 // app-shell.tsx.
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,7 +32,11 @@ export function TopNav() {
   const { user, isAuthenticated, clearSession } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === "ADMIN");
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly) return user?.role === "ADMIN";
+    if (item.employerOnly) return user?.role === "EMPLOYER";
+    return true;
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -68,18 +73,40 @@ export function TopNav() {
         className="pointer-events-auto flex w-full max-w-[1140px] items-center justify-between rounded-2xl border px-5 py-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
         style={{ background: "rgba(13,11,22,0.75)", borderColor: "rgba(255,255,255,0.12)" }}
       >
-        <Link href="/" className="flex items-center gap-2 text-sm font-bold text-white">
+        <Link href="/" className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
+          <Image
+            src="/logo.svg"
+            alt="ResuMate"
+            width={46}
+            height={46}
+            priority
+            className="h-[46px] w-[46px]"
+          />
           <span
-            className="flex h-[26px] w-[26px] items-center justify-center rounded-lg text-sm"
             style={{
-              background:
-                "linear-gradient(135deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2), var(--color-home-hero-accent-3))",
+              backgroundImage:
+                "linear-gradient(90deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2), var(--color-home-hero-accent-3), var(--color-home-hero-accent-1))",
+              backgroundSize: "220% 100%",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+              WebkitTextFillColor: "transparent",
+              animation: "top-nav-brand-shimmer 4s linear infinite",
             }}
           >
-            ✦
+            ResuMate
           </span>
-          AI_Project
         </Link>
+        {/* Scoped keyframe for the wordmark's rightward gradient sweep — same
+            background-position sweep pattern as how-it-works-demo.tsx's
+            shimmer heading, just a different animation name to stay scoped
+            to this component. */}
+        <style>{`
+          @keyframes top-nav-brand-shimmer {
+            0% { background-position: 0% 0; }
+            100% { background-position: -220% 0; }
+          }
+        `}</style>
 
         {isAuthenticated && user ? (
           <div className="flex items-center gap-1 sm:gap-2">

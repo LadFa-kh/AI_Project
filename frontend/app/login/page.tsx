@@ -15,6 +15,7 @@
 // component (needs useState/useSearchParams for the mode toggle); the title
 // set by RootLayout's default stays in effect instead.
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -182,7 +183,7 @@ function LoginRegisterPage() {
           </Link>
         </div>
 
-        <div className={styles.eyebrow}>AI_PROJECT — เข้าสู่ระบบ</div>
+        <div className={styles.eyebrow}>RESUMATE — เข้าสู่ระบบ</div>
         <SplitHeading text={copy.heading} />
         <p className={styles.subheading} style={{ marginTop: 8, textAlign: "center" }}>
           {copy.subheading}
@@ -261,21 +262,7 @@ function FlipStage({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }
           <div className={styles.card}>
             <div className={styles.brand}>
               <div className={`${styles.logoMark} ${styles.animateIn} ${styles.delay1}`}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M12 2 3 6.5V12c0 5.25 3.6 9.9 9 11 5.4-1.1 9-5.75 9-11V6.5L12 2Z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M8.5 12.2 11 14.7l4.7-5.4"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <Image src="/logo.svg" alt="ResuMate" width={84} height={84} priority />
               </div>
             </div>
 
@@ -299,21 +286,7 @@ function FlipStage({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }
           <div className={styles.card}>
             <div className={styles.brand}>
               <div className={`${styles.logoMark} ${styles.animateIn} ${styles.delay1}`}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M12 2 3 6.5V12c0 5.25 3.6 9.9 9 11 5.4-1.1 9-5.75 9-11V6.5L12 2Z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M8.5 12.2 11 14.7l4.7-5.4"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <Image src="/logo.svg" alt="ResuMate" width={84} height={84} priority />
               </div>
             </div>
 

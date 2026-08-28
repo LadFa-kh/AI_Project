@@ -4,6 +4,10 @@
 // RouteGuard (which only checks isAuthenticated) — RouteGuard already keeps
 // unauthenticated users out; this adds the missing role check so a regular
 // STUDENT account can't view admin-only stats by navigating to /admin directly.
+//
+// EMPLOYER has its own separate page instead (/employer/jobs, guarded by
+// EmployerGuard) rather than being let in here — see
+// components/employer/employer-guard.tsx.
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
