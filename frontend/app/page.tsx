@@ -15,7 +15,7 @@ import { HowItWorksDemo } from "@/components/home/how-it-works-demo";
 // the demo's <body>-level .blob elements. See home-blob-layer.tsx for why
 // per-section blobs (an earlier attempt) caused a visible seam.
 export const metadata: Metadata = {
-  title: "AI_Project — วิเคราะห์เรซูเม่ จับคู่ฝึกงาน",
+  title: "ResuMate — วิเคราะห์เรซูเม่ จับคู่ฝึกงาน",
 };
 
 export default function Home() {

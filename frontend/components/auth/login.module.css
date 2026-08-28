@@ -266,14 +266,16 @@
 }
 
 .logoMark {
-  width: 48px;
-  height: 48px;
+  width: 92px;
+  height: 92px;
   flex: none;
   display: grid;
   place-items: center;
   border-radius: 13px;
-  background: linear-gradient(135deg, #7c3aed, #ec4899, #3b82f6);
-  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.4), 0 8px 24px -8px rgba(124, 58, 237, 0.5);
+  /* Back on Logo2 (transparent artwork, no baked-in background), so the
+     frame itself stays transparent to avoid boxing it in with a clashing
+     solid color behind it. */
+  background: transparent;
   color: #ffffff;
 }
 

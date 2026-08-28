@@ -6,6 +6,16 @@ export type NavItemDef = {
   icon: ReactNode;
   /** Only shown to users whose role is "ADMIN" (see AdminGuard). */
   adminOnly?: boolean;
+  /**
+   * Only shown to users whose role is "EMPLOYER". Points at the dedicated
+   * /employer/jobs page (see components/employer/*) — a standalone
+   * job-posting list, separate from /admin's Jobs tab. Note: the admin API
+   * (README_Admin_API.md) has no employer-scoped "my jobs" endpoint yet —
+   * GET /admin/jobs returns every company's postings, and every job
+   * endpoint still requires an ADMIN-role session on the backend, so this
+   * page currently only works if the backend grants EMPLOYER access too.
+   */
+  employerOnly?: boolean;
 };
 
 function Icon({ path }: { path: string }) {
@@ -58,6 +68,14 @@ export const NAV_ITEMS: NavItemDef[] = [
     adminOnly: true,
     icon: (
       <Icon path="M222.14,58.87A8,8,0,0,0,215,54H180.7a75.6,75.6,0,0,0-52.7,21.34A75.6,75.6,0,0,0,75.3,54H41a8,8,0,0,0-7.12,4.87,79.61,79.61,0,0,0,7.85,82.55A8,8,0,0,0,48,144H80a71.6,71.6,0,0,0,25.36-4.61A71.86,71.86,0,0,0,120,168.51V216a8,8,0,0,0,16,0V168.51a71.86,71.86,0,0,0,14.64-29.12A71.6,71.6,0,0,0,176,144h32a8,8,0,0,0,6.27-3.06A79.6,79.6,0,0,0,222.14,58.87ZM48.7,128a63.68,63.68,0,0,1-3.66-58,63.71,63.71,0,0,1,58,58ZM128,150a55.72,55.72,0,0,1-4.7-22.94,56.11,56.11,0,0,1,9.4-31,55.72,55.72,0,0,1,4.7,22.94A56.11,56.11,0,0,1,128,150Zm79.3-22H162.29a63.71,63.71,0,0,1,58-58,63.68,63.68,0,0,1-3.66,58Z" />
+    ),
+  },
+  {
+    href: "/employer/jobs",
+    label: "สร้างประกาศงาน",
+    employerOnly: true,
+    icon: (
+      <Icon path="M216,56H176V48a24,24,0,0,0-24-24H104A24,24,0,0,0,80,48v8H40A16,16,0,0,0,24,72V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V72A16,16,0,0,0,216,56ZM96,48a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm32,88a12,12,0,1,1,12-12A12,12,0,0,1,128,136Zm88,56H40V72H216Z" />
     ),
   },
 ];

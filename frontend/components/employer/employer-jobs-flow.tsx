@@ -1,21 +1,17 @@
 "use client";
 
-// Full-page structure rebuilt to match the demo
-// (seam-demo/internship-matches.html) — same page-chrome pattern as
-// upload-resume-flow.tsx / skill-assessment-flow.tsx / evaluation-result-flow.tsx
-// (full-viewport particle canvas, split-word heading), Nocturne palette.
-//
-// All real business logic (filter mode "ตรงกับคุณ"/"ทั้งหมด", multi-skill AND
-// filter, matching/workplaces API calls, skeleton loading, error/empty
-// states) lives entirely in InternshipMatchesView, untouched by this
-// restructure — this file only owns the page-level chrome: particle canvas
-// background, decorative blobs, and the split-word heading.
+// Page-level chrome (full-viewport particle canvas, decorative blobs,
+// split-word heading) — same pattern as admin-dashboard-flow.tsx / the rest
+// of the "flow" components. Content lives in EmployerJobsView; this file
+// only owns the surrounding page shell and reuses the admin CSS module
+// (admin-dashboard.module.css) rather than duplicating ~500 lines of
+// glass-card/Nocturne-token styles for one page.
 
 import { useEffect, useMemo, useRef } from "react";
-import { InternshipMatchesView } from "./internship-matches-view";
-import styles from "./matches-list.module.css";
+import { EmployerJobsView } from "./employer-jobs-view";
+import styles from "@/components/admin/admin-dashboard.module.css";
 
-const HEADING = "ตำแหน่งฝึกงานที่ใช่สำหรับคุณ";
+const HEADING = "ประกาศงานของบริษัทคุณ";
 
 // ===== Particle field background — identical pattern to the rest of the
 // flow (try/catch, full cleanup). =====
@@ -98,13 +94,9 @@ function useParticleCanvas(canvasRef: React.RefObject<HTMLCanvasElement | null>)
 function SplitHeading({ text }: { text: string }) {
   const words = useMemo(() => text.split(" "), [text]);
   return (
-    <h1 className={styles.splitHeading}>
+    <h1 className={styles.pageHeading}>
       {words.map((w, i) => (
-        <span
-          key={i}
-          className={styles.splitWord}
-          style={{ animationDelay: `${i * 0.07}s` }}
-        >
+        <span key={i} className={styles.splitWord} style={{ animationDelay: `${i * 0.07}s` }}>
           {w}
           {i < words.length - 1 ? " " : ""}
         </span>
@@ -113,7 +105,7 @@ function SplitHeading({ text }: { text: string }) {
   );
 }
 
-export function InternshipMatchesFlow() {
+export function EmployerJobsFlow() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useParticleCanvas(canvasRef);
 
@@ -126,13 +118,17 @@ export function InternshipMatchesFlow() {
       </div>
 
       <main className={styles.main}>
-        <div className={`${styles.eyebrow} ${styles.animateIn}`}>RESUMATE — INTERNSHIP MATCHES</div>
-        <SplitHeading text={HEADING} />
-        <p className={`${styles.subtitle} ${styles.animateIn} ${styles.delay3}`}>
-          จับคู่จากผลการประเมินทักษะของคุณ เรียงลำดับความสอดคล้องจากมากไปน้อย
-        </p>
+        <div className={`${styles.headerRow} ${styles.animateIn} ${styles.delay1}`}>
+          <div>
+            <span className={styles.eyebrow}>RESUMATE — EMPLOYER</span>
+            <SplitHeading text={HEADING} />
+            <p className={styles.pageSubheading}>
+              สร้าง แก้ไข และลบประกาศรับสมัครฝึกงาน/งานของบริษัทคุณ
+            </p>
+          </div>
+        </div>
 
-        <InternshipMatchesView />
+        <EmployerJobsView />
       </main>
     </div>
   );

@@ -129,7 +129,7 @@ export function SkillAssessmentFlow() {
       </div>
 
       <main className={styles.main}>
-        <div className={`${styles.eyebrow} ${styles.animateIn}`}>AI_PROJECT — SKILL ASSESSMENT</div>
+        <div className={`${styles.eyebrow} ${styles.animateIn}`}>RESUMATE — SKILL ASSESSMENT</div>
         <SplitHeading text={HEADING} />
 
         <div className={`${styles.stepRow} ${styles.animateIn} ${styles.delay3}`}>

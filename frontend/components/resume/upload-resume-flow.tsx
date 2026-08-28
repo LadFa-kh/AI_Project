@@ -132,7 +132,7 @@ export function UploadResumeFlow() {
       </div>
 
       <main className={styles.main}>
-        <div className={`${styles.eyebrow} ${styles.animateIn}`}>AI_PROJECT — UPLOAD RESUME</div>
+        <div className={`${styles.eyebrow} ${styles.animateIn}`}>RESUMATE — UPLOAD RESUME</div>
         <SplitHeading text={HEADING} />
         <p className={`${styles.subtitle} ${styles.animateIn} ${styles.delay3}`}>
           อัปโหลดเรซูเม่ของคุณ ให้ AI ช่วยประเมินทักษะและแนะนำที่ฝึกงานที่เหมาะกับคุณที่สุด

@@ -10,6 +10,7 @@
 // dropped — no backend endpoint backs either.
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   getDashboardStats,
   listUsers,
@@ -287,7 +288,13 @@ function EditUserModal({
     }
   }
 
-  return (
+  // Rendered via a portal straight onto <body> — without this, the fixed
+  // overlay was containing-blocked by the ancestor .card's backdrop-filter
+  // (any filter/backdrop-filter/transform on an ancestor traps
+  // position:fixed inside that ancestor's box instead of the viewport),
+  // which is why the modal used to appear pinned to the table's scroll
+  // position instead of centered on screen.
+  return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
         <h3 className={styles.modalTitle}>แก้ไขผู้ใช้งาน</h3>
@@ -340,7 +347,8 @@ function EditUserModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -702,9 +710,14 @@ function JobFormModal({
     }
   }
 
-  return (
+  // Portaled onto <body> for the same reason as EditUserModal — the
+  // .card ancestor's backdrop-filter otherwise traps this fixed overlay
+  // inside the tab's own box instead of centering it on the viewport.
+  // modalCardWide (vs. the narrower modalCard used by EditUserModal) gives
+  // this form's ~9 fields more breathing room so it needs less scrolling.
+  return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+      <div className={`${styles.modalCard} ${styles.modalCardWide}`} onClick={(e) => e.stopPropagation()}>
         <h3 className={styles.modalTitle}>{jobId ? "แก้ไขประกาศงาน" : "สร้างประกาศงานใหม่"}</h3>
         {error && (
           <p className={styles.formError} role="alert" style={{ marginBottom: 12 }}>
@@ -773,7 +786,8 @@ function JobFormModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

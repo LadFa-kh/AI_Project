@@ -345,7 +345,7 @@ export function HowItWorksDemo() {
 
       <footer className="relative z-[1] px-6 pb-10 pt-[clamp(3rem,6vw,4.5rem)] text-center">
         <p className="mx-auto max-w-[1140px] border-t border-white/10 pt-6 text-xs text-white/40">
-          © 2026 AI_Project. สงวนลิขสิทธิ์.
+          © 2026 ResuMate. สงวนลิขสิทธิ์.
         </p>
       </footer>
     </div>
