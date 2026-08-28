@@ -1,5 +1,4 @@
-// Auth API calls. Endpoints confirmed against live backend Swagger UI
-// (recommendation.site):
+// Auth API calls. Endpoints confirmed against live backend Swagger UI:
 // POST /auth/login    { email, password }            -> { status, message, data: { userId, email, fullname, role, accessToken, refreshToken } }
 // POST /auth/register { email, password, fullname, telephone? } -> same shape as login
 // (role defaults server-side to STUDENT on register — not sent by the client)
@@ -11,17 +10,14 @@
 // the backend team — the frontend must NOT read or store them; session
 // state is sourced from getCurrentUser() (GET /auth/me) instead.
 //
-// IMPORTANT — this only works when the frontend is same-site with the
-// backend (recommendation.site). Backend's Set-Cookie has `SameSite=Lax`
-// with no explicit `Domain=`, so it's a host-only cookie scoped to
-// recommendation.site; a cross-site caller (e.g. localhost:3000) never
-// receives/sends it at all. Deploy the frontend at a subdomain of
-// recommendation.site (e.g. app.recommendation.site, see the repo-root
-// Caddyfile/docker-compose.yml) so browser requests to the backend count
-// as same-site. Confirmed backend also removed the old userId-based
-// fallback entirely on /resumes/upload, /assessments/submit, and
-// /matching/recommendations — cookie auth is the only way in now, local
-// dev on a different origin cannot reach these endpoints until deployed.
+// เรื่อง same-site: frontend เรียก API ผ่าน path /api/* ของตัวเอง แล้ว
+// Next.js proxy ต่อไปยัง backend (rewrites ใน next.config.ts) เบราว์เซอร์จึง
+// เห็นทุกอย่างอยู่บน origin เดียวกัน — cookie `SameSite=Lax` แบบ host-only
+// ทำงานได้ทั้งตอน dev บน localhost และตอน deploy บนโดเมนจริง
+//
+// backend ตัด fallback แบบส่ง userId จาก client ทิ้งไปหมดแล้วใน
+// /resumes/upload, /assessments/submit และ /matching/recommendations —
+// cookie auth คือทางเดียวที่เข้าถึงได้
 //
 // GET  /auth/me      -> 200 { userId, email, fullName, role, authProvider } if logged in, 401 if not/expired
 // POST /auth/logout  -> clears the httpOnly cookie server-side (JS cannot delete an httpOnly cookie itself)
@@ -92,7 +88,17 @@ export async function loginWithGoogle(idToken: string): Promise<AuthSession> {
 // logged in" is an expected, common state, not a failure.
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
-    const res = await apiFetch<CurrentUserResponse>("/auth/me", { method: "GET" });
+    // ⚠️ /auth/me ห่อข้อมูลไว้ใน ApiResponse envelope ({status, message, data})
+    // เหมือน /auth/login และ /auth/register ไม่ได้คืนค่าแบบแบนราบ
+    // เดิมโค้ดอ่าน res.role ตรง ๆ ทำให้ได้ undefined ทุก field ผลคือ
+    // AdminGuard มองว่าไม่ใช่ ADMIN และเด้งผู้ดูแลระบบกลับหน้าแรกเสมอ
+    //
+    // เผื่อกรณีที่ backend เปลี่ยนไปคืนค่าแบบแบนราบในอนาคต จึงรองรับทั้งสองรูปแบบ
+    const raw = await apiFetch<ApiEnvelope<CurrentUserResponse> | CurrentUserResponse>(
+      "/auth/me",
+      { method: "GET" }
+    );
+    const res = (raw as ApiEnvelope<CurrentUserResponse>).data ?? (raw as CurrentUserResponse);
     return {
       userId: res.userId,
       email: res.email,

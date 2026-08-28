@@ -1,11 +1,17 @@
 package com.example.backend.user.dto.request;
 
 import com.example.backend.user.entity.UserEntity.Role;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class RegisterRequestDto {
+
+    @Email(message = "รูปแบบอีเมลไม่ถูกต้อง")
+    @NotBlank(message = "กรุณากรอกอีเมล")
     private String email;
+
     private String password;
     private String fullname;
     private String telephone;

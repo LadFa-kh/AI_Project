@@ -1,40 +1,38 @@
-# Caddy reverse-proxy config for the frontend, exposed publicly at
-# app.recommendation.site. Caddy automatically obtains and renews a
-# Let's Encrypt TLS certificate for this domain the first time it starts —
-# no manual cert setup needed, as long as:
-#   1. DNS: an A (or CNAME) record for app.recommendation.site points at
-#      this server's public IP (set up outside of this repo — ask
-#      whoever manages the recommendation.site DNS zone).
-#   2. Ports 80 and 443 on this server are reachable from the internet
-#      (80 is needed for the ACME HTTP-01 challenge Caddy uses to prove
-#      domain ownership to Let's Encrypt; it auto-redirects to 443 after).
+# Caddy = ทางเข้าเดียวจากอินเทอร์เน็ต ใช้กับ docker-compose.prod.yml เท่านั้น
 #
-# Why this still matters for auth (updated after backend switched the
-# accessToken cookie to `SameSite=None; Secure` — confirmed working
-# cross-site from localhost:3000 as of the latest test): SameSite=None lets
-# ANY origin send the cookie today, so this subdomain deploy is no longer
-# required to make login/upload work. It's still worth doing because:
-#   1. Chrome is progressively phasing out third-party (cross-site) cookies
-#      even when SameSite=None — a same-site deploy (app.recommendation.site,
-#      same eTLD+1 as recommendation.site) is immune to that phase-out and
-#      lets the cookie eventually move back to the stricter `SameSite=Lax`.
-#   2. A stable public HTTPS URL for the frontend, separate from whoever's
-#      laptop happens to be running `npm run dev`.
-# This only works over HTTPS on both sides (the cookie is also `Secure`),
-# which is exactly what this Caddyfile provides.
+# Caddy จะขอและต่ออายุใบรับรอง TLS จาก Let's Encrypt ให้อัตโนมัติตั้งแต่ครั้งแรก
+# ที่สตาร์ท ไม่ต้องตั้งค่า cert เอง ขอแค่:
+#   1. DNS: มี A (หรือ CNAME) record ของ app.recommendation.site ชี้มาที่ IP
+#      สาธารณะของเครื่องนี้
+#   2. port 80 และ 443 เข้าถึงได้จากภายนอก (port 80 จำเป็นสำหรับ ACME
+#      HTTP-01 challenge ที่ Caddy ใช้พิสูจน์ความเป็นเจ้าของโดเมน หลังจากนั้น
+#      จะ redirect ไป 443 ให้เอง)
+#
+# หมายเหตุเรื่อง auth: Caddy proxy เฉพาะ frontend เท่านั้น ส่วน request ที่
+# ขึ้นต้นด้วย /api/* ตัว Next.js จะ proxy ต่อไปยัง backend ภายในเครือข่าย
+# Docker ให้เอง (ดู rewrites ใน frontend/next.config.ts) ผลลัพธ์คือเบราว์เซอร์
+# เห็นทุกอย่างอยู่บนโดเมนเดียว — cookie `accessToken` จึงเป็น same-site
+# ตลอด ใช้ `SameSite=Lax` ได้ ไม่ต้องพึ่ง `SameSite=None` ซึ่งนับเป็น
+# third-party cookie ที่เบราว์เซอร์กำลังทยอยเลิกรองรับ
+# และ backend ไม่ต้องเปิด port ออกอินเทอร์เน็ตเลยแม้แต่ port เดียว
 
 app.recommendation.site {
 	reverse_proxy frontend:3000
 
 	encode gzip
 
+	# อัปโหลดเรซูเม่เป็น PDF ไม่เกิน 5MB (จำกัดฝั่ง backend อยู่แล้ว)
+	# เผื่อไว้ 12MB กัน multipart overhead แล้วตัดคำขอที่ใหญ่ผิดปกติทิ้งแต่ต้นทาง
+	request_body {
+		max_size 12MB
+	}
+
 	header {
-		# Baseline hardening — safe defaults, adjust if the app needs to be
-		# framed/embedded somewhere or loads cross-origin resources Caddy
-		# should know about.
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		# บังคับ HTTPS ฝั่งเบราว์เซอร์ 1 ปี — สำคัญเพราะ cookie ติดธง Secure
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	}
 
 	log {

@@ -8,6 +8,7 @@ import com.example.backend.user.service.registration.RegistrationService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,7 +27,7 @@ public class RegistrationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthenticationResponseDto>> register(@RequestBody RegisterRequestDto request) {
+    public ResponseEntity<ApiResponse<AuthenticationResponseDto>> register(@Valid @RequestBody RegisterRequestDto request) {
         AuthenticationResponseDto authResponse = registrationService.register(request);
 
         ApiResponse<AuthenticationResponseDto> response = new ApiResponse<>(

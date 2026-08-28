@@ -25,11 +25,7 @@ public class JobDescriptionService {
 
     @Transactional
     public JobDescriptionResponseDto createJobDescription(JobPostRequestDto request) {
-        // 1. ค้นหา User ที่เป็น Employer
-        UserEntity employer = userRepository.findById(request.getEmployerId())
-                .orElseThrow(() -> new RuntimeException("Employer not found"));
-
-        // 2. Parse comma-separated string เป็น List ก่อน validate
+        // 1. Parse comma-separated string เป็น List ก่อน validate
         String rawSkills = request.getRequiredSkills();
         if (rawSkills == null || rawSkills.isBlank()) {
             throw new IllegalArgumentException("ต้องระบุ required skills อย่างน้อย 1 รายการ");
@@ -53,6 +49,13 @@ public class JobDescriptionService {
         if (!invalidSkills.isEmpty()) {
             throw new IllegalArgumentException("พบ skill ที่ไม่อยู่ในระบบ: " + String.join(", ", invalidSkills));
         }
+
+        // 2. ค้นหา User ที่เป็น Employer (ตรวจ null ก่อน เพื่อไม่ให้ Spring Data โยน InvalidDataAccessApiUsageException)
+        if (request.getEmployerId() == null) {
+            throw new IllegalArgumentException("ต้องระบุรหัสผู้ประกาศงาน (employerId)");
+        }
+        UserEntity employer = userRepository.findById(request.getEmployerId())
+                .orElseThrow(() -> new IllegalArgumentException("ไม่พบผู้ประกาศงานที่ระบุ"));
 
         // 3. Map ข้อมูลลง Entity
         JobDescriptionEntity job = new JobDescriptionEntity();

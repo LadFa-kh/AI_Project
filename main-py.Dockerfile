@@ -13,7 +13,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# แยกติดตั้งเป็นชั้น ๆ เพื่อให้ Docker cache ตัวที่โหลดสำเร็จแล้ว
+# ถ้าชั้นไหน fail เพราะเน็ตหลุด รัน build ซ้ำจะข้ามชั้นที่ผ่านแล้วไปเลย
+RUN pip install --no-cache-dir --timeout 900 --retries 20 \
+    fastapi uvicorn[standard] python-multipart pydantic requests google-genai
+
+RUN pip install --no-cache-dir --timeout 900 --retries 20 pdfplumber
+
+RUN pip install --no-cache-dir --timeout 900 --retries 20 pythainlp
 
 COPY main.py .
 

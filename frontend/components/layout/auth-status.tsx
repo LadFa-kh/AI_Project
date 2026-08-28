@@ -50,8 +50,8 @@ export function AuthStatus({ isCollapsed = false, onNavigate }: AuthStatusProps)
       router.push("/login");
     }
 
-    const initial = user.fullname.charAt(0).toUpperCase();
-    const roleLabel = user.role.charAt(0) + user.role.slice(1).toLowerCase();
+    const initial = user.fullname?.charAt(0).toUpperCase() ?? "?";
+    const roleLabel = user.role ? user.role.charAt(0) + user.role.slice(1).toLowerCase() : "";
 
     return (
       <div ref={containerRef} className={styles.userCard}>

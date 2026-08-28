@@ -1,21 +1,3 @@
-# Local/self-hosted deploy for the full stack: Postgres, the Spring Boot
-# backend, the FastAPI resume-processing service (main.py), the Next.js
-# frontend, and a Caddy reverse proxy that exposes the frontend publicly at
-# app.recommendation.site with automatic HTTPS. All secrets/config are
-# pulled from a .env file at this same directory (see .env.example for the
-# required keys) — docker compose loads it automatically, nothing here
-# should ever hold a real credential.
-#
-# Domain note: this compose file only hosts the FRONTEND at
-# app.recommendation.site. The backend is assumed to already be deployed
-# and reachable at recommendation.site (per NEXT_PUBLIC_API_BASE_URL below)
-# — the backend/postgres/resume-service services here are for running the
-# full stack locally end-to-end, not necessarily how production is
-# actually split across machines. If backend/postgres end up NOT running
-# via this same compose file in production, just don't start those
-# services there — `docker compose up caddy frontend` is enough to serve
-# the frontend alone.
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -27,9 +9,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      # Exposed to the host only for local debugging (psql/DBeaver) — remove
-      # this mapping in production so Postgres is reachable only from other
-      # containers on the compose network.
       - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -61,66 +40,43 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      # Backend calls this FastAPI service by its compose service name, not
-      # localhost — "resume-service" resolves via Docker's internal DNS.
-      # NOTE: verify this matches the actual @Value/property name the
-      # backend code reads for the FastAPI base URL (could not confirm the
-      # exact property name from ResumeService.java in this session) —
-      # check application.properties or a WebClient bean for the real key
-      # and rename this if it differs.
-      NLP_SERVICE_URL: http://resume-service:8000
+      # ชื่อ property จริงคือ fastapi.base.url (ไม่ใช่ NLP_SERVICE_URL)
+      # และต้องชี้ไป resume-service เพราะ service เปลี่ยนชื่อจาก fastapi-ai แล้ว
+      FASTAPI_BASE_URL: http://resume-service:8000
       JWT_SECRET: ${JWT_SECRET}
+      # ตัวนี้ไม่มีค่า default ในโค้ด — ถ้าไม่ใส่ backend จะ start ไม่ขึ้นเลย
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
+      # ไฟล์นี้คือโปรไฟล์ dev (http://localhost) — cookie ต้องไม่ติดธง Secure
+      # ไม่งั้นเบราว์เซอร์จะทิ้ง cookie ทันทีเพราะไม่ได้วิ่งบน HTTPS
+      # โปรไฟล์ production อยู่ใน docker-compose.prod.yml (Secure=true)
+      #
+      # SameSite=Lax ใช้ได้ทั้ง dev และ prod เพราะ frontend เรียก API ผ่าน
+      # proxy ของตัวเอง (same-origin) ไม่ได้ยิงข้าม origin แล้ว
+      APP_COOKIE_SECURE: "false"
+      APP_COOKIE_SAME_SITE: Lax
+      # origin ที่อนุญาตให้เรียกตรง (ไม่ผ่าน proxy) — เหลือไว้ให้ Swagger UI
+      # และการเทสด้วย Postman เท่านั้น
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:3000
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
     ports:
       - "8080:8080"
 
   frontend:
     build:
       context: ./frontend
-      # frontend.Dockerfile lives INSIDE frontend/, not one level above it —
-      # this path is relative to `context:` above (per Compose spec), so it
-      # must be "frontend.Dockerfile", not "../frontend.Dockerfile" (that
-      # would resolve to a repo-root file that doesn't exist and fail the
-      # build with "no such file or directory").
       dockerfile: frontend.Dockerfile
       args:
-        # Baked into the JS bundle at build time (browser-side env var) —
-        # must point at wherever the backend is actually reachable from the
-        # end user's browser (recommendation.site), NOT the "backend"
-        # compose hostname (that only resolves inside the Docker network).
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
-        # Google Identity Services Client ID for "Sign in with Google" (see
-        # frontend/lib/use-google-signin.ts). Also baked in at build time.
-        # Must have this deploy's origin (https://app.recommendation.site)
-        # listed under "Authorized JavaScript origins" in the Google Cloud
-        # Console credential, or the Google sign-in popup will fail.
+        # ตั้งเป็น /api/v1 (path ล้วน ไม่มีโดเมน) — เบราว์เซอร์จะยิงมาที่ origin
+        # เดียวกับหน้าเว็บ แล้ว Next.js rewrites proxy ต่อไปให้ (next.config.ts)
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api/v1}
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+        # ปลายทางของ proxy — ชื่อ service ภายในเครือข่าย Docker
+        BACKEND_INTERNAL_URL: http://backend:8080
     restart: unless-stopped
     depends_on:
       - backend
-    # No `ports:` mapping here on purpose — the frontend is reached only
-    # through Caddy below (compose-internal network), so port 3000 is never
-    # exposed to the host/internet directly. Change this back to
-    # `ports: ["3000:3000"]` temporarily if you need to hit it directly
-    # while debugging.
-    expose:
-      - "3000"
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      - frontend
     ports:
-      # 80 required for the Let's Encrypt ACME HTTP-01 challenge; Caddy
-      # auto-redirects plain HTTP traffic to HTTPS afterwards.
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - "3000:3000"
 
 volumes:
   postgres_data:
-  caddy_data:
-  caddy_config:

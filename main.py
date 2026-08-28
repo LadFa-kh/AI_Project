@@ -1,38 +1,61 @@
+import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 import pdfplumber
 import uuid
 import io
-import json
 import os
 from pydantic import BaseModel, Field
 from typing import List
 from google import genai
+from pythainlp.util import normalize
+from pythainlp.tokenize import word_tokenize
 
 app = FastAPI()
+logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------
-# 1. Pydantic Schemas (ปรับตาม requirements ฝั่ง Frontend)
+# 1. Pydantic Schemas
 # -------------------------------------------------------------
 class ResumeSchema(BaseModel):
-    skills: List[str] = Field(description="รายการ ทักษะ/Hard Skills ทั้งหมดที่พบ")
+    hard_skills: List[str] = Field(
+        description="ทักษะด้านเทคนิคเฉพาะทาง เช่น โปรแกรม เครื่องมือ ภาษาโปรแกรม เทคโนโลยี (เช่น Python, Excel, SAP, AutoCAD)"
+    )
+    soft_skills: List[str] = Field(
+        description="ทักษะทั่วไป/สมรรถนะส่วนบุคคล เช่น การสื่อสาร การทำงานเป็นทีม ภาวะผู้นำ การแก้ปัญหา การบริหารเวลา"
+    )
+
+FIXED_ASSESSMENT_OPTIONS = ["1. พอใช้", "2. มาตรฐาน", "3. ดี", "4. ดีมาก"]
+
+class GeneratedQuestion(BaseModel):
+    question: str = Field(description="คำถามประเมินตนเองเกี่ยวกับทักษะของผู้สมัครที่เชื่อมโยงกับตำแหน่งงานเป้าหมาย")
+
+class QuestionListSchema(BaseModel):
+    questions: List[GeneratedQuestion]
 
 class EvaluationQuestion(BaseModel):
     id: str = Field(description="UUID format string สำหรับระบุไอดีคำถาม")
-    question: str = Field(description="คำถามประเมินตนเองเกี่ยวกับทักษะของผู้สมัครที่เชื่อมโยงกับตำแหน่งงานเป้าหมาย")
-    options: List[str] = Field(description="ตัวเลือก 4 ข้อเสมอ คือ ['1. พอใช้', '2. มาตรฐาน', '3. ดี', '4. ดีมาก']")
-
-class QuestionListSchema(BaseModel):
-    questions: List[EvaluationQuestion]
-
-# เพิ่ม Schema สำหรับรับผลวิเคราะห์ Gap ทักษะเทียบกับตำแหน่งงาน
-class GapAnalysisSchema(BaseModel):
-    missing_skills: List[str] = Field(description="รายการทักษะที่จำเป็นสำหรับตำแหน่งงานนี้ แต่ยังไม่มีในเรซูเม่")
-    recommendation: str = Field(description="คำแนะนำในการพัฒนาตนเองเพื่อให้เหมาะกับตำแหน่งงานเป้าหมาย")
+    question: str
+    options: List[str] = Field(description="ตัวเลือก 4 ข้อเสมอ")
 
 class AssessmentResponse(BaseModel):
     resume_data: ResumeSchema
-    gap_analysis: GapAnalysisSchema
     questions: List[EvaluationQuestion]
+
+class RoleTranslationSchema(BaseModel):
+    english_role_name: str = Field(
+        description="ชื่อตำแหน่งงานที่แปลเป็นภาษาอังกฤษ ให้ตรงกับชื่ออาชีพมาตรฐานสากลแบบ O*NET (เช่น 'Web Developers', 'Software Developers', 'Data Scientists') เลือกชื่อที่ใกล้เคียงที่สุดแม้ต้นฉบับจะเขียนไม่เป็นทางการ"
+    )
+
+class RecommendationResponseSchema(BaseModel):
+    missing_skills: List[str] = Field(description="รายการทักษะที่จำเป็นสำหรับตำแหน่งงานนี้ แต่ยังไม่มีในเรซูเม่")
+    recommendation_summary: str = Field(description="คำแนะนำแบบย่อหน้าเดียวสรุปภาพรวม สำหรับแสดงแบบข้อความปกติ")
+    recommendation_items: List[str] = Field(description="คำแนะนำแยกเป็นข้อ ๆ อย่างละเอียด สั้นกระชับต่อข้อ สำหรับแสดงเป็น bullet list")
+
+# [NEW] ใช้ตอนผู้สมัครไม่ได้กรอก desiredRoleName มา — ให้ AI เดาอาชีพที่เหมาะสมจากทักษะในเรซูเม่แทน
+class RoleInferenceSchema(BaseModel):
+    inferred_role_name: str = Field(
+        description="ชื่อตำแหน่งงานภาษาอังกฤษที่เหมาะสมที่สุดกับชุดทักษะนี้ ให้ตรงกับชื่ออาชีพมาตรฐาน O*NET มากที่สุด (เช่น 'Software Developers', 'Web Developers', 'Data Analysts')"
+    )
 
 
 # -------------------------------------------------------------
@@ -49,15 +72,19 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 
 
 # -------------------------------------------------------------
+# 2.1 Function ทำความสะอาดข้อความภาษาไทยก่อนส่งเข้า LLM
+# -------------------------------------------------------------
+def preprocess_thai_text(raw_text: str) -> str:
+    text = normalize(raw_text)
+    tokens = word_tokenize(text, engine="newmm")
+    return "".join(tokens)
+
+
+# -------------------------------------------------------------
 # 3. Setup CometAPI Client
 # -------------------------------------------------------------
-# API key now read from the environment (set via docker-compose.yml / the
-# platform's secret store) instead of being hardcoded here — the previous
-# hardcoded value was a real committed secret and should be treated as
-# compromised: rotate/revoke it in the CometAPI dashboard regardless of this
-# code change, since it may already be in git history and on GitHub.
 BASE_URL = "https://api.cometapi.com"
-COMET_API_KEY = os.environ["COMET_API_KEY"]
+COMET_API_KEY = os.getenv("COMET_API_KEY")
 
 client = genai.Client(
     http_options={"api_version": "v1beta", "base_url": BASE_URL},
@@ -66,31 +93,28 @@ client = genai.Client(
 
 
 # -------------------------------------------------------------
-# 4. API Endpoint
+# 4. Endpoint: อัปโหลด Resume
 # -------------------------------------------------------------
 @app.post("/api/v1/python/process-resume", response_model=AssessmentResponse)
-async def process_resume(
-        file: UploadFile = File(...),
-        desiredRoleName: str = Form(...),
-        standardSkills: str = Form(default="")
-):
-    if not file.filename.endswith('.pdf'):
+def process_resume(file: UploadFile = File(...)):
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="กรุณาอัปโหลดไฟล์ PDF เท่านั้น")
 
-    pdf_bytes = await file.read()
+    pdf_bytes = file.file.read()
     raw_text = extract_text_from_pdf(pdf_bytes)
 
     if not raw_text.strip():
         raise HTTPException(status_code=400, detail="ไม่สามารถอ่านข้อความจาก PDF ได้")
 
+    cleaned_text = preprocess_thai_text(raw_text)
+
     try:
-        # A) สกัดข้อมูล Resume
         resume_prompt = f"""
         คุณเป็น HR Expert โปรดอ่านข้อความจาก Resume ต่อไปนี้ 
         ทำความสะอาดข้อมูล และสกัดข้อมูลทักษะออกมา:
         
         TEXT จาก PDF:
-        {raw_text}
+        {cleaned_text}
         """
 
         response_resume = client.models.generate_content(
@@ -103,46 +127,12 @@ async def process_resume(
         )
         resume_data = ResumeSchema.model_validate_json(response_resume.text)
 
-        # แปลงรายชื่อทักษะมาตรฐานที่รับมาจาก Java
-        skills_list = []
-        if standardSkills:
-            skills_list = [s.strip() for s in standardSkills.split("|") if s.strip()]
-
-        # B) วิเคราะห์ Gap ทักษะ เทียบกับตำแหน่งงานที่ต้องการ (Desired Role)
-        gap_prompt = f"""
-        ผู้สมัครต้องการสมัครตำแหน่งงาน: "{desiredRoleName}"
-        
-        ทักษะมาตรฐานสากล O*NET (รวมเครื่องมือและหมวดหมู่ทักษะ): 
-        {skills_list}
-        
-        ทักษะจริงที่พบใน Resume ของผู้สมัคร: 
-        {resume_data.skills}
-        
-        โปรดวิเคราะห์ความสอดคล้องอย่างถี่ถ้วน:
-        1. ให้เปรียบเทียบทั้งชื่อเครื่องมือตรงๆ และความหมายเชิงหมวดหมู่ (เช่น หากมาตรฐานต้องการ Spreadsheet software และ Resume มี Excel ให้ถือว่าครอบคลุม)
-        2. สรุปเฉพาะทักษะมาตรฐานที่ผู้สมัครยังขาดอยู่อย่างแท้จริง (Missing Skills)
-        3. ให้คำแนะนำ (Recommendation) สำหรับการพัฒนาทักษะเพิ่มเติม
-        """
-
-        response_gap = client.models.generate_content(
-            model="gemini-3.1-flash-lite-preview",
-            contents=gap_prompt,
-            config={
-                'response_mime_type': 'application/json',
-                'response_schema': GapAnalysisSchema,
-            }
-        )
-        gap_analysis = GapAnalysisSchema.model_validate_json(response_gap.text)
-
-        # C) สร้างแบบประเมินตนเอง 5 ข้อ
-
         question_prompt = f"""
-        ตำแหน่งงานเป้าหมาย: {desiredRoleName}
-        ทักษะของผู้สมัคร: {resume_data.skills}
-        ทักษะที่ยังขาด: {gap_analysis.missing_skills}
-        
-        จงสร้าง "แบบประเมินตนเอง" จำนวนไม่เกิน 5 ข้อ เพื่อวัดความมั่นใจในทักษะที่จำเป็นสำหรับตำแหน่งนี้
-        ทุกข้อต้องมีตัวเลือก 4 ระดับเสมอ คือ ["1. พอใช้", "2. มาตรฐาน", "3. ดี", "4. ดีมาก"]
+        ทักษะที่พบในเรซูเม่ของผู้สมัคร: {resume_data.hard_skills}
+
+        จงสร้าง "แบบประเมินตนเอง" จำนวนไม่เกิน 5 ข้อ เพื่อให้ผู้สมัครประเมินความมั่นใจ/ความชำนาญ
+        ในทักษะที่ระบุไว้ในเรซูเม่ของตนเองแต่ละอย่าง
+        แต่ละข้อให้ตอบเฉพาะข้อความคำถามเท่านั้น (ไม่ต้องสร้างตัวเลือก ระบบจะใส่ตัวเลือกให้เอง)
         """
 
         response_questions = client.models.generate_content(
@@ -156,22 +146,126 @@ async def process_resume(
 
         questions_obj = QuestionListSchema.model_validate_json(response_questions.text)
 
-        # แปลง id ของคำถามแต่ละข้อให้เป็น UUID String ป้องกันปัญหา Type ไม่แมตช์กับ Java
         formatted_questions = [
             EvaluationQuestion(
                 id=str(uuid.uuid4()),
                 question=q.question,
-                options=q.options
+                options=FIXED_ASSESSMENT_OPTIONS
             )
             for q in questions_obj.questions
         ]
 
-        # ส่ง JSON ผลลัพธ์ทั้งหมดกลับไป
         return AssessmentResponse(
             resume_data=resume_data,
-            gap_analysis=gap_analysis,
             questions=formatted_questions
         )
 
     except Exception as e:
+        logger.exception("Resume processing failed")
+        raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
+
+
+# -------------------------------------------------------------
+# 5. Endpoint: สร้างคำแนะนำสุดท้าย หลัง submit assessment
+# -------------------------------------------------------------
+@app.post("/api/v1/python/generate-recommendation", response_model=RecommendationResponseSchema)
+def generate_recommendation(
+        desiredRoleName: str = Form(...),
+        standardSkills: str = Form(default=""),
+        hardSkills: str = Form(default=""),
+        assessmentSummary: str = Form(default="")
+):
+    try:
+        standard_list = [s.strip() for s in standardSkills.split("|") if s.strip()] if standardSkills else []
+        hard_list = [s.strip() for s in hardSkills.split("|") if s.strip()] if hardSkills else []
+
+        recommendation_prompt = f"""
+        ผู้สมัครต้องการสมัครตำแหน่งงาน: "{desiredRoleName}"
+
+        ทักษะมาตรฐานสากล O*NET ที่เกี่ยวข้องกับตำแหน่งนี้:
+        {standard_list}
+
+        ทักษะจริงที่พบใน Resume ของผู้สมัคร:
+        {hard_list}
+
+        ผลการประเมินความมั่นใจของผู้สมัครในแต่ละทักษะ (จากแบบประเมินตนเอง แต่ละบรรทัดคือ 1 คำถาม รูปแบบ "คำถาม: คะแนน/4"):
+        {assessmentSummary}
+
+        โปรดวิเคราะห์และให้คำแนะนำ:
+        1. เปรียบเทียบทักษะมาตรฐานกับทักษะจริงของผู้สมัคร ทั้งชื่อเครื่องมือตรงๆ และความหมายเชิงหมวดหมู่
+        2. สรุปเฉพาะทักษะมาตรฐานที่ผู้สมัครยังขาดอยู่อย่างแท้จริง (missing_skills)
+        3. เขียนคำแนะนำ 2 รูปแบบพร้อมกัน:
+           - recommendation_summary: สรุปภาพรวมเป็นย่อหน้าเดียว อ่านลื่นไหล
+           - recommendation_items: แยกคำแนะนำเป็นข้อ ๆ (3-5 ข้อ) แต่ละข้อสั้นกระชับ เจาะจงทักษะที่ควรพัฒนา
+           โดยพิจารณาผลการประเมินความมั่นใจร่วมด้วย เช่น หากมีทักษะแต่มั่นใจน้อย ให้แนะนำการฝึกฝนเพิ่มเติมในทักษะนั้นโดยเฉพาะ
+        """
+
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=recommendation_prompt,
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': RecommendationResponseSchema,
+            }
+        )
+        return RecommendationResponseSchema.model_validate_json(response.text)
+
+    except Exception as e:
+        logger.exception("Recommendation generation failed")
+        raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
+
+
+@app.post("/api/v1/python/translate-role-name", response_model=RoleTranslationSchema)
+def translate_role_name(desiredRoleName: str = Form(...)):
+    try:
+        translate_prompt = f"""
+        แปลชื่อตำแหน่งงานต่อไปนี้เป็นภาษาอังกฤษ โดยเลือกให้ตรงกับชื่ออาชีพมาตรฐาน O*NET มากที่สุด
+        ตอบเฉพาะชื่อตำแหน่งภาษาอังกฤษเท่านั้น ไม่ต้องอธิบายเพิ่ม:
+
+        ตำแหน่งงาน: "{desiredRoleName}"
+        """
+
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=translate_prompt,
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': RoleTranslationSchema,
+            }
+        )
+        return RoleTranslationSchema.model_validate_json(response.text)
+
+    except Exception as e:
+        logger.exception("Role name translation failed")
+        raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
+
+
+# -------------------------------------------------------------
+# [NEW] Endpoint: เดาอาชีพที่เหมาะสมจากทักษะในเรซูเม่ — ใช้เมื่อ user ไม่กรอก desiredRoleName
+# -------------------------------------------------------------
+@app.post("/api/v1/python/infer-role-from-skills", response_model=RoleInferenceSchema)
+def infer_role_from_skills(hardSkills: str = Form(default="")):
+    try:
+        skills_list = [s.strip() for s in hardSkills.split("|") if s.strip()] if hardSkills else []
+
+        inference_prompt = f"""
+        ต่อไปนี้คือทักษะด้านเทคนิค (hard skills) ที่พบในเรซูเม่ของผู้สมัคร:
+        {skills_list}
+
+        จากชุดทักษะนี้ โปรดวิเคราะห์ว่าผู้สมัครน่าจะเหมาะกับตำแหน่งงานใดมากที่สุด
+        ตอบเป็นชื่อตำแหน่งงานภาษาอังกฤษที่ตรงกับมาตรฐานอาชีพ O*NET มากที่สุดเพียงชื่อเดียว
+        """
+
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=inference_prompt,
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': RoleInferenceSchema,
+            }
+        )
+        return RoleInferenceSchema.model_validate_json(response.text)
+
+    except Exception as e:
+        logger.exception("Role inference from skills failed")
         raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
