@@ -1,4 +1,4 @@
-package com.example.backend.handle;
+package com.example.backend.handle.jwt;
 
 import com.example.backend.user.entity.UserEntity;
 import io.jsonwebtoken.*;
@@ -55,5 +55,15 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload();
         return claims.getSubject();
+    }
+
+    // ดึง Role จาก Token
+    public String getRoleFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith((javax.crypto.SecretKey) getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return claims.get("role", String.class);
     }
 }

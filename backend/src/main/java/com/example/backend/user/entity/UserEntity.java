@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.security.AuthProvider;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -20,7 +21,12 @@ public class UserEntity {
 
     public enum Role {
         STUDENT,
-        EMPLOYER
+        EMPLOYER,
+        ADMIN
+    }
+
+    public enum AuthProvider {
+        LOCAL, GOOGLE
     }
 
     @Enumerated(EnumType.STRING)
@@ -36,11 +42,18 @@ public class UserEntity {
     @Column(unique = true)
     private String telephone;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash", nullable = true)
     private String passwordHash;
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider")
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(name = "google_id")
+    private String googleId;
 
 
 }

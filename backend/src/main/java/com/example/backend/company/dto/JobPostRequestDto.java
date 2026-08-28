@@ -2,7 +2,6 @@ package com.example.backend.company.dto;
 
 import lombok.Data;
 
-import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -11,5 +10,9 @@ public class JobPostRequestDto {
     private String companyName;
     private String jobType;
     private String positionName;
-    private List <String> requiredSkills;
+    private String requiredSkills;
+    private String jobDescription;
+    private String duration;
+    private String salary;
+    private String contactLink;
 }

@@ -6,7 +6,6 @@ import java.util.UUID;
 
 @Data
 public class SubmitAssessmentRequestDto {
-    private UUID userId;
     private UUID resumeId;
     private String desiredRoleName;
     private List<AnswerItem> answers;
