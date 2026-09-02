@@ -54,9 +54,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // suppressHydrationWarning บน <html> ด้านล่าง: THEME_INIT_SCRIPT เขียน
+  // data-theme ลงบน <html> ก่อน React hydrate ฝั่งเซิร์ฟเวอร์จึงเรนเดอร์
+  // <html> โดยไม่มี attribute นี้เสมอ แล้วไม่ตรงกับฝั่ง client ทำให้ React
+  // เตือน hydration mismatch ทุกครั้งที่โหลดหน้า ความไม่ตรงกันตรงนี้เป็น
+  // ความตั้งใจ (จำเป็นเพื่อกันจอกระพริบผิดธีมก่อน ThemeProvider จะ mount)
+  // จึงบอก React ให้ข้ามการเทียบ attribute ของ element นี้ตัวเดียว —
+  // ไม่กระทบ element อื่น และไม่ได้ปิดการตรวจ hydration ของทั้งแอป
   return (
     <html
       lang="th"
+      suppressHydrationWarning
       className={cn(
         "h-full",
         "antialiased",

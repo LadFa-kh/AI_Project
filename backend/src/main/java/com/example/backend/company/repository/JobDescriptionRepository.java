@@ -12,5 +12,9 @@ import java.util.UUID;
 @Repository
 public interface JobDescriptionRepository extends JpaRepository<JobDescriptionEntity, UUID> {
 
-
+    /**
+     * ดึงเฉพาะประกาศงานของผู้ประกาศรายนั้น ใช้ในหน้าจัดการประกาศของ EMPLOYER
+     * ซึ่งต้องไม่เห็นประกาศของบริษัทอื่น
+     */
+    List<JobDescriptionEntity> findByEmployer_Id(UUID employerId);
 }
