@@ -87,17 +87,34 @@ function ScoreBreakdownSection({
                 <span>ทักษะที่สกัดจากเรซูเม่ทั้งหมด</span>
                 <strong>{breakdown.totalResumeSkills}</strong>
               </div>
-              <div className={styles.breakdownRow}>
-                <span>ทักษะมาตรฐานของตำแหน่งนี้</span>
+              <div className={`${styles.breakdownRow} ${styles.breakdownRowStart}`}>
+                <span>
+                  ทักษะมาตรฐานของตำแหน่งนี้
+                  <br />
+                  <span className={styles.breakdownHint}>
+                    จากฐานข้อมูลทักษะมาตรฐาน O*NET ทั้งหมดที่เกี่ยวข้องกับชื่อตำแหน่ง &ldquo;
+                    {breakdown.roleUsedForMatching}&rdquo; — ใช้เป็นเกณฑ์เทียบเท่านั้น ไม่ใช่รายการที่ต้องมีให้ครบ
+                  </span>
+                </span>
                 <strong>{breakdown.totalStandardSkills}</strong>
               </div>
-              <div className={styles.breakdownRow}>
-                <span>จับคู่ได้</span>
+              <div className={`${styles.breakdownRow} ${styles.breakdownRowStart}`}>
+                <span>
+                  จับคู่ได้
+                  <br />
+                  <span className={styles.breakdownHint}>
+                    ทักษะจากเรซูเม่ของคุณที่ตรงกับรายการทักษะมาตรฐานด้านบน (แสดงรายชื่อด้านล่าง)
+                  </span>
+                </span>
                 <strong>{breakdown.matchedSkills.length} รายการ</strong>
               </div>
               <p className={styles.breakdownFormula}>
                 precisionScore = ({breakdown.matchedSkills.length} / {breakdown.totalResumeSkills}) × 100 ={" "}
                 {breakdown.precisionScore.toFixed(2)}
+              </p>
+              <p className={styles.breakdownReason} style={{ marginTop: 0 }}>
+                หมายเหตุ: ตัวหารของสูตรนี้คือจำนวนทักษะทั้งหมดในเรซูเม่ ({breakdown.totalResumeSkills}) ไม่ใช่จำนวนทักษะมาตรฐาน
+                ({breakdown.totalStandardSkills}) — ยิ่งใส่ทักษะในเรซูเม่เยอะแต่ไม่ตรงสาย คะแนนส่วนนี้ยิ่งลดลง
               </p>
               {hasPenalty && (
                 <p className={styles.breakdownFormula}>
@@ -109,12 +126,12 @@ function ScoreBreakdownSection({
                 <p className={styles.breakdownReason}>{breakdown.resumeScoreReason}</p>
               )}
               {(breakdown.matchedSkills.length > 0 || breakdown.unmatchedSkills.length > 0) && (
-                <div style={{ marginTop: 4 }}>
+                <div style={{ marginTop: 10 }}>
                   {breakdown.matchedSkills.length > 0 && (
                     <InsightChipList heading="ทักษะที่ตรงกับตำแหน่ง" items={breakdown.matchedSkills} tone="positive" />
                   )}
                   {breakdown.unmatchedSkills.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
+                    <div style={{ marginTop: 16 }}>
                       <InsightChipList heading="ทักษะในเรซูเม่ที่ไม่ตรงกับตำแหน่งนี้" items={breakdown.unmatchedSkills} tone="warning" />
                     </div>
                   )}
