@@ -3,7 +3,8 @@ import { Inter, Poppins, Geist, Noto_Sans_Thai } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthProvider } from "@/lib/auth-context";
-import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme-context";
+import { cookies } from "next/headers";
+import { ThemeProvider, THEME_COOKIE, isTheme } from "@/lib/theme-context";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -49,22 +50,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // suppressHydrationWarning บน <html> ด้านล่าง: THEME_INIT_SCRIPT เขียน
-  // data-theme ลงบน <html> ก่อน React hydrate ฝั่งเซิร์ฟเวอร์จึงเรนเดอร์
-  // <html> โดยไม่มี attribute นี้เสมอ แล้วไม่ตรงกับฝั่ง client ทำให้ React
-  // เตือน hydration mismatch ทุกครั้งที่โหลดหน้า ความไม่ตรงกันตรงนี้เป็น
-  // ความตั้งใจ (จำเป็นเพื่อกันจอกระพริบผิดธีมก่อน ThemeProvider จะ mount)
-  // จึงบอก React ให้ข้ามการเทียบ attribute ของ element นี้ตัวเดียว —
-  // ไม่กระทบ element อื่น และไม่ได้ปิดการตรวจ hydration ของทั้งแอป
+  // อ่านธีมจาก cookie ตั้งแต่ฝั่งเซิร์ฟเวอร์ แล้วใส่ data-theme ลงใน HTML
+  // ตั้งแต่ชุดแรกที่ส่งออกไป ฝั่งเซิร์ฟเวอร์กับฝั่งเบราว์เซอร์จึงตรงกันเป๊ะ
+  // ไม่มี hydration mismatch (เดิมใช้ localStorage + สคริปต์ inline ซึ่ง
+  // เซิร์ฟเวอร์อ่านไม่ได้ ทำให้ React ล้มทั้งหน้าด้วย error #418 แล้วกดสลับ
+  // ธีมไม่ติด) และไม่กระพริบ เพราะธีมถูกต้องมาตั้งแต่ byte แรก
+  // ดูคำอธิบายเต็มใน lib/theme-context.tsx
+  const cookieStore = await cookies();
+  const cookieTheme = cookieStore.get(THEME_COOKIE)?.value;
+  const theme = isTheme(cookieTheme) ? cookieTheme : "dark";
+
   return (
     <html
       lang="th"
-      suppressHydrationWarning
+      data-theme={theme}
       className={cn(
         "h-full",
         "antialiased",
@@ -75,21 +79,12 @@ export default function RootLayout({
         notoSansThai.variable
       )}
     >
-      <head>
-        {/* ต้องอยู่ใน <head> เท่านั้น — สคริปต์นี้เขียน data-theme ลงบน <html>
-            ให้เสร็จก่อนเบราว์เซอร์เริ่ม parse <body> จอแรกจึงเป็นธีมที่ถูก
-            ไม่กระพริบ ถ้าย้ายไปไว้ใน <body> (จุดเดิม) มันจะทำงานหลัง <html>
-            ถูก parse ไปแล้ว ทำให้ DOM ไม่ตรงกับ HTML ที่ server ส่งมา แล้ว
-            hydration ของ React ล้มทั้งหน้า (error #418) — อาการคือกดสลับธีม
-            แล้วสีไม่เปลี่ยน เพราะ DOM ค้างอยู่ที่สภาพเดิมจากฝั่ง server */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
       <body className="min-h-full flex flex-col">
         {/* Google Identity Services — loaded once app-wide so both /login
             and /register can call window.google.accounts.id without each
             needing its own <script> tag. See lib/use-google-signin.ts. */}
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" id="google-identity-services" />
-        <ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
           <AuthProvider>
             <AppShell>{children}</AppShell>
           </AuthProvider>

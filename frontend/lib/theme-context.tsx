@@ -1,18 +1,26 @@
 "use client";
 
-// Light/dark theme toggle for the Nocturne UI — applies a `data-theme`
-// attribute to <html> (not the shadcn `.dark` class already reserved by
-// globals.css's dormant --background/--foreground scaffold), which every
-// Nocturne surface/text/border in globals.css's `--nocturne-*` tokens
-// reads from. Persisted to localStorage so the choice survives reloads;
-// defaults to "dark" (the original, only design) when nothing is stored
-// yet or localStorage is unavailable (SSR, privacy mode, etc).
+// Light/dark theme สำหรับ Nocturne UI — เขียน attribute `data-theme` ลงบน
+// <html> ซึ่ง token --nocturne-* ทุกตัวใน globals.css อ่านค่าจากตรงนั้น
+// (ไม่ได้ใช้คลาส .dark ของ shadcn เพราะ scaffold ชุดนั้นไม่ได้ถูกใช้งานจริง)
 //
-// The blocking inline script in app/layout.tsx's <head> (see
-// THEME_INIT_SCRIPT below, rendered there before hydration) sets the
-// attribute synchronously on first paint so there's no flash of the wrong
-// theme while React hydrates — this provider then just keeps state and
-// <html> in sync on every toggle after that.
+// ทำไมต้องเก็บใน cookie ไม่ใช่ localStorage
+// -----------------------------------------
+// เดิมเก็บใน localStorage แล้วใช้สคริปต์ inline เขียน data-theme ลงบน <html>
+// ก่อน React hydrate เพื่อกันจอกระพริบผิดธีม ปัญหาคือ localStorage อ่านได้
+// เฉพาะฝั่งเบราว์เซอร์ ฝั่งเซิร์ฟเวอร์จึงเรนเดอร์ <html> โดยไม่มี data-theme
+// เสมอ พอถึงตอน hydrate DOM จริงกับ HTML ที่เซิร์ฟเวอร์ส่งมาไม่ตรงกัน React
+// จึงล้มทั้งหน้า (error #418 ใน production) ผลคือกดสลับธีมแล้วสีไม่เปลี่ยน
+// เพราะ DOM ค้างอยู่ที่สภาพเดิมจากฝั่งเซิร์ฟเวอร์
+//
+// cookie แก้ปัญหานี้ที่ต้นเหตุ เพราะเบราว์เซอร์แนบมากับทุก request เซิร์ฟเวอร์
+// จึงอ่านค่าได้ตั้งแต่ตอนเรนเดอร์ แล้วใส่ data-theme ลงใน HTML ตั้งแต่แรก
+// (ดู app/layout.tsx) ฝั่งเซิร์ฟเวอร์กับฝั่งเบราว์เซอร์ตรงกันเป๊ะ ไม่มีอะไรให้
+// mismatch อีก ไม่ต้องใช้สคริปต์ inline ไม่ต้องใช้ suppressHydrationWarning
+// และไม่กระพริบ เพราะธีมถูกต้องมาตั้งแต่ byte แรกของ HTML
+//
+// cookie นี้ไม่ใช่ข้อมูลลับ (เป็นแค่ตัวเลือกธีม) จึงตั้ง httpOnly ไม่ได้ —
+// ฝั่งเบราว์เซอร์ต้องเขียนเองเวลากดสลับ ใช้ SameSite=Lax และ path=/ ตามปกติ
 
 import {
   createContext,
@@ -25,7 +33,14 @@ import {
 
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "resumate-theme";
+export const THEME_COOKIE = "resumate-theme";
+
+/** 1 ปี — ตัวเลือกธีมควรอยู่ข้ามการปิดเบราว์เซอร์ */
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+export function isTheme(value: unknown): value is Theme {
+  return value === "light" || value === "dark";
+}
 
 type ThemeContextValue = {
   theme: Theme;
@@ -35,30 +50,33 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function readStoredTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+function writeThemeCookie(theme: Theme) {
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "dark") return stored;
+    document.cookie = `${THEME_COOKIE}=${theme}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
   } catch {
-    // localStorage unavailable (privacy mode, etc) — fall through to default.
+    // เขียน cookie ไม่ได้ (โหมดส่วนตัวบางแบบ) — ธีมยังใช้ได้ในหน้านี้
+    // แค่จะไม่ถูกจำไว้รอบหน้า ไม่ใช่เรื่องคอขาดบาดตาย
   }
-  return "dark";
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Lazy init reads the same synchronous source the inline script already
-  // used to set data-theme before hydration, so this never has to "jump"
-  // to a different value on mount.
-  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme());
+/**
+ * ค่าเริ่มต้นรับมาจาก server component (app/layout.tsx) ซึ่งอ่านจาก cookie
+ * เดียวกัน ค่าตั้งต้นของ state จึงตรงกับ HTML ที่เซิร์ฟเวอร์ส่งมาเสมอ
+ */
+export function ThemeProvider({
+  initialTheme,
+  children,
+}: {
+  initialTheme: Theme;
+  children: ReactNode;
+}) {
+  const [theme, setThemeState] = useState<Theme>(initialTheme);
 
+  // เซิร์ฟเวอร์ใส่ data-theme มาให้ถูกต้องแล้วตั้งแต่ HTML ชุดแรก effect นี้จึง
+  // ทำงานจริงเฉพาะตอนผู้ใช้กดสลับ (และตอน mount ครั้งแรกซึ่งเขียนทับด้วยค่าเดิม)
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // Best-effort persistence only.
-    }
+    writeThemeCookie(theme);
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
@@ -81,19 +99,3 @@ export function useTheme(): ThemeContextValue {
   if (!ctx) throw new Error("useTheme must be used within a ThemeProvider");
   return ctx;
 }
-
-// Inlined verbatim into a <script> tag in app/layout.tsx's <head>, before
-// any hydration — reads the same localStorage key this module uses and
-// sets data-theme on <html> synchronously, so the very first paint already
-// has the right theme instead of flashing dark-then-light (or vice versa).
-export const THEME_INIT_SCRIPT = `
-(function () {
-  try {
-    var stored = window.localStorage.getItem("${STORAGE_KEY}");
-    var theme = stored === "light" || stored === "dark" ? stored : "dark";
-    document.documentElement.setAttribute("data-theme", theme);
-  } catch (e) {
-    document.documentElement.setAttribute("data-theme", "dark");
-  }
-})();
-`;
