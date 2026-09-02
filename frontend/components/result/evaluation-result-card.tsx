@@ -20,7 +20,6 @@ import { ScoreBadge } from "@/components/ui/score-badge";
 import { InsightChipList } from "@/components/ui/insight-chip-list";
 import type { EvaluationResult } from "@/lib/result-types";
 import { readAssessmentResult } from "@/lib/assessment-session";
-import { ScoreBreakdownCard } from "./score-breakdown-card";
 import styles from "./evaluation-result.module.css";
 import fieldStyles from "@/components/resume/resume-upload.module.css";
 
@@ -133,30 +132,6 @@ export function EvaluationResultCard() {
           </div>
         </div>
       </div>
-
-      {/* ที่มาของคะแนน — วางไว้ติดกับการ์ดคะแนนด้านบน เพราะเป็นคำอธิบายของตัวเลข
-          ชุดเดียวกัน ผู้ใช้จะได้เห็นคำตอบทันทีว่าเลขที่เพิ่งเห็นคิดมาจากอะไร
-          แสดงเฉพาะเมื่อหลังบ้านส่ง scoreBreakdown มา ผลการประเมินเก่าที่บันทึกไว้
-          ก่อนมีฟีเจอร์นี้จะไม่มีข้อมูลส่วนนี้ และต้องไม่ทำให้หน้าพัง */}
-      {result.scoreBreakdown && (
-        <div className={`${styles.animateIn} ${styles.delay2}`}>
-          <ScoreBreakdownCard breakdown={result.scoreBreakdown} />
-          {result.scoreExplanation && (
-            <div className={styles.breakdownCard} style={{ marginTop: 16 }}>
-              <div className={styles.breakdownHeader}>
-                <span className={styles.aiSparkle} aria-hidden="true">✦</span>
-                <span className={styles.breakdownTitle}>คำอธิบายคะแนน</span>
-                <span className={styles.aiCardBadge}>สร้างโดย AI</span>
-              </div>
-              {/* AI เรียบเรียงจากตัวเลขชุดเดียวกับตารางด้านบน ไม่ได้คำนวณเอง
-                  ตัวเลขในย่อหน้านี้จึงตรงกับตารางเสมอ */}
-              <p className={styles.breakdownExplain} style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>
-                {result.scoreExplanation}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       {result.recommendationSummary && (
         <div className={`${styles.aiCard} ${styles.animateIn} ${styles.delay2}`}>
