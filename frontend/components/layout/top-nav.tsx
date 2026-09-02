@@ -24,12 +24,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 
 export function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, clearSession } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const visibleNavItems = NAV_ITEMS.filter((item) => {
@@ -65,8 +67,12 @@ export function TopNav() {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-20 flex justify-center px-4 sm:top-6">
       <nav
-        className="pointer-events-auto flex w-full max-w-[1140px] items-center justify-between rounded-2xl border px-5 py-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
-        style={{ background: "rgba(13,11,22,0.75)", borderColor: "rgba(255,255,255,0.12)" }}
+        className="pointer-events-auto flex w-full max-w-[1140px] items-center justify-between rounded-2xl border px-5 py-3 backdrop-blur-md"
+        style={{
+          background: "var(--nocturne-card-bg)",
+          borderColor: "var(--nocturne-border)",
+          boxShadow: "var(--nocturne-shadow)",
+        }}
       >
         <Link href="/" className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
           <Image
@@ -120,15 +126,20 @@ export function TopNav() {
                     title={item.label}
                     className="group/dock relative flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-125 lg:h-10 lg:w-10"
                     style={{
-                      color: isActive ? "#ffffff" : "rgba(255,255,255,0.65)",
-                      background: isActive ? "rgba(255,255,255,0.08)" : "transparent",
-                      borderColor: isActive ? "rgba(255,255,255,0.18)" : "transparent",
+                      color: isActive ? "var(--nocturne-text-primary)" : "var(--nocturne-text-secondary)",
+                      background: isActive ? "var(--nocturne-surface-hover)" : "transparent",
+                      borderColor: isActive ? "var(--nocturne-border-strong)" : "transparent",
                     }}
                   >
                     {item.icon}
                     <span
-                      className="pointer-events-none absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.6)] transition-opacity duration-150 group-hover/dock:opacity-100"
-                      style={{ background: "rgba(13,11,22,0.95)", borderColor: "rgba(255,255,255,0.12)" }}
+                      className="pointer-events-none absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-medium opacity-0 transition-opacity duration-150 group-hover/dock:opacity-100"
+                      style={{
+                        background: "var(--nocturne-card-bg)",
+                        borderColor: "var(--nocturne-border)",
+                        color: "var(--nocturne-text-primary)",
+                        boxShadow: "var(--nocturne-shadow)",
+                      }}
                     >
                       {item.label}
                     </span>
@@ -143,7 +154,10 @@ export function TopNav() {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5"
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors"
+                style={{ background: "transparent" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--nocturne-surface)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               >
                 <span
                   aria-hidden="true"
@@ -155,10 +169,20 @@ export function TopNav() {
                 >
                   {user.fullname?.charAt(0).toUpperCase() ?? "?"}
                 </span>
-                <span className="hidden text-xs font-medium text-white/85 sm:inline sm:text-sm">
+                <span
+                  className="hidden text-xs font-medium sm:inline sm:text-sm"
+                  style={{ color: "var(--nocturne-text-secondary)" }}
+                >
                   {user.fullname}
                 </span>
-                <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" className="text-white/60">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 256 256"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  style={{ color: "var(--nocturne-text-muted)" }}
+                >
                   <path d="M213.66,101.66l-72,72a8,8,0,0,1-11.32,0l-72-72A8,8,0,0,1,69.66,90.34L128,148.69l58.34-58.35a8,8,0,0,1,11.32,11.32Z" />
                 </svg>
               </button>
@@ -166,8 +190,12 @@ export function TopNav() {
               {menuOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-xl border py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md"
-                  style={{ background: "rgba(13,11,22,0.92)", borderColor: "rgba(255,255,255,0.12)" }}
+                  className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-xl border py-1 backdrop-blur-md"
+                  style={{
+                    background: "var(--nocturne-card-bg)",
+                    borderColor: "var(--nocturne-border)",
+                    boxShadow: "var(--nocturne-shadow)",
+                  }}
                 >
                   {/* ลิงก์ "โปรไฟล์" (/profile) และ "ตั้งค่า" (/settings) ถูกถอดออก
                       ชั่วคราว — ยังไม่มีทั้งสองหน้าใน app/ ตัวลิงก์เองทำให้ Next.js
@@ -178,25 +206,30 @@ export function TopNav() {
                     type="button"
                     role="menuitem"
                     onClick={handleLogout}
-                    className="block w-full px-4 py-2 text-left text-xs text-red-300 transition-colors hover:bg-white/5 sm:text-sm"
+                    className="block w-full px-4 py-2 text-left text-xs text-red-300 transition-colors hover:opacity-80 sm:text-sm"
                   >
                     ออกจากระบบ
                   </button>
                 </div>
               )}
             </div>
+
+            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
           </div>
         ) : (
           <div className="flex items-center gap-3 sm:gap-4">
+            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
             <Link
               href="/login"
-              className="text-xs font-medium text-white/70 transition-colors hover:text-white sm:text-sm"
+              className="text-xs font-medium transition-colors hover:opacity-80 sm:text-sm"
+              style={{ color: "var(--nocturne-text-secondary)" }}
             >
               เข้าสู่ระบบ
             </Link>
             <Link
               href="/register"
-              className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#0a0714] transition-transform hover:-translate-y-0.5 sm:px-4 sm:py-2 sm:text-sm"
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-transform hover:-translate-y-0.5 sm:px-4 sm:py-2 sm:text-sm"
+              style={{ background: "var(--nocturne-text-primary)", color: "var(--nocturne-bg)" }}
             >
               สมัครสมาชิก
             </Link>
@@ -210,8 +243,8 @@ export function TopNav() {
               href="/login"
               aria-label="เข้าสู่ระบบด้วย Google"
               title="เข้าสู่ระบบด้วย Google"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:bg-white/5 sm:h-9 sm:w-9"
-              style={{ borderColor: "rgba(255,255,255,0.15)" }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:opacity-80 sm:h-9 sm:w-9"
+              style={{ borderColor: "var(--nocturne-border-strong)" }}
             >
               <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
                 <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.2-.1-2.4-.4-3.5z"/>
@@ -224,5 +257,40 @@ export function TopNav() {
         )}
       </nav>
     </div>
+  );
+}
+
+// Sun/moon toggle — placed inline in TopNav (both auth branches) so the
+// control is available everywhere the nav renders, without duplicating the
+// icon markup. Reads/writes theme via useTheme() from lib/theme-context.tsx;
+// all colors reference --nocturne-* tokens so the button itself flips
+// correctly when the theme it controls changes.
+function ThemeToggleButton({
+  theme,
+  onToggle,
+}: {
+  theme: "light" | "dark";
+  onToggle: () => void;
+}) {
+  const isDark = theme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={isDark ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"}
+      title={isDark ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors hover:opacity-80 sm:h-9 sm:w-9"
+      style={{ borderColor: "var(--nocturne-border-strong)", color: "var(--nocturne-text-secondary)" }}
+    >
+      {isDark ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm9-6a1 1 0 0 1 0 2h-1a1 1 0 1 1 0-2h1ZM4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm14.36-6.36a1 1 0 0 1 1.41 1.41l-.7.71a1 1 0 1 1-1.42-1.41l.71-.71ZM6.34 17.66a1 1 0 0 1 1.42 1.41l-.71.71a1 1 0 0 1-1.41-1.41l.7-.71Zm11.31 1.41a1 1 0 0 1-1.41-1.41l.7-.71a1 1 0 1 1 1.42 1.41l-.71.71ZM7.05 6.34a1 1 0 1 1-1.41-1.41l.7-.71a1 1 0 0 1 1.42 1.41l-.71.71ZM12 20a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1Z" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M20.742 13.045a8.088 8.088 0 0 1-2.077.273c-4.552 0-8.25-3.698-8.25-8.25 0-1.276.29-2.484.808-3.562a.75.75 0 0 0-.917-1.03A10.502 10.502 0 0 0 3 11.25C3 17.187 7.813 22 13.75 22a10.502 10.502 0 0 0 9.024-5.106.75.75 0 0 0-.808-1.126 8.194 8.194 0 0 1-1.224.277Z" />
+        </svg>
+      )}
+    </button>
   );
 }

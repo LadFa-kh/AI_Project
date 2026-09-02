@@ -99,6 +99,16 @@ export function SkillAutocomplete({ id, value, onChange, placeholder, disabled }
     setFilterText("");
   }
 
+  function clearValue(event: React.MouseEvent) {
+    // Stop this from also triggering the trigger button's onClick (which
+    // would immediately reopen the menu right after clearing).
+    event.stopPropagation();
+    onChange("");
+    setIsOpen(false);
+    setActiveIndex(-1);
+    setFilterText("");
+  }
+
   function handleTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
     if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -143,6 +153,25 @@ export function SkillAutocomplete({ id, value, onChange, placeholder, disabled }
         <span className={value ? styles.selectValue : styles.selectPlaceholder}>
           {value || placeholder}
         </span>
+        {value && !disabled && (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="ล้างค่าที่เลือก"
+            className={styles.clearBtn}
+            onClick={clearValue}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                clearValue(e as unknown as React.MouseEvent);
+              }
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+            </svg>
+          </span>
+        )}
         <svg
           width="14"
           height="14"

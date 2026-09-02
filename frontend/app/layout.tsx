@@ -3,6 +3,7 @@ import { Inter, Poppins, Geist, Noto_Sans_Thai } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthProvider } from "@/lib/auth-context";
+import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme-context";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -67,13 +68,21 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
+        {/* Sets data-theme on <html> synchronously before hydration/first
+            paint, reading the same localStorage key ThemeProvider uses —
+            without this, the page would flash the wrong theme for a beat
+            while React mounts and ThemeProvider's effect catches up. See
+            lib/theme-context.tsx. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Google Identity Services — loaded once app-wide so both /login
             and /register can call window.google.accounts.id without each
             needing its own <script> tag. See lib/use-google-signin.ts. */}
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" id="google-identity-services" />
-        <AuthProvider>
-          <AppShell>{children}</AppShell>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

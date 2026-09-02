@@ -29,12 +29,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <TopNav />
-      {/* bg-black here fixes a visible white gap above the navbar: this
-          wrapper's own top padding (clearing the fixed/floating TopNav)
-          had no background of its own, so the page's default light
-          --background token showed through above each page's own dark
-          surface. */}
-      <div className="min-h-dvh bg-black pt-[88px] sm:pt-[96px]">
+      {/* Uses --nocturne-bg (not the shadcn --background token, which
+          defaults light) so this wrapper's background follows the
+          light/dark toggle instead of showing a gap above the navbar. */}
+      <div className="min-h-dvh pt-[88px] sm:pt-[96px]" style={{ background: "var(--nocturne-bg)" }}>
         <RouteGuard>{children}</RouteGuard>
       </div>
     </>

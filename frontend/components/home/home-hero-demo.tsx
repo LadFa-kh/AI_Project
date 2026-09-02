@@ -290,13 +290,23 @@ export function HomeHeroDemo() {
               "linear-gradient(to bottom, transparent 0%, black 12%, black 78%, transparent 100%)",
             WebkitMaskImage:
               "linear-gradient(to bottom, transparent 0%, black 12%, black 78%, transparent 100%)",
+            // The WebGL threads are tuned for a dark backdrop — on the light
+            // theme they'd read as faint noise, so fade them out via the
+            // --nocturne-particle-opacity token instead of hiding outright.
+            opacity: "var(--nocturne-particle-opacity)",
           }}
         />
         <div className="relative z-10 flex flex-col items-center">
-          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.15em] text-white/60">
+          <div
+            className="mb-4 text-xs font-semibold uppercase tracking-[0.15em]"
+            style={{ color: "var(--nocturne-text-muted)" }}
+          >
             RESUMATE
           </div>
-          <h1 className="min-h-[2.4em] max-w-[820px] whitespace-pre-wrap text-[clamp(2.2rem,1.6rem+3vw,4rem)] font-extrabold leading-[1.15] text-white">
+          <h1
+            className="min-h-[2.4em] max-w-[820px] whitespace-pre-wrap text-[clamp(2.2rem,1.6rem+3vw,4rem)] font-extrabold leading-[1.15]"
+            style={{ color: "var(--nocturne-text-primary)" }}
+          >
             <span ref={typeTextRef} />
             <span
               aria-hidden="true"
@@ -306,7 +316,7 @@ export function HomeHeroDemo() {
               |
             </span>
           </h1>
-          <p className="mt-6 max-w-[560px] text-white/70">
+          <p className="mt-6 max-w-[560px]" style={{ color: "var(--nocturne-text-secondary)" }}>
             อัปโหลดเรซูเม่ ให้ AI ประเมินทักษะของคุณ แล้วรับคำแนะนำสถานที่ฝึกงานที่เหมาะกับคุณที่สุด
           </p>
           <div className="mt-10 flex gap-4">
@@ -339,8 +349,8 @@ export function HomeHeroDemo() {
                 </Link>
                 <Link
                   href="/register"
-                  className="rounded-full border px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
-                  style={{ borderColor: "rgba(255,255,255,0.2)" }}
+                  className="rounded-full border px-8 py-3.5 text-sm font-semibold transition-transform hover:-translate-y-0.5"
+                  style={{ borderColor: "var(--nocturne-border-strong)", color: "var(--nocturne-text-primary)" }}
                 >
                   สมัครสมาชิก
                 </Link>

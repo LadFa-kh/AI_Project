@@ -15,7 +15,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(24px, 6vw, 48px) 16.8px;
-  background: #000000;
+  background: var(--nocturne-bg);
   overflow: hidden;
 }
 
@@ -39,7 +39,7 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(90px);
-  opacity: 0.26;
+  opacity: var(--nocturne-blob-opacity);
   will-change: transform;
 }
 
@@ -58,7 +58,6 @@
   bottom: -160px;
   right: -140px;
   background: #ec4899;
-  opacity: 0.22;
   animation: drift-two 32s ease-in-out infinite;
 }
 
@@ -97,7 +96,7 @@
   padding: 0 4px;
   font-size: 13.5px;
   font-weight: 500;
-  color: color-mix(in srgb, #f5f3ff 65%, transparent);
+  color: var(--nocturne-text-secondary);
   text-decoration: none;
   transition: color 0.15s ease-out, transform 0.15s ease-out;
 }
@@ -112,7 +111,7 @@
   font-size: 12px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
   text-align: center;
   margin-bottom: 10px;
 }
@@ -122,7 +121,7 @@
   font-size: clamp(26px, 4vw, 32px);
   font-weight: 700;
   line-height: 1.2;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
   min-height: 1.3em;
 }
 
@@ -150,8 +149,8 @@
   margin-bottom: 20px;
   padding: 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, #ffffff 4%, transparent);
-  border: 1px solid color-mix(in srgb, #ffffff 8%, transparent);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border);
 }
 .modeIndicator {
   position: absolute;
@@ -172,14 +171,14 @@
   padding: 8px 12px;
   border: none;
   background: transparent;
-  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+  color: var(--nocturne-text-secondary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   border-radius: 999px;
   transition: color 0.25s ease;
 }
-.modeBtn.isActive { color: #ffffff; }
+.modeBtn.isActive { color: var(--nocturne-text-primary); }
 
 /* ===== Component 1 (animation): 3D card-flip between the two forms ===== */
 .cardStage {
@@ -247,13 +246,13 @@
   gap: 24px;
   padding: 40px 32px;
   border-radius: 20px;
-  background: color-mix(in srgb, #0a0714 80%, transparent);
+  background: var(--nocturne-card-bg);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid color-mix(in srgb, #f5f3ff 12%, transparent);
+  border: 1px solid var(--nocturne-border-strong);
   box-shadow:
     0 0 0 1px rgba(124, 58, 237, 0.1),
-    0 32px 80px rgba(0, 0, 0, 0.6),
+    var(--nocturne-shadow),
     0 0 60px -16px rgba(124, 58, 237, 0.35);
 }
 
@@ -276,7 +275,7 @@
      frame itself stays transparent to avoid boxing it in with a clashing
      solid color behind it. */
   background: transparent;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .headingBlock {
@@ -293,14 +292,14 @@
   font-size: clamp(28px, 4vw, 32px);
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .subheading {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.55;
-  color: color-mix(in srgb, #b8b0d9 75%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .form {
@@ -334,7 +333,7 @@
 .field > label {
   font-size: 12px;
   font-weight: 500;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .input {
@@ -343,17 +342,17 @@
   padding: 10px 14px;
   font: inherit;
   font-size: 15px;
-  color: #f5f3ff;
+  color: var(--nocturne-text-primary);
   caret-color: #ec4899;
-  background: color-mix(in srgb, #0a0714 85%, transparent);
-  border: 1px solid color-mix(in srgb, #f5f3ff 16%, transparent);
+  background: var(--nocturne-input-bg);
+  border: 1px solid var(--nocturne-input-border);
   border-radius: 10px;
   outline: none;
   transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.18s ease-out;
 }
 
-.input::placeholder { color: color-mix(in srgb, #f5f3ff 38%, transparent); }
-.input:hover { border-color: color-mix(in srgb, #f5f3ff 45%, transparent); }
+.input::placeholder { color: var(--nocturne-input-placeholder); }
+.input:hover { border-color: var(--nocturne-border-strong); }
 .input:focus-visible {
   border-color: #7c3aed;
   outline: 2px solid #7c3aed;
@@ -362,6 +361,37 @@
   transform: scale(1.008);
 }
 .input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Wraps a password .input so the show/hide toggle can sit inside it,
+   right-aligned, without affecting the input's own layout/width. */
+.inputWrap {
+  position: relative;
+  display: flex;
+}
+.inputWrap .input {
+  padding-right: 44px;
+}
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--nocturne-text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.15s ease-out, background 0.15s ease-out;
+}
+.passwordToggle:hover { color: var(--nocturne-text-secondary); background: var(--nocturne-surface); }
+.passwordToggle:focus-visible { outline: 2px solid #7c3aed; outline-offset: 1px; }
+.passwordToggle:disabled { opacity: 0.5; cursor: not-allowed; }
 .inputInvalid { border-color: oklch(58% 0.14 25); }
 .inputInvalid:focus-visible {
   border-color: oklch(58% 0.14 25);
@@ -385,7 +415,7 @@
   flex: 1;
   height: 4px;
   border-radius: 2px;
-  background: color-mix(in srgb, #f5f3ff 14%, transparent);
+  background: var(--nocturne-input-border);
   overflow: hidden;
 }
 .strengthFill {
@@ -438,7 +468,7 @@
   padding: 12px 0;
   font-size: 13px;
   line-height: 1.5;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .submitBtn {
@@ -486,11 +516,11 @@
 .dividerLine {
   height: 1px;
   flex: 1;
-  background: linear-gradient(to right, transparent, color-mix(in srgb, #f5f3ff 16%, transparent) 20%, color-mix(in srgb, #f5f3ff 16%, transparent) 80%, transparent);
+  background: linear-gradient(to right, transparent, var(--nocturne-input-border) 20%, var(--nocturne-input-border) 80%, transparent);
 }
 .dividerText {
   font-size: 12px;
-  color: color-mix(in srgb, #b8b0d9 60%, transparent);
+  color: var(--nocturne-text-muted);
 }
 
 .googleBtn {
@@ -503,16 +533,16 @@
   font-family: "Segoe UI", system-ui, sans-serif;
   font-weight: 500;
   font-size: 14px;
-  color: #f5f3ff;
-  background: color-mix(in srgb, #ffffff 3%, transparent);
-  border: 1px solid color-mix(in srgb, #ffffff 14%, transparent);
+  color: var(--nocturne-text-primary);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border-strong);
   border-radius: 10px;
   cursor: pointer;
   transition: box-shadow 0.18s ease-out, background 0.18s ease-out, transform 0.18s ease-out, border-color 0.18s ease-out;
 }
 .googleBtn:hover:not(:disabled) {
-  background: color-mix(in srgb, #ffffff 6%, transparent);
-  border-color: color-mix(in srgb, #ffffff 28%, transparent);
+  background: var(--nocturne-surface-hover);
+  border-color: var(--nocturne-border-strong);
   transform: translateY(-1px);
 }
 .googleBtn:active:not(:disabled) { transform: translateY(0); }
@@ -523,7 +553,7 @@
   margin: 0;
   text-align: center;
   font-size: 13px;
-  color: color-mix(in srgb, #b8b0d9 70%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .animateIn {

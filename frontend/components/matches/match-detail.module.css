@@ -14,7 +14,7 @@
   position: relative;
   min-height: 100dvh;
   overflow-x: hidden;
-  background: #000000;
+  background: var(--nocturne-bg);
 }
 
 .particleCanvas {
@@ -36,7 +36,7 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.24;
+  opacity: var(--nocturne-blob-opacity);
   will-change: transform;
 }
 
@@ -55,7 +55,6 @@
   bottom: -170px;
   left: -150px;
   background: #3b82f6;
-  opacity: 0.2;
   animation: drift-two 33s ease-in-out infinite;
 }
 
@@ -87,11 +86,11 @@
   width: fit-content;
   font-size: 13px;
   font-weight: 500;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
   text-decoration: none;
   transition: color 0.18s ease-out;
 }
-.backLink:hover { color: #ffffff; }
+.backLink:hover { color: var(--nocturne-text-primary); }
 .backLink:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; border-radius: 4px; }
 
 .detailCard {
@@ -101,10 +100,10 @@
   gap: 28px;
   padding: clamp(28px, 4vw, 40px) clamp(24px, 4vw, 36px);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--nocturne-surface);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--nocturne-border);
 }
 
 .headerRow {
@@ -129,13 +128,13 @@
   font-size: clamp(22px, 3vw, 26px);
   letter-spacing: -0.01em;
   line-height: 1.2;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .companyText {
   margin: 0;
   font-size: 14.5px;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .jobTypeBadge {
@@ -165,7 +164,7 @@
   height: 96px;
   border-radius: 50%;
   --pct: 0;
-  background: conic-gradient(var(--score-color, #7c3aed) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.08) 0);
+  background: conic-gradient(var(--score-color, #7c3aed) calc(var(--pct) * 1%), var(--nocturne-border-strong) 0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,7 +176,7 @@
   position: absolute;
   inset: 6px;
   border-radius: 50%;
-  background: #0a0714;
+  background: var(--nocturne-card-bg);
 }
 
 .headerScoreInner {
@@ -198,7 +197,7 @@
 
 .headerScoreLabel {
   font-size: 0.62rem;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
   margin-top: -2px;
 }
 
@@ -206,14 +205,14 @@
   margin: 0 0 12px;
   font-size: 14px;
   font-weight: 700;
-  color: color-mix(in srgb, #ffffff 90%, transparent);
+  color: var(--nocturne-text-primary);
 }
 
 .bodyText {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.65;
-  color: color-mix(in srgb, #b8b0d9 90%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .skillChipRow {
@@ -248,9 +247,9 @@
   font-family: "Segoe UI", system-ui, sans-serif;
   font-weight: 600;
   font-size: 14px;
-  color: color-mix(in srgb, #ffffff 90%, transparent);
+  color: var(--nocturne-text-primary);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--nocturne-border-strong);
   border-radius: 10px;
   cursor: pointer;
   text-decoration: none;
@@ -284,9 +283,9 @@
   border-radius: 6px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, #f5f3ff 10%, transparent) 25%,
-    color-mix(in srgb, #f5f3ff 18%, transparent) 37%,
-    color-mix(in srgb, #f5f3ff 10%, transparent) 63%
+    var(--nocturne-border) 25%,
+    var(--nocturne-border-strong) 37%,
+    var(--nocturne-border) 63%
   );
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;

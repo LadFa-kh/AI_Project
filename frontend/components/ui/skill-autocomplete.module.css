@@ -29,14 +29,14 @@
 }
 
 .selectValue {
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .selectPlaceholder {
-  color: color-mix(in srgb, #b8b0d9 55%, transparent);
+  color: var(--nocturne-input-placeholder);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -44,12 +44,36 @@
 
 .chevron {
   flex-shrink: 0;
-  color: color-mix(in srgb, #b8b0d9 75%, transparent);
+  color: var(--nocturne-text-secondary);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .chevron[data-open="true"] {
   transform: rotate(180deg);
   color: #c4b5fd;
+}
+
+/* "✕" clear button — only rendered when a value is selected, sits between
+   the value text and the chevron so the whole trigger stays clickable to
+   reopen the menu while this one small hit-area clears instead. */
+.clearBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--nocturne-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease-out, background 0.15s ease-out;
+}
+.clearBtn:hover {
+  color: var(--nocturne-text-primary);
+  background: rgba(124, 58, 237, 0.18);
+}
+.clearBtn:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 1px;
 }
 
 /* Menu — scale + fade entrance from the trigger edge, direction depends on
@@ -62,11 +86,11 @@
   display: flex;
   flex-direction: column;
   max-height: 240px;
-  background: #0d0a16;
-  border: 1px solid color-mix(in srgb, #7c3aed 35%, transparent);
+  background: var(--nocturne-card-bg);
+  border: 1px solid var(--nocturne-border-strong);
   border-radius: 14px;
   box-shadow:
-    0 20px 48px rgba(0, 0, 0, 0.55),
+    var(--nocturne-shadow),
     0 0 0 1px rgba(124, 58, 237, 0.08),
     0 0 32px -12px rgba(124, 58, 237, 0.35);
   overflow: hidden;
@@ -98,13 +122,13 @@
   padding: 0 14px;
   font-size: 13px;
   font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
   background: rgba(124, 58, 237, 0.06);
   border: none;
   border-bottom: 1px solid color-mix(in srgb, #7c3aed 22%, transparent);
   outline: none;
 }
-.searchInput::placeholder { color: color-mix(in srgb, #b8b0d9 55%, transparent); }
+.searchInput::placeholder { color: var(--nocturne-input-placeholder); }
 .searchInput:focus { background: rgba(124, 58, 237, 0.1); }
 
 .optionList {
@@ -132,7 +156,7 @@
   font-size: 13px;
   line-height: 1.35;
   font-family: var(--font-noto-thai), "Segoe UI", system-ui, sans-serif;
-  color: color-mix(in srgb, #b8b0d9 92%, transparent);
+  color: var(--nocturne-text-secondary);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -153,7 +177,7 @@
 }
 .option:hover,
 .option[data-active="true"] {
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
   background: linear-gradient(90deg, rgba(124, 58, 237, 0.16), rgba(124, 58, 237, 0.03));
 }
 .option:hover::before,
@@ -161,14 +185,14 @@
   height: 60%;
 }
 .option[aria-selected="true"] {
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
   font-weight: 600;
 }
 
 .emptyState {
   padding: 10px 12px;
   font-size: 13px;
-  color: color-mix(in srgb, #b8b0d9 60%, transparent);
+  color: var(--nocturne-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {

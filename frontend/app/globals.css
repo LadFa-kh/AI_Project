@@ -24,7 +24,9 @@
      by the shared floating TopNav (components/layout/top-nav.tsx) on every
      route per explicit request to replace the old Stardust sidebar
      app-wide. Page content/body surfaces elsewhere still default to
-     Stardust orange unless a page has explicitly opted into Nocturne. */
+     Stardust orange unless a page has explicitly opted into Nocturne. The
+     3 accent hues themselves don't change between light/dark — only the
+     surfaces/text around them do (--nocturne-* below). */
   --color-home-hero-accent-1: #7c3aed;
   --color-home-hero-accent-2: #ec4899;
   --color-home-hero-accent-3: #3b82f6;
@@ -138,6 +140,62 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ===== Nocturne theme tokens (light/dark) =====
+   Separate from the shadcn --background/--foreground/.dark scaffold above
+   (that system is unused by the actual Nocturne pages — Home, TopNav,
+   Login/Register, admin/employer dashboards — which hardcode raw hex/rgba
+   throughout). Gated by [data-theme] on <html> instead of .dark, set by
+   ThemeProvider (lib/theme-context.tsx) + persisted to localStorage, so it
+   doesn't collide with the dormant shadcn dark-mode class.
+   Defaults to dark (data-theme="dark") since that's the original design;
+   data-theme="light" flips every token below to the light variant. Every
+   Nocturne surface/text/border value a component needs should reference
+   one of these — never a raw hex/rgba — so both themes stay consistent
+   from one edit here. The 3 accent hues (--color-home-hero-accent-1/2/3
+   above) stay constant in both themes; only what surrounds them changes. */
+:root,
+[data-theme="dark"] {
+  --nocturne-bg: #000000;
+  --nocturne-bg-alt: #030303;
+  --nocturne-surface: rgba(255, 255, 255, 0.03);
+  --nocturne-surface-hover: rgba(255, 255, 255, 0.06);
+  --nocturne-card-bg: color-mix(in srgb, #0a0714 80%, transparent);
+  --nocturne-border: rgba(255, 255, 255, 0.1);
+  --nocturne-border-strong: rgba(255, 255, 255, 0.16);
+  --nocturne-text-primary: #ffffff;
+  --nocturne-text-secondary: color-mix(in srgb, #b8b0d9 85%, transparent);
+  --nocturne-text-muted: color-mix(in srgb, #b8b0d9 60%, transparent);
+  --nocturne-input-bg: color-mix(in srgb, #0a0714 85%, transparent);
+  --nocturne-input-border: color-mix(in srgb, #f5f3ff 16%, transparent);
+  --nocturne-input-placeholder: color-mix(in srgb, #f5f3ff 38%, transparent);
+  --nocturne-blob-opacity: 0.26;
+  --nocturne-particle-opacity: 1;
+  --nocturne-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] {
+  --nocturne-bg: #faf9fc;
+  --nocturne-bg-alt: #f3f1f8;
+  --nocturne-surface: rgba(20, 12, 40, 0.035);
+  --nocturne-surface-hover: rgba(20, 12, 40, 0.06);
+  --nocturne-card-bg: color-mix(in srgb, #ffffff 88%, transparent);
+  --nocturne-border: rgba(20, 12, 40, 0.1);
+  --nocturne-border-strong: rgba(20, 12, 40, 0.18);
+  --nocturne-text-primary: #1a1625;
+  /* Bumped from 85%/60% mix — at 60% the muted tier measured ~3.1:1 against
+     this background (below WCAG AA's 4.5:1 for body text), which is what
+     read as "unclear" in light mode. 80%/78% brings both tiers to ~5:1+
+     while keeping the two visually distinct from text-primary. */
+  --nocturne-text-secondary: color-mix(in srgb, #4a4460 90%, transparent);
+  --nocturne-text-muted: color-mix(in srgb, #4a4460 78%, transparent);
+  --nocturne-input-bg: color-mix(in srgb, #ffffff 90%, transparent);
+  --nocturne-input-border: color-mix(in srgb, #1a1625 14%, transparent);
+  --nocturne-input-placeholder: color-mix(in srgb, #1a1625 42%, transparent);
+  --nocturne-blob-opacity: 0.14;
+  --nocturne-particle-opacity: 0.55;
+  --nocturne-shadow: 0 32px 80px rgba(20, 12, 40, 0.12);
 }
 
 @layer base {

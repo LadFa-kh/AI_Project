@@ -12,7 +12,7 @@
   position: relative;
   min-height: 100dvh;
   overflow-x: hidden;
-  background: #000000;
+  background: var(--nocturne-bg);
 }
 
 .particleCanvas {
@@ -34,7 +34,7 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.24;
+  opacity: var(--nocturne-blob-opacity);
   will-change: transform;
 }
 
@@ -53,7 +53,6 @@
   bottom: -170px;
   left: -150px;
   background: #3b82f6;
-  opacity: 0.2;
   animation: drift-two 33s ease-in-out infinite;
 }
 
@@ -83,7 +82,7 @@
   font-size: 0.85rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
   margin-bottom: 0.75rem;
 }
 
@@ -92,7 +91,7 @@
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.5rem);
   font-weight: 800;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .splitWord {
@@ -110,7 +109,7 @@
 .subtitle {
   margin-top: 0.9rem;
   font-size: 0.95rem;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .viewWrap {
@@ -131,10 +130,10 @@
   gap: 12px;
   padding: 16px 18px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--nocturne-surface);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--nocturne-border);
 }
 
 .sortSelect {
@@ -142,9 +141,9 @@
   padding: 8px 12px;
   font: inherit;
   font-size: 13px;
-  color: #f5f3ff;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--nocturne-text-primary);
+  background: var(--nocturne-surface-hover);
+  border: 1px solid var(--nocturne-border-strong);
   border-radius: 10px;
   outline: none;
   cursor: pointer;
@@ -153,12 +152,14 @@
 /* Native <option> elements don't inherit the select's dark background in
    most browsers — without this, the open dropdown panel falls back to the
    OS default (white/light), making the near-white .sortSelect text
-   unreadable against it. */
+   unreadable against it. Explicit per-theme colors (not tokens) here since
+   this is the one place matching the *native OS popup* surface matters more
+   than matching the page card surface. */
 .sortSelect option {
-  background: #120f1a;
-  color: #f5f3ff;
+  background: var(--nocturne-bg-alt);
+  color: var(--nocturne-text-primary);
 }
-.sortSelect:hover { border-color: rgba(255, 255, 255, 0.35); }
+.sortSelect:hover { border-color: var(--nocturne-text-muted); }
 .sortSelect:focus-visible {
   border-color: #7c3aed;
   outline: 2px solid #7c3aed;
@@ -180,14 +181,14 @@
   padding: 6px 12px;
   font-size: 12.5px;
   font-weight: 500;
-  color: color-mix(in srgb, #b8b0d9 90%, transparent);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--nocturne-text-secondary);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border-strong);
   border-radius: 999px;
   cursor: pointer;
   transition: border-color 0.18s ease-out, background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
 }
-.filterChip:hover { border-color: rgba(255, 255, 255, 0.35); transform: translateY(-1px); }
+.filterChip:hover { border-color: var(--nocturne-text-muted); transform: translateY(-1px); }
 .filterChip:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16); }
 
 .filterChipActive {
@@ -229,8 +230,8 @@
   position: relative;
   padding: clamp(1.4rem, 3vw, 1.9rem);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -256,7 +257,7 @@
   height: 76px;
   border-radius: 50%;
   --pct: 0;
-  background: conic-gradient(var(--score-color, #7c3aed) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.08) 0);
+  background: conic-gradient(var(--score-color, #7c3aed) calc(var(--pct) * 1%), var(--nocturne-border-strong) 0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,7 +269,7 @@
   position: absolute;
   inset: 5px;
   border-radius: 50%;
-  background: #0a0714;
+  background: var(--nocturne-card-bg);
 }
 
 .matchScoreInner {
@@ -289,7 +290,7 @@
 
 .matchScoreLabel {
   font-size: 0.58rem;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
   margin-top: -2px;
 }
 
@@ -302,13 +303,13 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .matchCompany {
   margin: 0.15rem 0 0;
   font-size: 0.85rem;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .matchSkills {
@@ -326,9 +327,9 @@
   justify-content: center;
   padding: 0.6rem 1.2rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--nocturne-border-strong);
   background: transparent;
-  color: #f5f3ff;
+  color: var(--nocturne-text-primary);
   font-size: 0.82rem;
   font-weight: 600;
   text-decoration: none;
@@ -354,8 +355,8 @@
   gap: 12px;
   padding: 24px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border);
 }
 
 .skeletonLine {
@@ -363,9 +364,9 @@
   border-radius: 6px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, #f5f3ff 10%, transparent) 25%,
-    color-mix(in srgb, #f5f3ff 18%, transparent) 37%,
-    color-mix(in srgb, #f5f3ff 10%, transparent) 63%
+    var(--nocturne-border) 25%,
+    var(--nocturne-border-strong) 37%,
+    var(--nocturne-border) 63%
   );
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
@@ -384,8 +385,8 @@
   padding: 56px 24px;
   text-align: center;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: var(--nocturne-surface);
+  border: 1px dashed var(--nocturne-border-strong);
 }
 
 .emptyIcon {

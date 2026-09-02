@@ -11,7 +11,7 @@
   position: relative;
   min-height: 100dvh;
   overflow-x: hidden;
-  background: #000000;
+  background: var(--nocturne-bg);
 }
 
 /* Particle field background — full viewport, matches the demo's
@@ -35,7 +35,7 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.24;
+  opacity: var(--nocturne-blob-opacity);
   will-change: transform;
 }
 
@@ -54,7 +54,6 @@
   bottom: -160px;
   right: -140px;
   background: #3b82f6;
-  opacity: 0.2;
   animation: drift-two 33s ease-in-out infinite;
 }
 
@@ -84,7 +83,7 @@
   font-size: 0.85rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
   margin-bottom: 1rem;
 }
 
@@ -99,7 +98,7 @@
   font-weight: 800;
   line-height: 1.25;
   white-space: nowrap;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .splitWord {
@@ -117,7 +116,7 @@
 .subtitle {
   margin-top: 1.25rem;
   font-size: 1.05rem;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
   max-width: 480px;
 }
 
@@ -151,14 +150,14 @@
   font-size: clamp(24px, 3.4vw, 28px);
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .subheading {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.55;
-  color: color-mix(in srgb, #b8b0d9 75%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .formError {
@@ -199,17 +198,17 @@
   text-align: center;
   padding: clamp(2.5rem, 6vw, 4rem) 1.5rem;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--nocturne-surface);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
   outline: none;
   transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
   background-image:
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px),
-    repeating-linear-gradient(180deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px),
-    repeating-linear-gradient(270deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px);
+    repeating-linear-gradient(0deg, var(--nocturne-border-strong) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(90deg, var(--nocturne-border-strong) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(180deg, var(--nocturne-border-strong) 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(270deg, var(--nocturne-border-strong) 0 10px, transparent 10px 20px);
   background-position: 0 0, 0 0, 100% 0, 0 100%;
   background-size: 2px 22px, 22px 2px, 2px 22px, 22px 2px;
   background-repeat: repeat-y, repeat-x, repeat-y, repeat-x;
@@ -267,19 +266,19 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--nocturne-text-primary);
 }
 
 .dropzoneHint {
   margin: 0;
   font-size: 0.85rem;
-  color: color-mix(in srgb, #b8b0d9 80%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .dropzoneMeta {
   margin-top: 0.35rem;
   font-size: 0.75rem;
-  color: color-mix(in srgb, #b8b0d9 55%, transparent);
+  color: var(--nocturne-text-muted);
 }
 
 .filetypes {
@@ -293,9 +292,9 @@
 .filetypeChip {
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--nocturne-border-strong);
   font-size: 0.78rem;
-  color: color-mix(in srgb, #b8b0d9 85%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 /* Selected file preview — replaces the dropzone once a file is chosen */
@@ -336,7 +335,7 @@
   margin: 0;
   font-size: 0.92rem;
   font-weight: 600;
-  color: #f5f3ff;
+  color: var(--nocturne-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -345,7 +344,7 @@
 .fileSize {
   margin: 0;
   font-size: 0.78rem;
-  color: color-mix(in srgb, #b8b0d9 75%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .removeBtn {
@@ -357,14 +356,14 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: color-mix(in srgb, #f5f3ff 65%, transparent);
+  color: var(--nocturne-text-secondary);
   cursor: pointer;
   font-size: 1.1rem;
   transition: background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
 }
 .removeBtn:hover:not(:disabled) {
-  background: color-mix(in srgb, #f5f3ff 10%, transparent);
-  color: #f5f3ff;
+  background: var(--nocturne-surface-hover);
+  color: var(--nocturne-text-primary);
   transform: scale(1.06);
 }
 .removeBtn:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
@@ -398,18 +397,18 @@
 .fieldLabel {
   font-size: 13px;
   font-weight: 500;
-  color: color-mix(in srgb, #f5f3ff 85%, transparent);
+  color: var(--nocturne-text-secondary);
 }
 
 .fieldOptional {
   font-weight: 400;
-  color: color-mix(in srgb, #b8b0d9 55%, transparent);
+  color: var(--nocturne-text-muted);
 }
 
 .progressBar {
   height: 4px;
   border-radius: 2px;
-  background: color-mix(in srgb, #f5f3ff 14%, transparent);
+  background: var(--nocturne-input-border);
   overflow: hidden;
 }
 
