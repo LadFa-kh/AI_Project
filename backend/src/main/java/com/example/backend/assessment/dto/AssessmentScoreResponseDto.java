@@ -16,4 +16,10 @@ public class AssessmentScoreResponseDto {
     private List<String> missingSkills;
     private String recommendationSummary;
     private List<String> recommendationItems;
+
+    /** ที่มาของคะแนนแต่ละส่วน คำนวณจากฝั่งเซิร์ฟเวอร์ทั้งหมด ใช้แสดงเป็นตารางแยกส่วนบนหน้าเว็บ */
+    private ScoreBreakdownDto scoreBreakdown;
+
+    /** คำอธิบายที่มาของคะแนนเป็นภาษาไทย เรียบเรียงจากตัวเลขชุดเดียวกับ scoreBreakdown */
+    private String scoreExplanation;
 }

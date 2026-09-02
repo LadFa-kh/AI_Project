@@ -58,41 +58,120 @@ public class SkillTaxonomyService {
         return Pattern.compile(pattern).matcher(longer).find();
     }
 
-    public BigDecimal calculateOnetSkillMatchScore(List<String> extractedSkills, List<String> standardSkills) {
-        if (standardSkills == null || standardSkills.isEmpty() || extractedSkills == null || extractedSkills.isEmpty()) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    /**
+     * ตัวถ่วงคะแนนตามจำนวนทักษะที่จับคู่ได้
+     *
+     * เหตุผล: precisionScore เพียงอย่างเดียวทำให้เรซูเม่ที่มีทักษะน้อยมากได้คะแนนสูงเกินจริง
+     * เช่น มีทักษะเดียวแล้วบังเอิญตรง จะได้ 100 เต็มทันที ตัวถ่วงนี้จึงลดคะแนนลงเมื่อ
+     * จำนวนทักษะที่จับคู่ได้ยังน้อยเกินกว่าจะสรุปว่าผู้สมัครเหมาะกับตำแหน่งนั้นจริง
+     */
+    private static final double PENALTY_ONE_MATCH = 0.3;
+    private static final double PENALTY_TWO_MATCHES = 0.6;
+    private static final int PENALTY_FREE_THRESHOLD = 3;
+
+    /**
+     * คำนวณคะแนนเรซูเม่พร้อมคืนที่มาของคะแนนทุกขั้น
+     *
+     * ขั้นตอน
+     *   1. จับคู่ทักษะจากเรซูเม่กับทักษะมาตรฐาน O*NET แบบ word boundary ทั้งสองทาง
+     *   2. precisionScore = (จำนวนที่จับคู่ได้ / จำนวนทักษะทั้งหมดในเรซูเม่) x 100
+     *      ตัวหารเป็นทักษะในเรซูเม่ ไม่ใช่ทักษะที่ตำแหน่งงานต้องการ ดังนั้นการใส่ทักษะ
+     *      ที่ไม่เกี่ยวกับสายงานเข้ามาเยอะจะทำให้คะแนนลดลง
+     *   3. คูณตัวถ่วงตามจำนวนที่จับคู่ได้ แล้วตัดไม่ให้เกิน 100
+     */
+    public SkillMatchResult calculateOnetSkillMatchDetail(List<String> extractedSkills, List<String> standardSkills) {
+        int totalResume = extractedSkills == null ? 0 : extractedSkills.size();
+        int totalStandard = standardSkills == null ? 0 : standardSkills.size();
+
+        if (totalStandard == 0 || totalResume == 0) {
+            // แยกสองสาเหตุออกจากกัน เพราะความหมายต่างกันมากสำหรับผู้ใช้
+            // หาทักษะมาตรฐานไม่เจอ = ระบบเทียบให้ไม่ได้ ไม่ใช่ว่าผู้สมัครไม่มีทักษะ
+            String why = totalStandard == 0
+                    ? "ไม่พบทักษะมาตรฐานของตำแหน่งงานนี้ในฐานข้อมูล O*NET จึงยังเทียบทักษะให้ไม่ได้"
+                    : "ไม่พบทักษะด้านเทคนิคในเรซูเม่ จึงไม่มีทักษะให้นำไปเทียบ";
+            return SkillMatchResult.builder()
+                    .resumeScore(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                    .matchedSkills(List.of())
+                    .unmatchedSkills(extractedSkills == null ? List.of() : List.copyOf(extractedSkills))
+                    .totalResumeSkills(totalResume)
+                    .totalStandardSkills(totalStandard)
+                    .precisionScore(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                    .penaltyFactor(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                    .reason(why)
+                    .build();
         }
 
-        long matchedCount = 0;
+        List<String> matched = new ArrayList<>();
+        List<String> unmatched = new ArrayList<>();
+
         for (String userSkill : extractedSkills) {
             String userLower = normalize(userSkill);
-            if (userLower.length() < 2) continue;
+            if (userLower.length() < 2) {
+                unmatched.add(userSkill);
+                continue;
+            }
 
+            boolean hit = false;
             for (String stdSkill : standardSkills) {
                 String stdLower = normalize(stdSkill);
-                if (stdLower.length() < 2) continue; // [FIX] เพิ่มเช็คความยาวฝั่ง standard skill ด้วย
+                if (stdLower.length() < 2) continue;
 
                 if (isWordBoundaryMatch(userLower, stdLower) || isWordBoundaryMatch(stdLower, userLower)) {
-                    matchedCount++;
+                    hit = true;
                     break;
                 }
             }
+            if (hit) {
+                matched.add(userSkill);
+            } else {
+                unmatched.add(userSkill);
+            }
         }
 
-        double precisionScore = ((double) matchedCount / extractedSkills.size()) * 100.0;
+        int matchedCount = matched.size();
+        double precision = ((double) matchedCount / totalResume) * 100.0;
 
-        double penaltyFactor = 1.0;
+        double penalty;
         if (matchedCount == 0) {
-            penaltyFactor = 0.0;
+            penalty = 0.0;
         } else if (matchedCount == 1) {
-            penaltyFactor = 0.3;
+            penalty = PENALTY_ONE_MATCH;
         } else if (matchedCount == 2) {
-            penaltyFactor = 0.6;
+            penalty = PENALTY_TWO_MATCHES;
+        } else {
+            penalty = 1.0;
         }
 
-        double adjustedScore = precisionScore * penaltyFactor;
-        double finalScore = Math.min(100.0, adjustedScore);
+        double score = Math.min(100.0, precision * penalty);
 
-        return BigDecimal.valueOf(finalScore).setScale(2, RoundingMode.HALF_UP);
+        String why;
+        if (matchedCount == 0) {
+            why = "ไม่มีทักษะในเรซูเม่ที่ตรงกับทักษะมาตรฐานของตำแหน่งงานนี้เลย";
+        } else if (matchedCount < PENALTY_FREE_THRESHOLD) {
+            why = "จับคู่ทักษะได้ " + matchedCount + " รายการ ซึ่งยังน้อยกว่า " + PENALTY_FREE_THRESHOLD
+                    + " รายการ คะแนนจึงถูกคูณด้วยตัวถ่วง " + penalty + " เพื่อไม่ให้สูงเกินจริง";
+        } else {
+            why = "จับคู่ทักษะได้ " + matchedCount + " รายการ ตั้งแต่ " + PENALTY_FREE_THRESHOLD
+                    + " รายการขึ้นไปไม่มีการคูณตัวถ่วง";
+        }
+
+        return SkillMatchResult.builder()
+                .resumeScore(BigDecimal.valueOf(score).setScale(2, RoundingMode.HALF_UP))
+                .matchedSkills(matched)
+                .unmatchedSkills(unmatched)
+                .totalResumeSkills(totalResume)
+                .totalStandardSkills(totalStandard)
+                .precisionScore(BigDecimal.valueOf(precision).setScale(2, RoundingMode.HALF_UP))
+                .penaltyFactor(BigDecimal.valueOf(penalty).setScale(2, RoundingMode.HALF_UP))
+                .reason(why)
+                .build();
+    }
+
+    /**
+     * รูปแบบเดิมที่คืนเฉพาะตัวเลข เก็บไว้เพื่อไม่ให้โค้ดส่วนอื่นที่เรียกอยู่พัง
+     * ภายในเรียก calculateOnetSkillMatchDetail ตัวเดียวกัน ผลลัพธ์จึงตรงกันเสมอ
+     */
+    public BigDecimal calculateOnetSkillMatchScore(List<String> extractedSkills, List<String> standardSkills) {
+        return calculateOnetSkillMatchDetail(extractedSkills, standardSkills).getResumeScore();
     }
 }
