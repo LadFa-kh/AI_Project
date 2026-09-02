@@ -6,19 +6,23 @@
 // evaluation-result-flow.tsx / internship-matches-flow.tsx (full-viewport
 // particle canvas, decorative blobs), Nocturne palette.
 //
-// The demo also mocks a quick-facts grid (location/duration/headcount/
-// deadline), a job description, and a qualifications list — those are
-// intentionally NOT built here since the backend has no per-job detail
-// endpoint yet (DisplayJob only carries jobId/companyName/positionName/
-// jobType/requiredSkills/userFinalScore/matchedSkills/missingSkills). Only
-// real fields are rendered; the lookup/fallback logic against
-// match-session.ts / workplace-session.ts is unchanged from before.
+// ข้อมูลของหน้านี้มาจากสองแหล่งรวมกัน:
+//   1. GET /jobs/{id} (lib/job-detail-service.ts) — ข้อมูลจริงของประกาศงาน
+//      ครบทุกฟิลด์ที่ผู้ประกาศกรอกไว้ รวมถึงคำอธิบายงาน ระยะเวลา ค่าตอบแทน
+//      และลิงก์สมัคร ซึ่งก่อนหน้านี้ไม่เคยถูกส่งมาถึงหน้าเว็บเลย
+//   2. sessionStorage (match-session.ts) — คะแนนความเหมาะสมกับผู้ใช้และ
+//      ทักษะที่ตรง/ขาด ซึ่งเป็นข้อมูลเฉพาะบุคคลที่ /jobs/{id} ไม่ได้คืนมา
+//      จึงยังต้องอ่านจากรายการที่โหลดไว้ตอนอยู่หน้า /internship-matches
+//
+// ถ้าเรียก endpoint ไม่สำเร็จ (เช่นเน็ตหลุด) จะถอยไปใช้ข้อมูลย่อจาก
+// sessionStorage แทน เพื่อให้หน้ายังแสดงอะไรได้บ้าง ดีกว่าขึ้นว่าไม่พบข้อมูล
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { RequiredSkillChip } from "./required-skill-chip";
 import { readMatchById } from "@/lib/match-session";
 import { readWorkplaceById } from "@/lib/workplace-session";
+import { getJobById } from "@/lib/job-detail-service";
 import type { InternshipDetail } from "@/lib/internship-detail-types";
 import styles from "./match-detail.module.css";
 
@@ -157,32 +161,62 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useParticleCanvas(canvasRef);
 
-  // Looked up from whichever internship-matches list was held in
-  // sessionStorage — there's no backend endpoint to fetch a single job by
-  // id, so this only works if the list page was visited first in this tab.
-  // Checks the matching-results store first (has score/skill data), falling
-  // back to the "ทั้งหมด" /workplaces store (id-keyed, no score) if not found.
+  // ยิง GET /jobs/{id} เป็นหลัก แล้วผสมคะแนนเฉพาะบุคคลจาก sessionStorage เข้าไป
+  // (endpoint ไม่ได้คืนคะแนนมา เพราะเป็นข้อมูลของผู้ใช้แต่ละคน ไม่ใช่ของประกาศ)
+  // ถ้า endpoint ล้ม จะถอยไปใช้ข้อมูลย่อจาก sessionStorage เท่าที่มี
   useEffect(() => {
-    const match = readMatchById(internshipId);
-    if (match) {
-      setDetail(match);
-      setStatus("success");
-      return;
+    let cancelled = false;
+
+    async function load() {
+      const cachedMatch = readMatchById(internshipId);
+      const cachedWorkplace = readWorkplaceById(internshipId);
+
+      try {
+        const job = await getJobById(internshipId);
+        if (cancelled) return;
+        setDetail({
+          jobId: job.id,
+          companyName: job.companyName,
+          positionName: job.positionName,
+          jobType: job.jobType ?? undefined,
+          requiredSkills: job.requiredSkills,
+          jobDescription: job.jobDescription,
+          duration: job.duration,
+          salary: job.salary,
+          contactLink: job.contactLink,
+          // คะแนนและทักษะตรง/ขาด มีเฉพาะตอนที่ผู้ใช้เคยผ่านหน้าจับคู่มาก่อน
+          userFinalScore: cachedMatch?.userFinalScore,
+          matchedSkills: cachedMatch?.matchedSkills,
+          missingSkills: cachedMatch?.missingSkills,
+        });
+        setStatus("success");
+      } catch {
+        if (cancelled) return;
+        if (cachedMatch) {
+          setDetail(cachedMatch);
+          setStatus("success");
+          return;
+        }
+        if (cachedWorkplace) {
+          setDetail({
+            jobId: cachedWorkplace.id,
+            companyName: cachedWorkplace.companyName,
+            positionName: cachedWorkplace.positionName,
+            jobType: cachedWorkplace.jobType,
+            requiredSkills: cachedWorkplace.requiredSkills,
+          });
+          setStatus("success");
+          return;
+        }
+        setDetail(null);
+        setStatus("not-found");
+      }
     }
-    const workplace = readWorkplaceById(internshipId);
-    if (workplace) {
-      setDetail({
-        jobId: workplace.id,
-        companyName: workplace.companyName,
-        positionName: workplace.positionName,
-        jobType: workplace.jobType,
-        requiredSkills: workplace.requiredSkills,
-      });
-      setStatus("success");
-      return;
-    }
-    setDetail(null);
-    setStatus("not-found");
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [internshipId]);
 
   const matchPercent = detail ? computeMatchPercent(detail) : null;
@@ -263,14 +297,50 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
               </div>
             </div>
 
-            <div className={`${styles.animateIn} ${styles.delay4}`}>
-              <p className={styles.bodyText}>
-                รายละเอียดเพิ่มเติม (คำอธิบายงาน สถานที่ ระยะเวลา ลิงก์สมัคร) ยังไม่พร้อมใช้งาน
-                เนื่องจาก backend ยังไม่มี endpoint สำหรับข้อมูลเชิงลึกของแต่ละตำแหน่ง
-              </p>
-            </div>
+            {detail.jobDescription && (
+              <div className={`${styles.animateIn} ${styles.delay4}`}>
+                <h2 className={styles.sectionHeading}>รายละเอียดงาน</h2>
+                {/* whiteSpace: pre-line เพื่อให้การขึ้นบรรทัดใหม่ที่ผู้ประกาศพิมพ์ไว้
+                    ยังคงอยู่ ไม่ถูก HTML ยุบรวมเป็นบรรทัดเดียว */}
+                <p className={styles.bodyText} style={{ whiteSpace: "pre-line" }}>
+                  {detail.jobDescription}
+                </p>
+              </div>
+            )}
+
+            {(detail.duration || detail.salary) && (
+              <div className={`${styles.animateIn} ${styles.delay4}`}>
+                <h2 className={styles.sectionHeading}>เงื่อนไข</h2>
+                {detail.duration && (
+                  <p className={styles.bodyText}>ระยะเวลา: {detail.duration}</p>
+                )}
+                {detail.salary && (
+                  <p className={styles.bodyText}>ค่าตอบแทน: {detail.salary}</p>
+                )}
+              </div>
+            )}
+
+            {!detail.jobDescription && !detail.duration && !detail.salary && (
+              <div className={`${styles.animateIn} ${styles.delay4}`}>
+                <p className={styles.bodyText}>
+                  ผู้ประกาศยังไม่ได้กรอกรายละเอียดเพิ่มเติมสำหรับตำแหน่งนี้
+                </p>
+              </div>
+            )}
 
             <div className={`${styles.ctaRow} ${styles.animateIn} ${styles.delay5}`}>
+              {detail.contactLink && (
+                /* ลิงก์ภายนอกที่ผู้ประกาศกรอกเอง จึงต้องมี rel="noopener noreferrer"
+                   คู่กับ target="_blank" กันหน้าปลายทางเข้าถึง window.opener ของเรา */
+                <a
+                  href={detail.contactLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.ghostBtn}
+                >
+                  ไปที่ลิงก์สมัคร
+                </a>
+              )}
               <Link href="/internship-matches" className={styles.ghostBtn}>
                 กลับสู่รายการ
               </Link>
