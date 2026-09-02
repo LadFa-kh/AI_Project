@@ -22,6 +22,7 @@
 // cookie นี้ไม่ใช่ข้อมูลลับ (เป็นแค่ตัวเลือกธีม) จึงตั้ง httpOnly ไม่ได้ —
 // ฝั่งเบราว์เซอร์ต้องเขียนเองเวลากดสลับ ใช้ SameSite=Lax และ path=/ ตามปกติ
 
+import { THEME_COOKIE, type Theme } from "./theme-shared";
 import {
   createContext,
   useCallback,
@@ -31,16 +32,14 @@ import {
   type ReactNode,
 } from "react";
 
-export type Theme = "light" | "dark";
-
-export const THEME_COOKIE = "resumate-theme";
+// THEME_COOKIE / isTheme / Theme อยู่ใน lib/theme-shared.ts ซึ่งไม่มี
+// "use client" เพราะ app/layout.tsx (Server Component) ต้องใช้ด้วย
+// re-export ต่อไว้เพื่อให้โค้ดฝั่ง client ที่ import จากไฟล์นี้อยู่แล้วใช้ได้เหมือนเดิม
+export type { Theme } from "./theme-shared";
+export { THEME_COOKIE, isTheme } from "./theme-shared";
 
 /** 1 ปี — ตัวเลือกธีมควรอยู่ข้ามการปิดเบราว์เซอร์ */
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
-
-export function isTheme(value: unknown): value is Theme {
-  return value === "light" || value === "dark";
-}
 
 type ThemeContextValue = {
   theme: Theme;

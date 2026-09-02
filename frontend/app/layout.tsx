@@ -4,7 +4,10 @@ import Script from "next/script";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthProvider } from "@/lib/auth-context";
 import { cookies } from "next/headers";
-import { ThemeProvider, THEME_COOKIE, isTheme } from "@/lib/theme-context";
+import { ThemeProvider } from "@/lib/theme-context";
+// นำเข้าจาก theme-shared ไม่ใช่ theme-context — ไฟล์นั้นเป็น "use client"
+// ทุก export จะกลายเป็น client reference เรียกจากฝั่งเซิร์ฟเวอร์ไม่ได้ (500)
+import { THEME_COOKIE, DEFAULT_THEME, isTheme } from "@/lib/theme-shared";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -63,7 +66,7 @@ export default async function RootLayout({
   // ดูคำอธิบายเต็มใน lib/theme-context.tsx
   const cookieStore = await cookies();
   const cookieTheme = cookieStore.get(THEME_COOKIE)?.value;
-  const theme = isTheme(cookieTheme) ? cookieTheme : "dark";
+  const theme = isTheme(cookieTheme) ? cookieTheme : DEFAULT_THEME;
 
   return (
     <html
