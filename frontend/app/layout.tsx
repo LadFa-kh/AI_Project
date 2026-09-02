@@ -75,13 +75,16 @@ export default function RootLayout({
         notoSansThai.variable
       )}
     >
-      <body className="min-h-full flex flex-col">
-        {/* Sets data-theme on <html> synchronously before hydration/first
-            paint, reading the same localStorage key ThemeProvider uses —
-            without this, the page would flash the wrong theme for a beat
-            while React mounts and ThemeProvider's effect catches up. See
-            lib/theme-context.tsx. */}
+      <head>
+        {/* ต้องอยู่ใน <head> เท่านั้น — สคริปต์นี้เขียน data-theme ลงบน <html>
+            ให้เสร็จก่อนเบราว์เซอร์เริ่ม parse <body> จอแรกจึงเป็นธีมที่ถูก
+            ไม่กระพริบ ถ้าย้ายไปไว้ใน <body> (จุดเดิม) มันจะทำงานหลัง <html>
+            ถูก parse ไปแล้ว ทำให้ DOM ไม่ตรงกับ HTML ที่ server ส่งมา แล้ว
+            hydration ของ React ล้มทั้งหน้า (error #418) — อาการคือกดสลับธีม
+            แล้วสีไม่เปลี่ยน เพราะ DOM ค้างอยู่ที่สภาพเดิมจากฝั่ง server */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col">
         {/* Google Identity Services — loaded once app-wide so both /login
             and /register can call window.google.accounts.id without each
             needing its own <script> tag. See lib/use-google-signin.ts. */}
