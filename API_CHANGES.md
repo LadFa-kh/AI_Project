@@ -333,3 +333,34 @@ resumeScore = min(100, precisionScore x penaltyFactor)
 | แก้โค้ดเดิมที่ใช้อยู่ | **ไม่ต้อง** ฟิลด์เดิมไม่เปลี่ยน |
 
 ถ้าไม่แก้อะไรเลย ระบบยังทำงานได้ตามเดิมทุกอย่าง
+
+---
+
+## ภาคผนวก — สคริปต์ดึงงานจาก GitHub มา build
+
+ที่ root ของโปรเจกต์มีไฟล์ `sync-fe.ps1` ไว้ใช้แทนการพิมพ์คำสั่งทีละบรรทัด
+
+```powershell
+cd C:\Users\ratch\IdeaProjects\AI_Project
+.\sync-fe.ps1
+```
+
+สคริปต์จะทำให้ตามลำดับ
+
+1. ตรวจว่ามีงานค้างที่ยังไม่ commit ไหม ถ้ามีจะหยุดทันที (กัน merge ทับงานหาย)
+2. `git fetch` แล้วบอกว่ามี commit ใหม่กี่อัน
+3. ดูว่าแตะ backend / frontend / main.py ส่วนไหนบ้าง
+4. merge ด้วย `-Xrenormalize -Xignore-all-space` เพื่อข้าม conflict ปลอมจาก line ending
+5. `docker compose up -d --build` **เฉพาะ service ที่โดนแก้จริง** ไม่ build ทั้งหมด
+
+ถ้าเจอ conflict จริงจะหยุดพร้อมบอกชื่อไฟล์ ไม่ merge ต่อเอง
+
+ไม่อยาก build ต่อ ใส่ `-NoBuild`
+
+```powershell
+.\sync-fe.ps1 -NoBuild
+```
+
+> **ข้อควรรู้:** ตัวเลือก `-Xrenormalize -Xignore-all-space` ยังจำเป็นอยู่จนกว่า
+> ทีมหน้าบ้านจะ pull commit `.gitattributes` ของเราไป หลังจากนั้นทั้งสองฝั่งจะ
+> เก็บ line ending เป็น LF เหมือนกัน แล้ว conflict ปลอมจะหายไปเอง
