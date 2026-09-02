@@ -192,7 +192,8 @@ function SplitHeading({ text }: { text: string }) {
     <>
       <h2
         ref={ref}
-        className="mb-12 text-center text-[clamp(1.6rem,1.3rem+1.2vw,2.4rem)] font-bold text-white"
+        className="mb-12 text-center text-[clamp(1.6rem,1.3rem+1.2vw,2.4rem)] font-bold"
+        style={{ color: "var(--nocturne-text-primary)" }}
       >
         {words.map((w, i) => (
           <span
@@ -206,7 +207,7 @@ function SplitHeading({ text }: { text: string }) {
               ...(shimmer
                 ? {
                     backgroundImage:
-                      "linear-gradient(90deg, #ffffff 0%, var(--color-home-hero-accent-1) 25%, var(--color-home-hero-accent-2) 50%, var(--color-home-hero-accent-3) 75%, #ffffff 100%)",
+                      "linear-gradient(90deg, var(--nocturne-text-primary) 0%, var(--color-home-hero-accent-1) 25%, var(--color-home-hero-accent-2) 50%, var(--color-home-hero-accent-3) 75%, var(--nocturne-text-primary) 100%)",
                     backgroundSize: "220% 100%",
                     WebkitBackgroundClip: "text",
                     backgroundClip: "text",
@@ -280,8 +281,8 @@ function StepCard({ card, index }: { card: (typeof CARDS)[number]; index: number
       onMouseLeave={() => setSpot((s) => ({ ...s, active: false }))}
       className="group relative overflow-hidden rounded-[20px] border p-8 backdrop-blur-sm transition-transform duration-200 hover:-translate-y-1"
       style={{
-        background: "rgba(255,255,255,0.04)",
-        borderColor: "rgba(255,255,255,0.08)",
+        background: "var(--nocturne-surface)",
+        borderColor: "var(--nocturne-border)",
         opacity: revealed ? 1 : 0,
         transform: revealed ? "translateY(0)" : "translateY(24px)",
         transition: `opacity 0.6s ease-out ${index * 0.12}s, transform 0.6s ease-out ${index * 0.12}s`,
@@ -304,8 +305,8 @@ function StepCard({ card, index }: { card: (typeof CARDS)[number]; index: number
         >
           {card.icon}
         </div>
-        <h3 className="mb-2 text-lg font-semibold text-white">{card.title}</h3>
-        <p className="text-sm leading-relaxed text-white/60">{card.desc}</p>
+        <h3 className="mb-2 text-lg font-semibold" style={{ color: "var(--nocturne-text-primary)" }}>{card.title}</h3>
+        <p className="text-sm leading-relaxed" style={{ color: "var(--nocturne-text-muted)" }}>{card.desc}</p>
       </div>
     </div>
   );
@@ -344,7 +345,10 @@ export function HowItWorksDemo() {
       </main>
 
       <footer className="relative z-[1] px-6 pb-10 pt-[clamp(3rem,6vw,4.5rem)] text-center">
-        <p className="mx-auto max-w-[1140px] border-t border-white/10 pt-6 text-xs text-white/40">
+        <p
+          className="mx-auto max-w-[1140px] border-t pt-6 text-xs"
+          style={{ borderColor: "var(--nocturne-border)", color: "var(--nocturne-text-muted)" }}
+        >
           © 2026 ResuMate. สงวนลิขสิทธิ์.
         </p>
       </footer>

@@ -32,6 +32,7 @@ export function LoginForm() {
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<"default" | "loading" | "error">("default");
   const [formError, setFormError] = useState<string | null>(null);
@@ -125,19 +126,41 @@ export function LoginForm() {
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
         <label htmlFor="password">รหัสผ่าน</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-          aria-invalid={!!errors.password}
-          aria-describedby={errors.password ? "password-error" : undefined}
-          placeholder="กรอกรหัสผ่านของคุณ"
-          className={`${styles.input} ${errors.password ? styles.inputInvalid : ""}`}
-        />
+        <div className={styles.inputWrap}>
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? "password-error" : undefined}
+            placeholder="กรอกรหัสผ่านของคุณ"
+            className={`${styles.input} ${errors.password ? styles.inputInvalid : ""}`}
+          />
+          <button
+            type="button"
+            className={styles.passwordToggle}
+            onClick={() => setShowPassword((v) => !v)}
+            disabled={isLoading}
+            aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+            aria-pressed={showPassword}
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 3l18 18M10.58 10.58a2 2 0 0 0 2.83 2.83M9.36 5.36A9.77 9.77 0 0 1 12 5c5 0 9 4 10 7-.32.98-1 2.14-1.99 3.24M6.6 6.6C4.5 8.02 2.9 10 2 12c1 3 5 7 10 7 1.28 0 2.5-.26 3.6-.72" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+              </svg>
+            )}
+          </button>
+        </div>
         {errors.password && (
           <p id="password-error" className={styles.fieldError}>{errors.password}</p>
         )}

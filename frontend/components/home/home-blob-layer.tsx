@@ -12,18 +12,22 @@
 // structure — a single continuous glow layer with nothing to seam.
 export function HomeBlobLayer() {
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-black">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      style={{ background: "var(--nocturne-bg)" }}
+    >
       <div
-        className="absolute -left-36 -top-24 h-[480px] w-[480px] rounded-full opacity-30 blur-[90px]"
-        style={{ background: "var(--color-home-hero-accent-1)" }}
+        className="absolute -left-36 -top-24 h-[480px] w-[480px] rounded-full blur-[90px]"
+        style={{ background: "var(--color-home-hero-accent-1)", opacity: "var(--nocturne-blob-opacity)" }}
       />
       <div
-        className="absolute -right-32 top-[55vh] h-[420px] w-[420px] rounded-full opacity-30 blur-[90px]"
-        style={{ background: "var(--color-home-hero-accent-2)" }}
+        className="absolute -right-32 top-[55vh] h-[420px] w-[420px] rounded-full blur-[90px]"
+        style={{ background: "var(--color-home-hero-accent-2)", opacity: "var(--nocturne-blob-opacity)" }}
       />
       <div
-        className="absolute -left-44 top-[130vh] h-[500px] w-[500px] rounded-full opacity-30 blur-[90px]"
-        style={{ background: "var(--color-home-hero-accent-3)" }}
+        className="absolute -left-44 top-[130vh] h-[500px] w-[500px] rounded-full blur-[90px]"
+        style={{ background: "var(--color-home-hero-accent-3)", opacity: "var(--nocturne-blob-opacity)" }}
       />
     </div>
   );
