@@ -173,6 +173,18 @@ body {
   --nocturne-blob-opacity: 0.26;
   --nocturne-particle-opacity: 1;
   --nocturne-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  /* Semantic success/warning text — the raw #6ee7a0/#FC8337 pastel accents
+     read fine on the near-black dark surface but fall to ~1.5:1/~2.4:1
+     contrast on the light surface below, which is what made "match" skill
+     chips unreadable in light mode. Keep dark mode's original pastel; light
+     mode gets a deeper shade of the same hue that clears WCAG AA. */
+  --nocturne-success-text: #6ee7a0;
+  --nocturne-warning-text: #FC8337;
+  /* Role-badge text (Student/Admin/Employer) — same pastel-on-dark-only
+     contrast issue as success/warning above. */
+  --nocturne-badge-student-text: #93c5fd;
+  --nocturne-badge-admin-text: #f9a8d4;
+  --nocturne-badge-employer-text: #6ee7a0;
 }
 
 [data-theme="light"] {
@@ -196,6 +208,15 @@ body {
   --nocturne-blob-opacity: 0.14;
   --nocturne-particle-opacity: 0.55;
   --nocturne-shadow: 0 32px 80px rgba(20, 12, 40, 0.12);
+  /* Deeper shade of the same green/orange hue — ~4.8:1 against this
+     background, passes WCAG AA (verified via contrast calculator). */
+  --nocturne-success-text: #15803d;
+  --nocturne-warning-text: #b45309;
+  /* Deeper shades of the same blue/pink/green hues — all ≥4.9:1 against
+     this background (verified via contrast calculator). */
+  --nocturne-badge-student-text: #2563eb;
+  --nocturne-badge-admin-text: #be185d;
+  --nocturne-badge-employer-text: #15803d;
 }
 
 @layer base {
