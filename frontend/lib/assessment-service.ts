@@ -17,6 +17,41 @@
 import { apiFetch } from "./api-client";
 import type { AssessmentAnswers, AssessmentQuestion } from "./assessment-types";
 
+/**
+ * ที่มาของคะแนนแต่ละส่วน มาจาก scoreBreakdown ของ POST /assessments/submit
+ *
+ * ตัวเลขทุกค่าคำนวณจากฝั่งเซิร์ฟเวอร์ทั้งหมด หน้าเว็บมีหน้าที่แสดงอย่างเดียว
+ * ห้ามคำนวณซ้ำเองเด็ดขาด ไม่งั้นถ้าสูตรฝั่งหลังบ้านเปลี่ยน ตัวเลขสองที่จะไม่ตรงกัน
+ */
+export type ScoreBreakdown = {
+  // ส่วนที่ 1 คะแนนเรซูเม่
+  totalResumeSkills: number;
+  totalStandardSkills: number;
+  matchedSkills: string[];
+  unmatchedSkills: string[];
+  precisionScore: number;
+  penaltyFactor: number;
+  resumeScore: number;
+  resumeScoreReason: string;
+
+  // ส่วนที่ 2 คะแนนแบบประเมินตนเอง
+  answeredQuestions: number;
+  maxScorePerQuestion: number;
+  totalScoreObtained: number;
+  maxPossibleScore: number;
+  assessmentScore: number;
+
+  // ส่วนที่ 3 การถ่วงน้ำหนักรวม
+  resumeWeight: number;
+  assessmentWeight: number;
+  resumeContribution: number;
+  assessmentContribution: number;
+  finalScore: number;
+
+  roleUsedForMatching: string;
+  roleInferredByAi: boolean;
+};
+
 export type AssessmentSubmitResult = {
   resumeId: string;
   resumeScore: number;
@@ -28,6 +63,12 @@ export type AssessmentSubmitResult = {
   // shape had one `recommendation: string` field — no longer sent.)
   recommendationSummary: string;
   recommendationItems: string[];
+
+  // เพิ่มเข้ามาเพื่อตอบคำถามว่า "คะแนนนี้มาจากไหน" — เดิมหน้าเว็บแสดงแค่ตัวเลข
+  // สามตัวโดยไม่มีที่มา ทำให้ทั้งผู้ใช้และทีมงานตอบไม่ได้ว่าคิดมาอย่างไร
+  // เป็น optional เพราะข้อมูลที่ประเมินไว้ก่อนหน้านี้จะไม่มีสองฟิลด์นี้
+  scoreBreakdown?: ScoreBreakdown;
+  scoreExplanation?: string;
 };
 
 // Each option is prefixed like "1. พอใช้" / "2. มาตรฐาน" — the leading
