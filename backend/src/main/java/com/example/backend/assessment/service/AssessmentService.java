@@ -3,6 +3,7 @@ package com.example.backend.assessment.service;
 import com.example.backend.assessment.dto.AssessmentScoreResponseDto;
 import com.example.backend.assessment.dto.RecommendationResponseDto;
 import com.example.backend.assessment.dto.RoleTranslationResponseDto;
+import com.example.backend.assessment.dto.ScoreBreakdownDto;
 import com.example.backend.assessment.dto.SubmitAssessmentRequestDto;
 import com.example.backend.assessment.entity.AssessmentAnswerEntity;
 import com.example.backend.assessment.entity.AssessmentQuestionEntity;
