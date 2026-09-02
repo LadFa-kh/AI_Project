@@ -109,12 +109,12 @@ function ScoreBreakdownSection({
                 <p className={styles.breakdownReason}>{breakdown.resumeScoreReason}</p>
               )}
               {(breakdown.matchedSkills.length > 0 || breakdown.unmatchedSkills.length > 0) && (
-                <div style={{ marginTop: 4 }}>
+                <div style={{ marginTop: 10 }}>
                   {breakdown.matchedSkills.length > 0 && (
                     <InsightChipList heading="ทักษะที่ตรงกับตำแหน่ง" items={breakdown.matchedSkills} tone="positive" />
                   )}
                   {breakdown.unmatchedSkills.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
+                    <div style={{ marginTop: 16 }}>
                       <InsightChipList heading="ทักษะในเรซูเม่ที่ไม่ตรงกับตำแหน่งนี้" items={breakdown.unmatchedSkills} tone="warning" />
                     </div>
                   )}
