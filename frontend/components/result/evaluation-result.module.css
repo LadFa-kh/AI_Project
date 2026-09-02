@@ -271,6 +271,131 @@
   gap: 10px;
 }
 
+/* ===== Score breakdown ("ที่มาของคะแนน") — collapsible <details>, per
+   API_CHANGES.md §1. Shows exactly the numbers the backend used (never
+   recomputed client-side), so it stays correct if the weighting formula
+   ever changes on the backend. ===== */
+.breakdownBlock {
+  margin-top: 1.75rem;
+  text-align: left;
+}
+
+.breakdownToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border);
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nocturne-text-primary);
+  user-select: none;
+}
+.breakdownToggle::-webkit-details-marker { display: none; }
+.breakdownToggle:hover { border-color: var(--nocturne-border-strong); }
+.breakdownToggle:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
+
+.breakdownChevron {
+  margin-left: auto;
+  flex: none;
+  color: var(--nocturne-text-secondary);
+  transition: transform 0.2s ease-out;
+}
+.breakdownBlock[open] .breakdownChevron {
+  transform: rotate(180deg);
+}
+
+.breakdownBody {
+  margin-top: 14px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: 16px;
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.breakdownExplanation {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--nocturne-text-secondary);
+  white-space: pre-line;
+}
+
+.breakdownSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.breakdownSectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--nocturne-text-primary);
+}
+
+.breakdownRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--nocturne-text-secondary);
+  padding: 2px 0;
+}
+.breakdownRow strong {
+  color: var(--nocturne-text-primary);
+  font-weight: 600;
+}
+
+.breakdownFormula {
+  margin: 2px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--nocturne-surface-hover);
+  font-size: 12.5px;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  color: var(--nocturne-text-secondary);
+}
+
+.breakdownReason {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--nocturne-text-muted);
+}
+
+.breakdownDivider {
+  height: 1px;
+  background: var(--nocturne-border);
+  border: none;
+  margin: 0;
+}
+
+/* Warning box for totalStandardSkills === 0 — "ระบบเทียบให้ไม่ได้" is a
+   data-availability problem, not a low score, so it gets its own visual
+   register (amber) rather than reading as a red error or a plain 0. */
+.breakdownWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  background: color-mix(in srgb, #FC8337 12%, transparent);
+  border: 1px solid color-mix(in srgb, #FC8337 32%, transparent);
+  color: var(--nocturne-warning-text);
+}
+.breakdownWarning svg { flex: none; margin-top: 1px; }
+
 /* ===== CTA row ===== */
 .ctaRow {
   margin-top: 2rem;

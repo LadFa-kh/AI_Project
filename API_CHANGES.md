@@ -3,14 +3,14 @@
 เอกสารนี้สรุปสิ่งที่เปลี่ยนในฝั่งหลังบ้าน เพื่อให้ทีมหน้าบ้านรู้ว่าต้องแก้อะไรบ้าง
 
 **สรุปสั้นที่สุด:** ไม่มี breaking change ฟิลด์เดิมทุกตัวยังอยู่ครบและความหมายไม่เปลี่ยน
-มีแค่ **ฟิลด์ใหม่ 2 ตัวถูกเพิ่มเข้ามา** กับ **endpoint ใหม่ 1 ตัว** ถ้าไม่แก้อะไรเลยระบบก็ยังทำงานได้ตามเดิม
+มีแค่ **ฟิลด์ใหม่ 2 ตัวถูกเพิ่มเข้ามา** ถ้าไม่แก้อะไรเลยระบบก็ยังทำงานได้ตามเดิม
 
 ---
 
 ## สารบัญ
 
 1. [ฟิลด์ใหม่ใน POST /assessments/submit](#1-ฟิลด์ใหม่ใน-post-apiv1assessmentssubmit)
-2. [Endpoint ใหม่ GET /jobs/{id}](#2-endpoint-ใหม่-get-apiv1jobsid)
+2. [~~Endpoint ใหม่ GET /jobs/{id}~~ ถอนออกแล้ว](#2-endpoint-ใหม่-get-apiv1jobsid--ถอนออกแล้ว)
 3. [อายุ session เปลี่ยนจาก 15 นาที เป็น 1 วัน](#3-อายุ-session-เปลี่ยนจาก-15-นาที-เป็น-1-วัน)
 4. [สูตรคำนวณคะแนน สำหรับอ้างอิง](#4-สูตรคำนวณคะแนน-สำหรับอ้างอิง)
 
@@ -171,24 +171,21 @@ const label = `${breakdown.resumeWeight * 100}%`;
 
 ---
 
-## 2. Endpoint ใหม่ `GET /api/v1/jobs/{id}`
+## 2. ~~Endpoint ใหม่ `GET /api/v1/jobs/{id}`~~ — ถอนออกแล้ว
 
-### สิ่งที่เปลี่ยน
+> **แก้ไข:** เอกสารฉบับแรกบอกว่ามี endpoint ใหม่ `GET /api/v1/jobs/{id}` — **ผิด**
+> ระบบมี `GET /api/v1/workplaces/{id}` ที่ทำงานเหมือนกันทุกประการอยู่ก่อนแล้ว
+> (ทั้งสองเรียก `jobDescriptionService.getJobDescriptionById` ตัวเดียวกัน)
+> `GET /jobs/{id}` จึงถูกถอนออกเพื่อไม่ให้มีสองเส้นทางที่ทำงานซ้ำกัน
+>
+> **ใช้ `GET /api/v1/workplaces/{id}` แทน**
 
-เดิมไม่มี endpoint ดึงตำแหน่งงานทีละรายการ หน้ารายละเอียดฝึกงานจึงต้องอ่านจาก
-`sessionStorage` ของหน้ารายการ ซึ่งมีแค่ชื่อบริษัท ตำแหน่ง ประเภทงาน และทักษะ
-ฟิลด์อย่างคำอธิบายงาน ระยะเวลา ค่าตอบแทน และลิงก์สมัคร จึงไม่เคยถูกส่งมาถึงหน้าเว็บ
-ทั้งที่บันทึกอยู่ในฐานข้อมูลครบถ้วน
+### ข้อมูลที่ทีมหน้าบ้านควรรู้
 
-### Request
-
-```
-GET /api/v1/jobs/{id}
-```
-
-ต้องล็อกอินก่อน (ใช้ cookie `accessToken` เหมือน endpoint อื่น ต้องส่ง `credentials: "include"`)
-
-### Response
+`GET /api/v1/workplaces` (รายการ) และ `GET /api/v1/workplaces/{id}` (รายตัว)
+คืน `JobDescriptionResponseDto` แบบเดียวกัน ซึ่ง**มีฟิลด์ครบทุกตัวอยู่แล้ว**
+รวมถึง `jobDescription`, `duration`, `salary`, `contactLink` ที่หน้ารายละเอียด
+ฝึกงานต้องใช้ — ไม่ต้องเพิ่ม endpoint อะไรเลย
 
 ```jsonc
 {
@@ -204,6 +201,8 @@ GET /api/v1/jobs/{id}
 }
 ```
 
+ต้องล็อกอินก่อน (cookie `accessToken` ต้องส่ง `credentials: "include"`)
+
 ### ข้อควรระวัง 3 ข้อ
 
 **1. ฟิลด์ id ชื่อไม่ตรงกับ endpoint อื่น**
@@ -215,26 +214,12 @@ endpoint นี้คืน `id` แต่ `GET /matching/recommendations` ค�
 
 `userFinalScore` / `matchedSkills` / `missingSkills` เป็นข้อมูลเฉพาะบุคคล
 ไม่ใช่ข้อมูลของประกาศ จึงไม่ได้อยู่ใน endpoint นี้
-ถ้าต้องการแสดงคะแนนด้วย ต้องผสมกับข้อมูลจาก `sessionStorage` ของหน้ารายการเหมือนเดิม
+ถ้าต้องการแสดงคะแนนด้วย ต้องผสมกับข้อมูลจาก `sessionStorage` ของหน้ารายการ
 
 **3. ฟิลด์ที่เป็น optional ใน DB เป็น `null` ได้**
 
 `jobType`, `jobDescription`, `duration`, `salary`, `contactLink` ผู้ประกาศอาจไม่ได้กรอก
 ต้องเช็คก่อนแสดงทุกตัว
-
-```ts
-export type JobDetail = {
-  id: string;
-  companyName: string;
-  jobType: string | null;
-  positionName: string;
-  requiredSkills: string[];
-  jobDescription: string | null;
-  duration: string | null;
-  salary: string | null;
-  contactLink: string | null;
-};
-```
 
 > `contactLink` เป็น URL ที่ผู้ประกาศกรอกเอง ถ้าทำเป็นลิงก์เปิดแท็บใหม่
 > อย่าลืม `rel="noopener noreferrer"` คู่กับ `target="_blank"`
@@ -343,7 +328,7 @@ resumeScore = min(100, precisionScore x penaltyFactor)
 |---|---|
 | เพิ่ม type `ScoreBreakdown` และฟิลด์ optional 2 ตัวใน `AssessmentSubmitResult` | ต้องทำ ถ้าจะใช้ |
 | ทำ UI แสดงที่มาของคะแนน | ต้องทำ ถ้าจะใช้ |
-| เพิ่ม service เรียก `GET /jobs/{id}` และใช้ในหน้ารายละเอียดฝึกงาน | ต้องทำ ถ้าจะใช้ |
+| ใช้ `GET /workplaces/{id}` ในหน้ารายละเอียดฝึกงาน (มีอยู่แล้ว ไม่ใช่ของใหม่) | ต้องทำ ถ้าจะใช้ |
 | แก้ข้อความที่อ้างถึง session 15 นาที | ทำถ้ามี |
 | แก้โค้ดเดิมที่ใช้อยู่ | **ไม่ต้อง** ฟิลด์เดิมไม่เปลี่ยน |
 

@@ -1,21 +1,26 @@
 "use client";
 
-// Session ไม่ได้เก็บใน localStorage แล้ว — backend จะ set cookie `accessToken`
-// แบบ httpOnly ให้ตอน login/register/google-login (JavaScript อ่านไม่ได้ =
-// กัน XSS ขโมย token) เบราว์เซอร์แนบ cookie ให้เองทุก request ผ่าน
-// `credentials: 'include'` ใน api-client.ts
+// Session is no longer stored in localStorage — backend sets an httpOnly
+// `accessToken` cookie on login/register/google-login (unreadable by JS,
+// sent automatically by the browser via api-client.ts's
+// `credentials: 'include'`). Auth state here is instead hydrated by asking
+// the backend "who am I" (GET /auth/me) once on mount, and re-derived after
+// login/register/logout. The access token now expires in 1 day (bumped from
+// 15 minutes — see API_CHANGES.md §3, app.jwt.access-token-expiration-ms in
+// application.properties) with no refresh mechanism yet — a 401 from a
+// later request means the session has expired and the user must log in
+// again (RouteGuard handles the redirect). Note: a token issued before this
+// change is still only good for 15 minutes — the new 1-day lifetime only
+// applies to tokens issued after the backend was updated, so an
+// already-logged-in user needs to log in once more to pick it up.
 //
-// สถานะ auth ที่นี่ได้มาจากการถาม backend ว่า "ฉันคือใคร" (GET /auth/me)
-// ครั้งหนึ่งตอน mount แล้ว re-derive ใหม่หลัง login/register/logout
-//
-// access token มีอายุ 15 นาที และยังไม่มีระบบ refresh — เจอ 401 จาก request
-// ถัดไปแปลว่า session หมดอายุ ต้อง login ใหม่ (RouteGuard จัดการ redirect ให้)
-//
-// เรื่อง same-site: frontend เรียก API ผ่าน path `/api/*` ของตัวเอง แล้ว
-// Next.js proxy ต่อไปยัง backend (ดู rewrites ใน next.config.ts) เบราว์เซอร์
-// จึงเห็นทุก request เป็น same-origin — cookie `SameSite=Lax` ทำงานได้ทั้ง
-// ตอน dev บน localhost และตอน deploy บนโดเมนจริง โดยไม่ต้องพึ่ง
-// `SameSite=None` (third-party cookie) ที่เบราว์เซอร์กำลังทยอยเลิกรองรับ
+// REQUIRES the frontend to be deployed same-site with the backend (a
+// subdomain of recommendation.site, e.g. app.recommendation.site — see the
+// repo-root Caddyfile/docker-compose.yml) — backend's cookie is
+// `SameSite=Lax` with no explicit `Domain=`, so a cross-site origin (like
+// localhost:3000 during local dev) never receives or sends it at all, and
+// every request below will resolve to a signed-out state / 401. This is a
+// known limitation until the app is actually deployed at its real domain.
 
 import {
   createContext,
@@ -28,18 +33,13 @@ import {
 } from "react";
 import type { AuthSession, AuthUser } from "./auth-service";
 import { getCurrentUser, logout as logoutRequest } from "./auth-service";
-import { ApiError } from "./api-client";
 
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   /** True until the initial GET /auth/me session check completes (avoids a signed-out flash on first paint). */
   isLoading: boolean;
-  /**
-   * ยืนยันว่า cookie ถูกเก็บจริงแล้วค่อยตั้งสถานะเป็น "เข้าสู่ระบบแล้ว"
-   * โยน ApiError(401) ถ้า cookie ใช้ไม่ได้ — ผู้เรียกต้อง await เสมอ
-   */
-  setSession: (session: AuthSession) => Promise<void>;
+  setSession: (session: AuthSession) => void;
   clearSession: () => Promise<void>;
 };
 
@@ -70,31 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // response ของ login/register มีข้อมูล user ติดมาด้วยอยู่แล้ว แต่ "มี
-  // response 200" ไม่ได้แปลว่าเบราว์เซอร์เก็บ cookie สำเร็จ (เช่น cookie ติดธง
-  // Secure แต่วิ่งบน http, หรือถูกบล็อกด้วยการตั้งค่าเบราว์เซอร์)
-  //
-  // ถ้าตั้ง user จาก response ตรง ๆ UI จะคิดว่า login สำเร็จแล้วยิง endpoint
-  // ที่ต้องยืนยันตัวตนต่อ ได้ 403 รัว ๆ โดยผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น
-  // จึงยิง /auth/me ยืนยันหนึ่งครั้ง — ถ้าไม่ผ่านคือ cookie ใช้ไม่ได้จริง
-  // และรายงานความล้มเหลวตรงจุดที่ผู้ใช้กด login แทน
-  //
-  // accessToken/refreshToken ใน response ถูกทิ้ง — cookie คือ credential จริง
-  const setSession = useCallback(async (session: AuthSession) => {
+  // Login/register responses already include the user fields inline, so we
+  // can set state directly without an extra /auth/me round-trip. The
+  // accessToken/refreshToken in the response are ignored — the cookie is
+  // the real credential now.
+  const setSession = useCallback((session: AuthSession) => {
     const { accessToken: _accessToken, refreshToken: _refreshToken, ...rest } = session;
-
-    const confirmed = await getCurrentUser().catch(() => null);
-    if (!confirmed) {
-      setUser(null);
-      throw new ApiError(
-        401,
-        "เข้าสู่ระบบสำเร็จ แต่เบราว์เซอร์ไม่ได้เก็บคุกกี้ยืนยันตัวตนไว้ " +
-          "กรุณาตรวจสอบว่าไม่ได้ปิดการรับคุกกี้ แล้วลองใหม่อีกครั้ง",
-        null
-      );
-    }
-
-    setUser(confirmed ?? rest);
+    setUser(rest);
   }, []);
 
   const clearSession = useCallback(async () => {
