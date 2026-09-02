@@ -87,26 +87,22 @@ function ScoreBreakdownSection({
                 <span>ทักษะที่สกัดจากเรซูเม่ทั้งหมด</span>
                 <strong>{breakdown.totalResumeSkills}</strong>
               </div>
-              <div className={`${styles.breakdownRow} ${styles.breakdownRowStart}`}>
-                <span>
-                  ทักษะมาตรฐานของตำแหน่งนี้
-                  <br />
-                  <span className={styles.breakdownHint}>
-                    จากฐานข้อมูลทักษะมาตรฐาน O*NET ทั้งหมดที่เกี่ยวข้องกับชื่อตำแหน่ง &ldquo;
-                    {breakdown.roleUsedForMatching}&rdquo; — ใช้เป็นเกณฑ์เทียบเท่านั้น ไม่ใช่รายการที่ต้องมีให้ครบ
-                  </span>
+              <div className={styles.breakdownRowStacked}>
+                <span>ทักษะมาตรฐานของตำแหน่งนี้</span>
+                <br />
+                <span className={styles.breakdownHint}>
+                  จากฐานข้อมูลทักษะมาตรฐาน O*NET ทั้งหมดที่เกี่ยวข้องกับชื่อตำแหน่ง &ldquo;
+                  {breakdown.roleUsedForMatching}&rdquo; — ใช้เป็นเกณฑ์เทียบเท่านั้น ไม่ใช่รายการที่ต้องมีให้ครบ
                 </span>
-                <strong>{breakdown.totalStandardSkills}</strong>
+                <strong className={styles.breakdownValue}>{breakdown.totalStandardSkills}</strong>
               </div>
-              <div className={`${styles.breakdownRow} ${styles.breakdownRowStart}`}>
-                <span>
-                  จับคู่ได้
-                  <br />
-                  <span className={styles.breakdownHint}>
-                    ทักษะจากเรซูเม่ของคุณที่ตรงกับรายการทักษะมาตรฐานด้านบน (แสดงรายชื่อด้านล่าง)
-                  </span>
+              <div className={styles.breakdownRowStacked}>
+                <span>จับคู่ได้</span>
+                <br />
+                <span className={styles.breakdownHint}>
+                  ทักษะจากเรซูเม่ของคุณที่ตรงกับรายการทักษะมาตรฐานด้านบน (แสดงรายชื่อด้านล่าง)
                 </span>
-                <strong>{breakdown.matchedSkills.length} รายการ</strong>
+                <strong className={styles.breakdownValue}>{breakdown.matchedSkills.length} รายการ</strong>
               </div>
               <p className={styles.breakdownFormula}>
                 precisionScore = ({breakdown.matchedSkills.length} / {breakdown.totalResumeSkills}) × 100 ={" "}

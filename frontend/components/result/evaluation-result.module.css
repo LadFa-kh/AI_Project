@@ -369,6 +369,23 @@
   align-items: flex-start;
 }
 
+/* For a row whose label carries a second-line hint (.breakdownHint) — the
+   value moves onto its own line below instead of sitting beside a
+   multi-line label, which otherwise reads as squeezed against the hint
+   text right above it (see feedback: value looked "pushed down" onto the
+   hint line). */
+.breakdownRowStacked {
+  display: block;
+  padding: 3px 0;
+}
+.breakdownRowStacked .breakdownValue {
+  display: block;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--nocturne-text-primary);
+}
+
 .breakdownRow > strong {
   flex: none;
   margin-left: 12px;
