@@ -117,6 +117,10 @@ export function InternshipMatchesView() {
         userFinalScore: scored?.userFinalScore,
         matchedSkills: scored?.matchedSkills,
         missingSkills: scored?.missingSkills,
+        jobDescription: w.jobDescription,
+        duration: w.duration,
+        salary: w.salary,
+        contactLink: w.contactLink,
       };
     });
   }, [workplaces, matchByJobId]);

@@ -6,19 +6,20 @@
 // evaluation-result-flow.tsx / internship-matches-flow.tsx (full-viewport
 // particle canvas, decorative blobs), Nocturne palette.
 //
-// The demo also mocks a quick-facts grid (location/duration/headcount/
-// deadline), a job description, and a qualifications list — those are
-// intentionally NOT built here since the backend has no per-job detail
-// endpoint yet (DisplayJob only carries jobId/companyName/positionName/
-// jobType/requiredSkills/userFinalScore/matchedSkills/missingSkills). Only
-// real fields are rendered; the lookup/fallback logic against
-// match-session.ts / workplace-session.ts is unchanged from before.
+// jobDescription/duration/salary/contactLink now come from GET /workplaces
+// (see workplace-service.ts, backed by JobDescriptionResponseDto on the
+// backend) — a per-job detail endpoint (GET /workplaces/{id}) does exist.
+// The demo's quick-facts grid (location/headcount/deadline) still isn't
+// built since those specific fields aren't in the backend response; only
+// fields that actually exist are rendered, with a fallback message when a
+// job genuinely has none of them filled in.
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { RequiredSkillChip } from "./required-skill-chip";
 import { readMatchById } from "@/lib/match-session";
 import { readWorkplaceById } from "@/lib/workplace-session";
+import { getWorkplaceById } from "@/lib/workplace-service";
 import type { InternshipDetail } from "@/lib/internship-detail-types";
 import styles from "./match-detail.module.css";
 
@@ -157,12 +158,16 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useParticleCanvas(canvasRef);
 
-  // Looked up from whichever internship-matches list was held in
-  // sessionStorage — there's no backend endpoint to fetch a single job by
-  // id, so this only works if the list page was visited first in this tab.
-  // Checks the matching-results store first (has score/skill data), falling
-  // back to the "ทั้งหมด" /workplaces store (id-keyed, no score) if not found.
+  // Looked up first from whichever internship-matches list was held in
+  // sessionStorage for this tab (avoids a network round-trip on the common
+  // path of clicking through from the list). Checks the matching-results
+  // store first (has score/skill data), then the "ทั้งหมด" /workplaces store
+  // (id-keyed, no score). If neither has it — e.g. the user opened this
+  // detail URL directly, refreshed, or the job was created/loaded after the
+  // list was last fetched — falls back to GET /workplaces/{id} directly.
   useEffect(() => {
+    let cancelled = false;
+
     const match = readMatchById(internshipId);
     if (match) {
       setDetail(match);
@@ -177,12 +182,41 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
         positionName: workplace.positionName,
         jobType: workplace.jobType,
         requiredSkills: workplace.requiredSkills,
+        jobDescription: workplace.jobDescription,
+        duration: workplace.duration,
+        salary: workplace.salary,
+        contactLink: workplace.contactLink,
       });
       setStatus("success");
       return;
     }
-    setDetail(null);
-    setStatus("not-found");
+
+    setStatus("loading");
+    getWorkplaceById(internshipId)
+      .then((workplace) => {
+        if (cancelled) return;
+        setDetail({
+          jobId: workplace.id,
+          companyName: workplace.companyName,
+          positionName: workplace.positionName,
+          jobType: workplace.jobType,
+          requiredSkills: workplace.requiredSkills,
+          jobDescription: workplace.jobDescription,
+          duration: workplace.duration,
+          salary: workplace.salary,
+          contactLink: workplace.contactLink,
+        });
+        setStatus("success");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDetail(null);
+        setStatus("not-found");
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [internshipId]);
 
   const matchPercent = detail ? computeMatchPercent(detail) : null;
@@ -263,14 +297,45 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
               </div>
             </div>
 
-            <div className={`${styles.animateIn} ${styles.delay4}`}>
-              <p className={styles.bodyText}>
-                รายละเอียดเพิ่มเติม (คำอธิบายงาน สถานที่ ระยะเวลา ลิงก์สมัคร) ยังไม่พร้อมใช้งาน
-                เนื่องจาก backend ยังไม่มี endpoint สำหรับข้อมูลเชิงลึกของแต่ละตำแหน่ง
-              </p>
-            </div>
+            {detail.jobDescription && (
+              <div className={`${styles.animateIn} ${styles.delay4}`}>
+                <h2 className={styles.sectionHeading}>รายละเอียดงาน</h2>
+                <p className={styles.bodyText} style={{ whiteSpace: "pre-line" }}>
+                  {detail.jobDescription}
+                </p>
+              </div>
+            )}
+
+            {(detail.duration || detail.salary) && (
+              <div className={`${styles.animateIn} ${styles.delay4}`}>
+                <h2 className={styles.sectionHeading}>ข้อมูลเพิ่มเติม</h2>
+                <p className={styles.bodyText}>
+                  {detail.duration && <>ระยะเวลา: {detail.duration}</>}
+                  {detail.duration && detail.salary && <br />}
+                  {detail.salary && <>ค่าตอบแทน: {detail.salary}</>}
+                </p>
+              </div>
+            )}
+
+            {!detail.jobDescription && !detail.duration && !detail.salary && !detail.contactLink && (
+              <div className={`${styles.animateIn} ${styles.delay4}`}>
+                <p className={styles.bodyText}>
+                  ตำแหน่งนี้ยังไม่มีรายละเอียดเพิ่มเติม (คำอธิบายงาน ระยะเวลา ค่าตอบแทน ลิงก์สมัคร)
+                </p>
+              </div>
+            )}
 
             <div className={`${styles.ctaRow} ${styles.animateIn} ${styles.delay5}`}>
+              {detail.contactLink && (
+                <a
+                  href={detail.contactLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.ghostBtn}
+                >
+                  ลิงก์สมัคร
+                </a>
+              )}
               <Link href="/internship-matches" className={styles.ghostBtn}>
                 กลับสู่รายการ
               </Link>

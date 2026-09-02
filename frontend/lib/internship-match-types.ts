@@ -9,6 +9,10 @@
 // built from /workplaces alone won't have them. When a job appears in both
 // sources, the view merges the matching fields in (see
 // internship-matches-view.tsx) so score/skill chips still show in "ทั้งหมด".
+//
+// jobDescription/duration/salary/contactLink come from GET /workplaces (see
+// workplace-service.ts) — /matching/recommendations doesn't return them, so
+// they stay optional/undefined on jobs sourced only from the "matching" list.
 
 export type { InternshipMatch } from "./matching-service";
 export type { Workplace } from "./workplace-service";
@@ -22,4 +26,8 @@ export type DisplayJob = {
   userFinalScore?: number;
   matchedSkills?: string[];
   missingSkills?: string[];
+  jobDescription?: string;
+  duration?: string;
+  salary?: string;
+  contactLink?: string;
 };
