@@ -19,11 +19,153 @@ import { useCallback, useEffect, useState } from "react";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { InsightChipList } from "@/components/ui/insight-chip-list";
 import type { EvaluationResult } from "@/lib/result-types";
+import type { ScoreBreakdown } from "@/lib/assessment-service";
 import { readAssessmentResult } from "@/lib/assessment-session";
 import styles from "./evaluation-result.module.css";
 import fieldStyles from "@/components/resume/resume-upload.module.css";
 
 type Status = "loading" | "empty" | "success";
+
+// "ที่มาของคะแนน" — collapsible breakdown of exactly how resumeScore/
+// assessmentScore/finalScore were computed, per API_CHANGES.md §1. Every
+// number rendered here is read straight from `breakdown` rather than
+// recomputed (caveat #1 in the doc): if the backend's weighting or penalty
+// table ever changes, this section updates itself with no code change.
+function ScoreBreakdownSection({
+  breakdown,
+  explanation,
+}: {
+  breakdown: ScoreBreakdown;
+  explanation?: string;
+}) {
+  const noStandardSkills = breakdown.totalStandardSkills === 0;
+  const hasPenalty = breakdown.penaltyFactor < 1;
+
+  return (
+    <details className={`${styles.breakdownBlock} ${styles.animateIn} ${styles.delay3}`}>
+      <summary className={styles.breakdownToggle}>
+        ที่มาของคะแนน
+        <svg
+          className={styles.breakdownChevron}
+          width="16"
+          height="16"
+          viewBox="0 0 256 256"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" />
+        </svg>
+      </summary>
+
+      <div className={styles.breakdownBody}>
+        {explanation && <p className={styles.breakdownExplanation}>{explanation}</p>}
+
+        {breakdown.roleUsedForMatching && (
+          <p className={styles.breakdownRow} style={{ margin: 0 }}>
+            เทียบทักษะกับตำแหน่ง <strong>{breakdown.roleUsedForMatching}</strong>
+            {breakdown.roleInferredByAi && " (AI วิเคราะห์ให้จากทักษะที่พบ ไม่ได้ระบุตำแหน่งเอง)"}
+          </p>
+        )}
+
+        {/* คะแนนเรซูเม่ */}
+        <div className={styles.breakdownSection}>
+          <h3 className={styles.breakdownSectionTitle}>คะแนนเรซูเม่ (น้ำหนัก {breakdown.resumeWeight * 100}%)</h3>
+
+          {noStandardSkills ? (
+            <div className={styles.breakdownWarning} role="alert">
+              <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V72a8,8,0,0,1,16,0v64a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
+              </svg>
+              <span>
+                ระบบไม่พบทักษะมาตรฐานของตำแหน่ง &ldquo;{breakdown.roleUsedForMatching}&rdquo; ในฐานข้อมูล จึงเทียบคะแนนให้ไม่ได้
+                (ไม่ใช่ว่าทักษะของคุณไม่ตรง) — ลองระบุชื่อตำแหน่งงานที่ใกล้เคียงกับชื่ออาชีพมาตรฐานมากขึ้น
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className={styles.breakdownRow}>
+                <span>ทักษะที่สกัดจากเรซูเม่ทั้งหมด</span>
+                <strong>{breakdown.totalResumeSkills}</strong>
+              </div>
+              <div className={styles.breakdownRow}>
+                <span>ทักษะมาตรฐานของตำแหน่งนี้</span>
+                <strong>{breakdown.totalStandardSkills}</strong>
+              </div>
+              <div className={styles.breakdownRow}>
+                <span>จับคู่ได้</span>
+                <strong>{breakdown.matchedSkills.length} รายการ</strong>
+              </div>
+              <p className={styles.breakdownFormula}>
+                precisionScore = ({breakdown.matchedSkills.length} / {breakdown.totalResumeSkills}) × 100 ={" "}
+                {breakdown.precisionScore.toFixed(2)}
+              </p>
+              {hasPenalty && (
+                <p className={styles.breakdownFormula}>
+                  resumeScore = {breakdown.precisionScore.toFixed(2)} × {breakdown.penaltyFactor.toFixed(1)} (ตัวคูณลงโทษ) ={" "}
+                  {breakdown.resumeScore.toFixed(2)}
+                </p>
+              )}
+              {breakdown.resumeScoreReason && (
+                <p className={styles.breakdownReason}>{breakdown.resumeScoreReason}</p>
+              )}
+              {(breakdown.matchedSkills.length > 0 || breakdown.unmatchedSkills.length > 0) && (
+                <div style={{ marginTop: 4 }}>
+                  {breakdown.matchedSkills.length > 0 && (
+                    <InsightChipList heading="ทักษะที่ตรงกับตำแหน่ง" items={breakdown.matchedSkills} tone="positive" />
+                  )}
+                  {breakdown.unmatchedSkills.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <InsightChipList heading="ทักษะในเรซูเม่ที่ไม่ตรงกับตำแหน่งนี้" items={breakdown.unmatchedSkills} tone="warning" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <hr className={styles.breakdownDivider} />
+
+        {/* คะแนนแบบประเมินตนเอง */}
+        <div className={styles.breakdownSection}>
+          <h3 className={styles.breakdownSectionTitle}>
+            คะแนนแบบประเมินตนเอง (น้ำหนัก {breakdown.assessmentWeight * 100}%)
+          </h3>
+          <div className={styles.breakdownRow}>
+            <span>ตอบไป {breakdown.answeredQuestions} ข้อ (ข้อละสูงสุด {breakdown.maxScorePerQuestion} คะแนน)</span>
+          </div>
+          <p className={styles.breakdownFormula}>
+            assessmentScore = ({breakdown.totalScoreObtained} / {breakdown.maxPossibleScore}) × 100 ={" "}
+            {breakdown.assessmentScore.toFixed(2)}
+          </p>
+        </div>
+
+        <hr className={styles.breakdownDivider} />
+
+        {/* รวมคะแนน */}
+        <div className={styles.breakdownSection}>
+          <h3 className={styles.breakdownSectionTitle}>คะแนนรวม</h3>
+          <div className={styles.breakdownRow}>
+            <span>
+              คะแนนเรซูเม่ {breakdown.resumeScore.toFixed(2)} × {breakdown.resumeWeight * 100}%
+            </span>
+            <strong>{breakdown.resumeContribution.toFixed(2)}</strong>
+          </div>
+          <div className={styles.breakdownRow}>
+            <span>
+              คะแนนแบบประเมิน {breakdown.assessmentScore.toFixed(2)} × {breakdown.assessmentWeight * 100}%
+            </span>
+            <strong>{breakdown.assessmentContribution.toFixed(2)}</strong>
+          </div>
+          <p className={styles.breakdownFormula}>
+            finalScore = {breakdown.resumeContribution.toFixed(2)} + {breakdown.assessmentContribution.toFixed(2)} ={" "}
+            {breakdown.finalScore.toFixed(2)}
+          </p>
+        </div>
+      </div>
+    </details>
+  );
+}
 
 // One-shot character-by-character reveal of the AI recommendation text —
 // ported from the demo's typeAiText(). Runs once when `text` first becomes
@@ -160,6 +302,10 @@ export function EvaluationResultCard() {
         <div className={`${styles.sectionBlock} ${styles.animateIn} ${styles.delay3}`}>
           <InsightChipList heading="ทักษะที่ยังขาด" items={result.missingSkills} tone="warning" />
         </div>
+      )}
+
+      {result.scoreBreakdown && (
+        <ScoreBreakdownSection breakdown={result.scoreBreakdown} explanation={result.scoreExplanation} />
       )}
 
       <div className={`${styles.ctaRow} ${styles.animateIn} ${styles.delay4}`}>

@@ -5,9 +5,14 @@
 // sent automatically by the browser via api-client.ts's
 // `credentials: 'include'`). Auth state here is instead hydrated by asking
 // the backend "who am I" (GET /auth/me) once on mount, and re-derived after
-// login/register/logout. The access token expires in 15 minutes with no
-// refresh mechanism yet — a 401 from a later request means the session has
-// expired and the user must log in again (RouteGuard handles the redirect).
+// login/register/logout. The access token now expires in 1 day (bumped from
+// 15 minutes — see API_CHANGES.md §3, app.jwt.access-token-expiration-ms in
+// application.properties) with no refresh mechanism yet — a 401 from a
+// later request means the session has expired and the user must log in
+// again (RouteGuard handles the redirect). Note: a token issued before this
+// change is still only good for 15 minutes — the new 1-day lifetime only
+// applies to tokens issued after the backend was updated, so an
+// already-logged-in user needs to log in once more to pick it up.
 //
 // REQUIRES the frontend to be deployed same-site with the backend (a
 // subdomain of recommendation.site, e.g. app.recommendation.site — see the

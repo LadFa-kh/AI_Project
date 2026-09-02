@@ -738,11 +738,11 @@ function JobFormModal({
         )}
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-company">ชื่อบริษัท</label>
-          <input id="job-company" className={styles.formInput} value={form.companyName} onChange={(e) => set("companyName", e.target.value)} />
+          <input id="job-company" className={styles.formInput} value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="เช่น บริษัท โค้ดคราฟท์ เทคโนโลยี จำกัด" />
         </div>
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-position">ตำแหน่งงาน</label>
-          <input id="job-position" className={styles.formInput} value={form.positionName} onChange={(e) => set("positionName", e.target.value)} />
+          <input id="job-position" className={styles.formInput} value={form.positionName} onChange={(e) => set("positionName", e.target.value)} placeholder="เช่น Backend Developer" />
         </div>
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-type">ประเภทงาน</label>
@@ -763,19 +763,19 @@ function JobFormModal({
         </div>
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-desc">รายละเอียดงาน</label>
-          <textarea id="job-desc" className={styles.formTextarea} value={form.jobDescription} onChange={(e) => set("jobDescription", e.target.value)} />
+          <textarea id="job-desc" className={styles.formTextarea} value={form.jobDescription} onChange={(e) => set("jobDescription", e.target.value)} placeholder="อธิบายลักษณะงาน หน้าที่ความรับผิดชอบ และคุณสมบัติที่ต้องการ" />
         </div>
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-duration">ระยะเวลา</label>
-          <input id="job-duration" className={styles.formInput} value={form.duration} onChange={(e) => set("duration", e.target.value)} />
+          <input id="job-duration" className={styles.formInput} value={form.duration} onChange={(e) => set("duration", e.target.value)} placeholder="เช่น 4 เดือน (มิ.ย. - ก.ย.)" />
         </div>
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-salary">ค่าตอบแทน</label>
-          <input id="job-salary" className={styles.formInput} value={form.salary} onChange={(e) => set("salary", e.target.value)} />
+          <input id="job-salary" className={styles.formInput} value={form.salary} onChange={(e) => set("salary", e.target.value)} placeholder="เช่น 15,000 บาท/เดือน" />
         </div>
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="job-link">ลิงก์สมัคร</label>
-          <input id="job-link" className={styles.formInput} value={form.contactLink} onChange={(e) => set("contactLink", e.target.value)} />
+          <input id="job-link" className={styles.formInput} value={form.contactLink} onChange={(e) => set("contactLink", e.target.value)} placeholder="https://..." />
         </div>
         <div className={styles.modalActions}>
           <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>

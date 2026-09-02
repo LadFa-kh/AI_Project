@@ -13,9 +13,46 @@
 // - answers must cover every questionId from the upload-resume response, no more/less/dupes
 // - selectedScore must be an integer 1-4
 // - a resume can only be submitted once — resubmitting is rejected
+//
+// scoreBreakdown/scoreExplanation added per API_CHANGES.md §1 — explains
+// where resumeScore/assessmentScore/finalScore actually come from. Optional
+// because a result saved to sessionStorage before this change won't have
+// them (see result-session's read path).
 
 import { apiFetch } from "./api-client";
 import type { AssessmentAnswers, AssessmentQuestion } from "./assessment-types";
+
+// Mirrors scoreBreakdown exactly (see API_CHANGES.md §1) — every number here
+// is what the backend actually used to compute resumeScore/assessmentScore/
+// finalScore, so the UI should always display these instead of recomputing.
+export type ScoreBreakdown = {
+  // ส่วนที่ 1 คะแนนเรซูเม่
+  totalResumeSkills: number;
+  totalStandardSkills: number;
+  matchedSkills: string[];
+  unmatchedSkills: string[];
+  precisionScore: number;
+  penaltyFactor: number;
+  resumeScore: number;
+  resumeScoreReason: string;
+
+  // ส่วนที่ 2 คะแนนแบบประเมินตนเอง
+  answeredQuestions: number;
+  maxScorePerQuestion: number;
+  totalScoreObtained: number;
+  maxPossibleScore: number;
+  assessmentScore: number;
+
+  // ส่วนที่ 3 การถ่วงน้ำหนักรวม
+  resumeWeight: number;
+  assessmentWeight: number;
+  resumeContribution: number;
+  assessmentContribution: number;
+  finalScore: number;
+
+  roleUsedForMatching: string;
+  roleInferredByAi: boolean;
+};
 
 export type AssessmentSubmitResult = {
   resumeId: string;
@@ -28,6 +65,11 @@ export type AssessmentSubmitResult = {
   // shape had one `recommendation: string` field — no longer sent.)
   recommendationSummary: string;
   recommendationItems: string[];
+
+  // New per API_CHANGES.md §1 — optional since a result saved to
+  // sessionStorage before this change won't have them.
+  scoreBreakdown?: ScoreBreakdown;
+  scoreExplanation?: string;
 };
 
 // Each option is prefixed like "1. พอใช้" / "2. มาตรฐาน" — the leading
