@@ -625,7 +625,7 @@
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  color: #FC8337;
+  color: var(--nocturne-warning-text);
   background: color-mix(in srgb, #FC8337 16%, transparent);
   border: 1px solid color-mix(in srgb, #FC8337 38%, transparent);
 }
@@ -652,13 +652,13 @@
 }
 
 .chipPositive {
-  color: #6ee7a0;
+  color: var(--nocturne-success-text);
   background: color-mix(in srgb, #6ee7a0 16%, transparent);
   border: 1px solid color-mix(in srgb, #6ee7a0 38%, transparent);
 }
 
 .chipWarning {
-  color: #FC8337;
+  color: var(--nocturne-warning-text);
   background: color-mix(in srgb, #FC8337 16%, transparent);
   border: 1px solid color-mix(in srgb, #FC8337 38%, transparent);
 }
@@ -671,7 +671,7 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  color: #6ee7a0;
+  color: var(--nocturne-success-text);
   background: color-mix(in srgb, #6ee7a0 16%, transparent);
   border: 1px solid color-mix(in srgb, #6ee7a0 38%, transparent);
 }
