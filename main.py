@@ -85,7 +85,7 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 def preprocess_thai_text(raw_text: str) -> str:
     text = normalize(raw_text)
     tokens = word_tokenize(text, engine="newmm")
-    return "".join(tokens)
+    return " ".join(t for t in tokens if t.strip())
 
 
 # -------------------------------------------------------------

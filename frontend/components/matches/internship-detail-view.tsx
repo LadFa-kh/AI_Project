@@ -168,34 +168,38 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
   useEffect(() => {
     let cancelled = false;
 
+    // ข้อมูลในหน่วยความจำ (sessionStorage) แสดงได้ทันที แต่ไม่ครบ:
+    // - match มาจาก /matching/recommendations ซึ่งไม่มีคำอธิบายงาน ระยะเวลา ค่าตอบแทน ลิงก์สมัคร
+    // - workplace อาจเก่า ถ้าผู้ประกาศแก้ไขงานหลังจากโหลดรายการไว้
+    // จึงแสดงของที่มีไปก่อน แล้วดึง GET /workplaces/{id} มาเติมให้ครบทุกครั้ง
     const match = readMatchById(internshipId);
+    const cachedWorkplace = match ? null : readWorkplaceById(internshipId);
     if (match) {
       setDetail(match);
       setStatus("success");
-      return;
-    }
-    const workplace = readWorkplaceById(internshipId);
-    if (workplace) {
+    } else if (cachedWorkplace) {
       setDetail({
-        jobId: workplace.id,
-        companyName: workplace.companyName,
-        positionName: workplace.positionName,
-        jobType: workplace.jobType,
-        requiredSkills: workplace.requiredSkills,
-        jobDescription: workplace.jobDescription,
-        duration: workplace.duration,
-        salary: workplace.salary,
-        contactLink: workplace.contactLink,
+        jobId: cachedWorkplace.id,
+        companyName: cachedWorkplace.companyName,
+        positionName: cachedWorkplace.positionName,
+        jobType: cachedWorkplace.jobType,
+        requiredSkills: cachedWorkplace.requiredSkills,
+        jobDescription: cachedWorkplace.jobDescription,
+        duration: cachedWorkplace.duration,
+        salary: cachedWorkplace.salary,
+        contactLink: cachedWorkplace.contactLink,
       });
       setStatus("success");
-      return;
+    } else {
+      setStatus("loading");
     }
 
-    setStatus("loading");
     getWorkplaceById(internshipId)
       .then((workplace) => {
         if (cancelled) return;
+        // เก็บคะแนนและทักษะที่ตรง/ขาดจาก match ไว้ (ถ้ามี) แล้วเติมรายละเอียดงานจาก backend
         setDetail({
+          ...(match ?? {}),
           jobId: workplace.id,
           companyName: workplace.companyName,
           positionName: workplace.positionName,
@@ -210,6 +214,8 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
       })
       .catch(() => {
         if (cancelled) return;
+        // ถ้าดึงไม่สำเร็จแต่มีข้อมูลในหน่วยความจำอยู่แล้ว ให้แสดงของเดิมต่อไป
+        if (match || cachedWorkplace) return;
         setDetail(null);
         setStatus("not-found");
       });
