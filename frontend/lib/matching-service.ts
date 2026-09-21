@@ -5,9 +5,8 @@
 //    sorted by fit descending.
 //
 // userId is no longer sent — backend derives the user from the httpOnly
-// accessToken cookie and has fully removed the old userId-based fallback,
-// so this only works when the frontend is deployed same-site with the
-// backend (see auth-context.tsx). Requires login (403 if not).
+// accessToken cookie and has fully removed the old userId-based fallback.
+// ต้อง login ก่อน ไม่งั้นได้ 403
 //
 // KNOWN BACKEND BUG (README §6): MatchingController catches all exceptions
 // itself and returns a bodyless 500 for every failure case — including the

@@ -1,0 +1,59 @@
+# โปรไฟล์ production — ใช้คู่กับ docker-compose.yml เสมอ (override ไม่ใช่แทนที่)
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# ต่างจากโปรไฟล์ dev ตรงที่:
+#   1. มี Caddy เป็นทางเข้าเดียวจากอินเทอร์เน็ต (จัดการ HTTPS ให้อัตโนมัติ)
+#   2. postgres / resume-service / backend / frontend ไม่เปิด port ออกเครื่อง
+#      เลย คุยกันผ่านเครือข่ายภายใน Docker อย่างเดียว
+#   3. cookie ติดธง Secure เพราะทุกอย่างวิ่งบน HTTPS แล้ว
+#
+# ⚠️ ก่อนรัน ต้องมี DNS A record ของ app.recommendation.site ชี้มาที่ IP
+# สาธารณะของเครื่องนี้ และเปิด port 80/443 ให้เข้าถึงได้จากภายนอก
+# (Caddy ต้องใช้ port 80 ทำ ACME HTTP-01 challenge เพื่อขอใบรับรอง)
+
+services:
+  postgres:
+    # ไม่เปิด 5432 ออกอินเทอร์เน็ต — ฐานข้อมูลไม่ควรเข้าถึงได้จากภายนอก
+    ports: !override []
+
+  resume-service:
+    ports: !override []
+
+  backend:
+    environment:
+      # HTTPS แล้ว จึงติดธง Secure ได้ (และควรติด)
+      APP_COOKIE_SECURE: "true"
+      APP_COOKIE_SAME_SITE: Lax
+      # frontend เรียก API ผ่าน proxy ของตัวเอง (same-origin) จึงไม่มี
+      # cross-origin request เหลืออยู่เลย ค่านี้ตั้งไว้เผื่อ Swagger เท่านั้น
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-https://app.recommendation.site}
+    # backend เข้าถึงได้เฉพาะจาก frontend ภายในเครือข่าย Docker
+    ports: !override []
+
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api/v1
+        BACKEND_INTERNAL_URL: http://backend:8080
+    # เข้าผ่าน Caddy เท่านั้น
+    ports: !override []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

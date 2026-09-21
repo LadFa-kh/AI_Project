@@ -9,8 +9,12 @@ public class CookieUtil {
 
     public static final String ACCESS_TOKEN_COOKIE = "accessToken";
 
-    // 15 นาที — ให้ตรงกับอายุ JWT ใน JwtTokenProvider
-    private static final long ACCESS_TOKEN_MAX_AGE_SECONDS = 900;
+    // อายุ cookie ต้องเท่ากับอายุ JWT เสมอ ไม่งั้นจะเกิดอาการอย่างใดอย่างหนึ่ง:
+    // cookie ตายก่อน = ผู้ใช้หลุดทั้งที่ token ยังไม่หมดอายุ / JWT ตายก่อน =
+    // เบราว์เซอร์ยังส่ง cookie ที่ใช้ไม่ได้แล้วไปเรื่อย ๆ แล้วโดน 401
+    // จึงอ่านจาก property ตัวเดียวกับ JwtTokenProvider แล้วหารพันเป็นวินาที
+    @Value("${app.jwt.access-token-expiration-ms:86400000}")
+    private long accessTokenExpirationMs;
 
     // dev (http://localhost) ต้องเป็น false ไม่งั้นเบราว์เซอร์ไม่ยอมเก็บ cookie
     // production (https) ต้องเป็น true
@@ -25,7 +29,7 @@ public class CookieUtil {
                 .httpOnly(true)          // JavaScript อ่านไม่ได้ = กัน XSS ขโมย token
                 .secure(secure)
                 .path("/")
-                .maxAge(ACCESS_TOKEN_MAX_AGE_SECONDS)
+                .maxAge(accessTokenExpirationMs / 1000)
                 .sameSite(sameSite)
                 .build();
     }

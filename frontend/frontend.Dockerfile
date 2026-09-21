@@ -23,6 +23,10 @@ ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+# ปลายทางของ API proxy ใน next.config.ts — ต้องเป็น build arg ไม่ใช่ runtime env
+# เพราะ output:"standalone" จะ serialize ค่า rewrites ไว้ตั้งแต่ตอน build
+ARG BACKEND_INTERNAL_URL=http://backend:8080
+ENV BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}
 RUN npm run build
 
 # ---- runner: minimal final image, no build tools/source/node_modules ----

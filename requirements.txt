@@ -4,3 +4,5 @@ python-multipart
 pdfplumber
 pydantic
 google-genai
+pythainlp
+requests

@@ -17,7 +17,9 @@
     import org.springframework.beans.factory.annotation.Value;
     import org.springframework.core.io.ByteArrayResource;
     import org.springframework.http.*;
-    import org.springframework.stereotype.Service;
+    import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
     import org.springframework.transaction.annotation.Transactional;
     import org.springframework.util.LinkedMultiValueMap;
     import org.springframework.util.MultiValueMap;
@@ -38,6 +40,8 @@
     @Service
     @RequiredArgsConstructor
     public class ResumeService {
+
+    private static final Logger log = LoggerFactory.getLogger(ResumeService.class);
 
         private final ResumeRepository resumeRepository;
         private final ResumeSkillRepository resumeSkillRepository;
@@ -159,10 +163,29 @@
                         fastapiBaseUrl + PYTHON_PROCESS_RESUME_PATH, requestEntity, PythonResumeResponseDto.class);
                 return response.getBody();
             } catch (HttpStatusCodeException e) {
-                System.err.println("Python service error status: " + e.getStatusCode());
-                System.err.println("Python service error body: " + e.getResponseBodyAsString());
-                throw new RuntimeException("Python service failed: " + e.getResponseBodyAsString(), e);
+                log.error("บริการปัญญาประดิษฐ์ตอบกลับด้วยรหัสสถานะ {} เนื้อหา {}",
+                        e.getStatusCode(), e.getResponseBodyAsString());
+
+                // ข้อผิดพลาดระดับ 4xx เกิดจากไฟล์ที่ผู้ใช้ส่งมา เช่น ไม่ใช่ PDF หรืออ่านข้อความไม่ได้
+                // จึงต้องส่งกลับเป็น 400 พร้อมข้อความอธิบาย ไม่ใช่ 500 ซึ่งหมายถึงเซิร์ฟเวอร์ผิดพลาดเอง
+                if (e.getStatusCode().is4xxClientError()) {
+                    throw new IllegalArgumentException(extractDetail(e.getResponseBodyAsString()));
+                }
+                throw new RuntimeException("บริการปัญญาประดิษฐ์ไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง", e);
             }
+        }
+
+        /** ดึงข้อความอธิบายจากฟิลด์ detail ที่ FastAPI ส่งกลับมา */
+        private String extractDetail(String responseBody) {
+            try {
+                com.fasterxml.jackson.databind.JsonNode node =
+                        new com.fasterxml.jackson.databind.ObjectMapper().readTree(responseBody);
+                String detail = node.path("detail").asText("");
+                if (!detail.isBlank()) return detail;
+            } catch (Exception ignored) {
+                // ถ้าแกะไม่ได้ ใช้ข้อความกลางแทน
+            }
+            return "ไม่สามารถประมวลผลไฟล์ที่อัปโหลดได้ กรุณาตรวจสอบว่าเป็นไฟล์ PDF ที่มีข้อความ";
         }
 
         private String calculateSHA256(byte[] data) throws Exception {

@@ -3,6 +3,7 @@ package com.example.backend.handle.jwt;
 import com.example.backend.user.entity.UserEntity;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
@@ -12,7 +13,15 @@ public class JwtTokenProvider {
 
     // คีย์ลับสำหรับเซ็นต์ JWT (ควรเก็บไว้ใน application.yml แต่อันนี้เขียนจำลองไว้ก่อน)
     private final String jwtSecret = "your-very-secure-and-long-secret-key-that-is-at-least-256-bits";
-    private final long jwtAccessTokenExpirationInMs = 900000; // 15 นาที
+    // อายุ access token — เดิมตั้งไว้ 15 นาที ซึ่งสั้นเกินไปเพราะระบบยังไม่ได้ต่อ
+    // refresh token เข้ากับ flow การล็อกอินจริง (generateRefreshToken ยังสร้าง
+    // UUID ทิ้งไว้เฉย ๆ ไม่มีใครเรียกใช้) ผู้ใช้จึงหลุดออกจากระบบทุก 15 นาที
+    // ระหว่างใช้งาน ตั้งเป็น 1 วันตามที่ทีมหน้าบ้านแจ้งมา และย้ายมาอ่านจาก
+    // properties เพื่อให้ปรับได้โดยไม่ต้องแก้โค้ด — CookieUtil อ่านค่าเดียวกันนี้
+    // ไปตั้ง maxAge ของ cookie ด้วย ทั้งสองฝั่งจึงหมดอายุพร้อมกันเสมอ
+    @Value("${app.jwt.access-token-expiration-ms:86400000}")
+    private long jwtAccessTokenExpirationInMs;
+
     private final long jwtRefreshTokenExpirationInMs = 604800000; // 7 วัน
 
     private Key getSigningKey() {

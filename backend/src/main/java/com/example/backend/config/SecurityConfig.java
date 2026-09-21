@@ -68,6 +68,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/skills/**").permitAll()
                         .requestMatchers("/api/v1/workplaces/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // หน้าจัดการประกาศงานของผู้ประกาศ เปิดให้ EMPLOYER ใช้ได้
+                        // ADMIN ใส่ไว้ด้วยเพื่อให้ทดสอบและดูแลระบบได้โดยไม่ต้องสลับบัญชี
+                        // การกรองว่าเป็นประกาศของใครทำอยู่ในชั้นบริการ ไม่ได้พึ่งกฎข้อนี้
+                        .requestMatchers("/api/v1/employer/**").hasAnyRole("EMPLOYER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

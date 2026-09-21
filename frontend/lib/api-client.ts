@@ -1,5 +1,8 @@
 // Central fetch wrapper for all backend calls. Base URL comes from
-// NEXT_PUBLIC_API_BASE_URL (see .env.local.example). Splits failures into
+// NEXT_PUBLIC_API_BASE_URL — ปกติเป็น "/api/v1" (path ล้วน) ซึ่งวิ่งผ่าน
+// rewrites proxy ใน next.config.ts ไปยัง backend ทำให้ทุก request เป็น
+// same-origin ไม่มี CORS และ cookie ทำงานได้ทั้ง dev และ prod
+// Splits failures into
 // two shapes so callers can show the right message:
 // - ApiError: request reached the server, server returned a non-2xx status
 // - NetworkError: request never got a response (offline, CORS, DNS, timeout)
@@ -47,9 +50,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       // automatically on login/register/google-login) instead of a
       // client-managed JWT. `credentials: 'include'` is required on every
       // request so the browser attaches that cookie — without it, protected
-      // endpoints return 403 even right after a successful login. Only
-      // works when the frontend is same-site with the backend (e.g. served
-      // from app.recommendation.site) — see auth-context.tsx.
+      // endpoints return 403 even right after a successful login.
       credentials: "include",
       headers: {
         // Only set Content-Type when there's a body to describe — sending it

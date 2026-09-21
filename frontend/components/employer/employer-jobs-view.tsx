@@ -4,26 +4,23 @@
 // delete, trimmed down from admin-dashboard-view.tsx's JobsTab (same API,
 // same styling module reused as-is rather than duplicated).
 //
-// IMPORTANT — known backend limitation (README_Admin_API.md): there is no
-// employer-scoped "my jobs" endpoint. GET /admin/jobs returns every
-// company's postings with no employerId filter, and every /admin/jobs/*
-// endpoint is documented as ADMIN-only. Until the backend adds a real
-// employer-scoped endpoint (or opens these to EMPLOYER sessions), this
-// page shows ALL companies' jobs, not just the signed-in employer's own —
-// flagged here and to the user rather than silently pretending it's
-// already scoped. employerId is prefilled from the signed-in user (not
-// manually typed, unlike the admin form's free-text Employer ID field).
+// เดิมหน้านี้เรียก /admin/jobs ซึ่งเปิดให้เฉพาะบทบาท ADMIN บัญชี EMPLOYER
+// จึงได้ 403 และเส้นทางนั้นยังคืนประกาศงานของทุกบริษัทโดยไม่กรองเจ้าของ
+// ตอนนี้ backend มีเส้นทาง /employer/jobs แล้ว (EmployerJobController)
+// ซึ่งดึงรหัสผู้ประกาศจากโทเคนเอง จึงคืนเฉพาะประกาศของผู้ที่ล็อกอินอยู่
+// และปฏิเสธการแก้ไขหรือลบประกาศของผู้อื่นด้วยรหัสสถานะ 403
+// employerId ไม่ต้องกรอกและไม่ต้องส่ง เพราะ backend เติมให้จากโทเคน
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  listJobs,
-  createJob,
-  updateJob,
-  deleteJob,
-  type AdminJob,
-  type AdminJobInput,
-} from "@/lib/admin-service";
+  listMyJobs as listJobs,
+  createMyJob as createJob,
+  updateMyJob as updateJob,
+  deleteMyJob as deleteJob,
+  type EmployerJob as AdminJob,
+  type EmployerJobInput as AdminJobInput,
+} from "@/lib/employer-service";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import styles from "@/components/admin/admin-dashboard.module.css";

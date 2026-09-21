@@ -5,3 +5,20 @@
 # Local scratch — files staged for deletion during cleanup, not part of
 # the project. Keeping these out of the repo/GitHub.
 /frontend/_to_delete/
+_to_delete/
+
+# Secrets — .env.example is committed instead, with placeholder values
+.env
+
+# Uploaded resumes: real personal data (name, email, phone) produced at
+# runtime, not source. Must never reach GitHub — the project's own PDPA
+# section in chapter 3 commits to protecting exactly this kind of data.
+uploads/
+
+# Database dump — regenerated with pg_dump when needed
+backup.sql
+
+# Generated at runtime / by tooling, not source code
+__pycache__/
+.venv/
+.idea/

@@ -64,11 +64,6 @@ export function TopNav() {
     router.push("/login");
   }
 
-  function handleGoogleSignIn() {
-    // TODO: wire to backend auth API — POST /auth/google { idToken }
-    // Same not-yet-implemented contract as LoginForm/RegisterForm.
-  }
-
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-20 flex justify-center px-4 sm:top-6">
       <nav
@@ -116,7 +111,11 @@ export function TopNav() {
 
         {isAuthenticated && user ? (
           <div className="flex items-center gap-1 sm:gap-2">
-            <nav aria-label="เมนูหน้าเพจ" className="hidden items-end gap-1.5 md:flex">
+            {/* เดิมเป็น md:flex ทำให้ไอคอนเมนูทั้งแถบหายไปเมื่อจอแคบกว่า 768 พิกเซล
+                (เช่นตอนเปิด DevTools ควบคู่ไปด้วย) ผู้ใช้ที่ล็อกอินแล้วจึงเห็นแค่ชื่อ
+                ตัวเองโดยไม่มีเมนูใด ๆ ลดลงมาเป็น sm (640 พิกเซล) เพื่อให้เห็นเมนู
+                ในกรณีจอแคบระดับนี้ด้วย */}
+            <nav aria-label="เมนูหน้าเพจ" className="hidden items-end gap-1.5 sm:flex">
               {visibleNavItems.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
                 return (
@@ -168,7 +167,7 @@ export function TopNav() {
                       "linear-gradient(135deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2), var(--color-home-hero-accent-3))",
                   }}
                 >
-                  {user.fullname.charAt(0).toUpperCase()}
+                  {user.fullname?.charAt(0).toUpperCase() ?? "?"}
                 </span>
                 <span
                   className="hidden text-xs font-medium sm:inline sm:text-sm"
@@ -198,24 +197,11 @@ export function TopNav() {
                     boxShadow: "var(--nocturne-shadow)",
                   }}
                 >
-                  <Link
-                    href="/profile"
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-2 text-xs transition-colors hover:opacity-80 sm:text-sm"
-                    style={{ color: "var(--nocturne-text-secondary)" }}
-                  >
-                    โปรไฟล์
-                  </Link>
-                  <Link
-                    href="/settings"
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-2 text-xs transition-colors hover:opacity-80 sm:text-sm"
-                    style={{ color: "var(--nocturne-text-secondary)" }}
-                  >
-                    ตั้งค่า
-                  </Link>
+                  {/* ลิงก์ "โปรไฟล์" (/profile) และ "ตั้งค่า" (/settings) ถูกถอดออก
+                      ชั่วคราว — ยังไม่มีทั้งสองหน้าใน app/ ตัวลิงก์เองทำให้ Next.js
+                      prefetch ไปยัง route ที่ไม่มีอยู่ แล้วขึ้น 404 ใน console ทุกครั้ง
+                      ที่เรนเดอร์แถบนำทาง (คือแทบทุกหน้า) ใส่กลับเมื่อสร้างสองหน้านี้จริง
+                      เหตุผลเดียวกับลิงก์ "ลืมรหัสผ่าน?" ใน login-form.tsx */}
                   <button
                     type="button"
                     role="menuitem"
@@ -247,11 +233,16 @@ export function TopNav() {
             >
               สมัครสมาชิก
             </Link>
-            <button
-              type="button"
+            {/* ปุ่มนี้เคยเป็น <button> ที่มี handler ว่างเปล่า กดแล้วไม่เกิดอะไรขึ้น
+                ตอนนี้เปลี่ยนเป็นลิงก์ไปหน้า /login ซึ่งมีปุ่ม Google ตัวจริงที่
+                Google Identity Services เรนเดอร์ให้ (ดู lib/use-google-signin.ts)
+                เหตุที่ไม่ฝัง GSI ไว้ในแถบนำทางโดยตรง เพราะ GSI ต้องเรนเดอร์ปุ่ม
+                ของตัวเองลงใน container จริง จึงคุมขนาดให้พอดีกับไอคอน 32 พิกเซล
+                ในแถบนำทางไม่ได้ */}
+            <Link
+              href="/login"
               aria-label="เข้าสู่ระบบด้วย Google"
               title="เข้าสู่ระบบด้วย Google"
-              onClick={handleGoogleSignIn}
               className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:opacity-80 sm:h-9 sm:w-9"
               style={{ borderColor: "var(--nocturne-border-strong)" }}
             >
@@ -261,7 +252,7 @@ export function TopNav() {
                 <path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.4C29.6 35.4 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.6 39.6 16.3 44 24 44z"/>
                 <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4 5.5l6.6 5.4C41.8 35.5 44 30.1 44 24c0-1.2-.1-2.4-.4-3.5z"/>
               </svg>
-            </button>
+            </Link>
           </div>
         )}
       </nav>

@@ -1,0 +1,30 @@
+# แก้ปัญหา merge conflict ปลอมจาก line ending (CRLF บน Windows vs LF บน Linux)
+#
+# ที่ผ่านมาไม่มีไฟล์นี้ และไม่มีใครตั้ง core.autocrlf ทำให้แต่ละคน commit
+# line ending ต่างกัน git จึงมองว่าทั้งไฟล์เปลี่ยนทุกบรรทัด → merge ทีไร
+# ก็ conflict ทั้งไฟล์ทั้งที่เนื้อหาจริงแทบไม่ต่างกัน
+#
+# text=auto eol=lf = เก็บใน git เป็น LF เสมอ และ checkout ออกมาเป็น LF ด้วย
+# ทุกเครื่อง ทุก OS เลือก LF เพราะทุกอย่างรันจริงใน Linux container อยู่แล้ว
+
+* text=auto eol=lf
+
+# ไฟล์ไบนารี — ห้าม git ยุ่งกับ byte ข้างใน เดี๋ยวไฟล์พัง
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary
+*.zip   binary
+*.jar   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+
+# สคริปต์ Windows ต้องเป็น CRLF ไม่งั้นรันไม่ได้
+*.bat text eol=crlf
+*.cmd text eol=crlf

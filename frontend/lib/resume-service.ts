@@ -4,10 +4,8 @@
 // -> { resumeId, extractedSkills: string[], questions: { id, question, options: string[] }[] }
 //
 // userId is no longer sent — backend derives the user from the httpOnly
-// accessToken cookie and has fully removed the old userId-based fallback,
-// so this only works when the frontend is deployed same-site with the
-// backend (see auth-context.tsx). Requires the user to be logged in
-// (credentials: 'include' below), or the request gets 403.
+// accessToken cookie and has fully removed the old userId-based fallback.
+// ต้อง login ก่อน (credentials: 'include' ด้านล่าง) ไม่งั้นได้ 403
 //
 // desiredRoleName is NOT accepted here anymore — it moved to
 // POST /assessments/submit (see resume-session.ts for how it's carried over).

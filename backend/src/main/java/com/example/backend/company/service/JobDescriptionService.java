@@ -8,6 +8,7 @@ import com.example.backend.resume.repository.SoftwareSkillRepository;
 import com.example.backend.user.entity.UserEntity;
 import com.example.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,11 +26,7 @@ public class JobDescriptionService {
 
     @Transactional
     public JobDescriptionResponseDto createJobDescription(JobPostRequestDto request) {
-        // 1. ค้นหา User ที่เป็น Employer
-        UserEntity employer = userRepository.findById(request.getEmployerId())
-                .orElseThrow(() -> new RuntimeException("Employer not found"));
-
-        // 2. Parse comma-separated string เป็น List ก่อน validate
+        // 1. Parse comma-separated string เป็น List ก่อน validate
         String rawSkills = request.getRequiredSkills();
         if (rawSkills == null || rawSkills.isBlank()) {
             throw new IllegalArgumentException("ต้องระบุ required skills อย่างน้อย 1 รายการ");
@@ -53,6 +50,13 @@ public class JobDescriptionService {
         if (!invalidSkills.isEmpty()) {
             throw new IllegalArgumentException("พบ skill ที่ไม่อยู่ในระบบ: " + String.join(", ", invalidSkills));
         }
+
+        // 2. ค้นหา User ที่เป็น Employer (ตรวจ null ก่อน เพื่อไม่ให้ Spring Data โยน InvalidDataAccessApiUsageException)
+        if (request.getEmployerId() == null) {
+            throw new IllegalArgumentException("ต้องระบุรหัสผู้ประกาศงาน (employerId)");
+        }
+        UserEntity employer = userRepository.findById(request.getEmployerId())
+                .orElseThrow(() -> new IllegalArgumentException("ไม่พบผู้ประกาศงานที่ระบุ"));
 
         // 3. Map ข้อมูลลง Entity
         JobDescriptionEntity job = new JobDescriptionEntity();
@@ -161,5 +165,49 @@ public class JobDescriptionService {
         JobDescriptionEntity job = jobDescriptionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("ไม่พบตำแหน่งงานที่ระบุ"));
         jobDescriptionRepository.delete(job);
+    }
+
+    // ---------------------------------------------------------------
+    // ส่วนของผู้ประกาศงาน (EMPLOYER)
+    // ---------------------------------------------------------------
+    // เมธอดชุดนี้ต่างจากชุดของผู้ดูแลระบบตรงที่ผูกกับรหัสผู้ประกาศที่ได้มาจาก
+    // โทเคนเสมอ ไม่ได้รับมาจาก request body ผู้ประกาศจึงเห็นและแก้ไขได้เฉพาะ
+    // ประกาศของตนเอง ปลอมรหัสของคนอื่นส่งเข้ามาไม่ได้
+
+    public List<JobDescriptionResponseDto> getJobDescriptionsByEmployer(UUID employerId) {
+        return jobDescriptionRepository.findByEmployer_Id(employerId).stream()
+                .map(this::toResponseDto)
+                .toList();
+    }
+
+    @Transactional
+    public JobDescriptionResponseDto createJobDescriptionForEmployer(UUID employerId, JobPostRequestDto request) {
+        request.setEmployerId(employerId);   // บังคับใช้เจ้าของจากโทเคน ทับค่าที่ส่งมา
+        return createJobDescription(request);
+    }
+
+    @Transactional
+    public JobDescriptionResponseDto updateJobDescriptionForEmployer(UUID employerId, UUID id, JobPostRequestDto request) {
+        requireOwnership(employerId, id);
+        return updateJobDescription(id, request);
+    }
+
+    @Transactional
+    public void deleteJobDescriptionForEmployer(UUID employerId, UUID id) {
+        requireOwnership(employerId, id);
+        deleteJobDescription(id);
+    }
+
+    /**
+     * ตรวจว่าประกาศงานนั้นเป็นของผู้ประกาศที่กำลังเรียกใช้จริงหรือไม่
+     * ถ้าไม่ใช่ จะโยน AccessDeniedException ซึ่ง GlobalExceptionHandler ส่งต่อให้
+     * Spring Security จัดการเป็นรหัสสถานะ 403 ตามเดิม
+     */
+    private void requireOwnership(UUID employerId, UUID jobId) {
+        JobDescriptionEntity job = jobDescriptionRepository.findById(jobId)
+                .orElseThrow(() -> new IllegalArgumentException("ไม่พบตำแหน่งงานที่ระบุ"));
+        if (job.getEmployer() == null || !job.getEmployer().getId().equals(employerId)) {
+            throw new AccessDeniedException("ไม่มีสิทธิ์จัดการประกาศงานของผู้อื่น");
+        }
     }
 }

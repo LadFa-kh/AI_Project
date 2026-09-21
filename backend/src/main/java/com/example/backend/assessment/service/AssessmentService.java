@@ -3,6 +3,7 @@ package com.example.backend.assessment.service;
 import com.example.backend.assessment.dto.AssessmentScoreResponseDto;
 import com.example.backend.assessment.dto.RecommendationResponseDto;
 import com.example.backend.assessment.dto.RoleTranslationResponseDto;
+import com.example.backend.assessment.dto.ScoreBreakdownDto;
 import com.example.backend.assessment.dto.SubmitAssessmentRequestDto;
 import com.example.backend.assessment.entity.AssessmentAnswerEntity;
 import com.example.backend.assessment.entity.AssessmentQuestionEntity;
@@ -22,6 +23,7 @@ import com.example.backend.resume.repository.ResumeGapAnalysisRepository;
 import com.example.backend.resume.repository.ResumeRepository;
 import com.example.backend.resume.repository.ResumeScoreRepository;
 import com.example.backend.resume.repository.ResumeSkillRepository;
+import com.example.backend.resume.service.SkillMatchResult;
 import com.example.backend.resume.service.SkillTaxonomyService;
 import com.example.backend.user.entity.UserEntity;
 import com.example.backend.user.repository.UserRepository;
@@ -50,6 +52,12 @@ public class AssessmentService {
 
     private static final int MIN_SCORE_PER_QUESTION = 1;
     private static final int MAX_SCORE_PER_QUESTION = 4;
+
+    // น้ำหนักของคะแนนสองส่วนที่ประกอบกันเป็นคะแนนรวม (ต้องบวกกันได้ 1.00)
+    // เดิมเลขสองตัวนี้ฝังอยู่กลางสูตร ทำให้ไม่มีใครตอบได้ว่าคะแนนมาจากไหนโดยไม่ไล่โค้ด
+    // ดึงออกมาตั้งชื่อไว้ตรงนี้ และส่งออกไปกับผลลัพธ์ด้วย เพื่อให้หน้าเว็บอ้างอิงค่าเดียวกัน
+    private static final BigDecimal RESUME_WEIGHT = BigDecimal.valueOf(0.6);
+    private static final BigDecimal ASSESSMENT_WEIGHT = BigDecimal.valueOf(0.4);
     private static final String GENERATE_RECOMMENDATION_PATH = "/api/v1/python/generate-recommendation";
     private static final String TRANSLATE_ROLE_NAME_PATH = "/api/v1/python/translate-role-name";
     private static final String INFER_ROLE_PATH = "/api/v1/python/infer-role-from-skills"; // [NEW]
@@ -165,13 +173,16 @@ public class AssessmentService {
         // ถ้าไม่มี ให้ AI เดาอาชีพจากทักษะในเรซูเม่แทน (ได้เป็นภาษาอังกฤษอยู่แล้ว ไม่ต้องแปลซ้ำ)
         String effectiveRoleName;
         String englishRoleName;
+        boolean roleInferredByAi;
 
         if (request.getDesiredRoleName() != null && !request.getDesiredRoleName().isBlank()) {
             effectiveRoleName = request.getDesiredRoleName();
             englishRoleName = translateRoleNameToEnglish(effectiveRoleName);
+            roleInferredByAi = false;
         } else {
             englishRoleName = inferRoleFromSkills(hardSkills);
             effectiveRoleName = englishRoleName; // ไม่มีข้อความต้นฉบับจาก user ให้ใช้ตัวที่ AI เดามาแทนทั้งสองจุด
+            roleInferredByAi = true;
         }
 
         // บันทึก DesiredRoleEntity เสมอ ไม่ว่าจะมาจาก user พิมพ์เองหรือ AI เดาให้
@@ -183,15 +194,19 @@ public class AssessmentService {
 
         List<String> standardSkills = skillTaxonomyService.extractAndAggregateStandardSkills(englishRoleName);
 
-        BigDecimal resumeScore = skillTaxonomyService.calculateOnetSkillMatchScore(hardSkills, standardSkills);
+        SkillMatchResult matchResult = skillTaxonomyService.calculateOnetSkillMatchDetail(hardSkills, standardSkills);
+        BigDecimal resumeScore = matchResult.getResumeScore();
 
         ResumeScoreEntity resumeScoreEntity = new ResumeScoreEntity();
         resumeScoreEntity.setResume(resume);
         resumeScoreEntity.setResumeScore(resumeScore);
         resumeScoreRepository.save(resumeScoreEntity);
 
-        BigDecimal finalScore = resumeScore.multiply(BigDecimal.valueOf(0.6))
-                .add(assessmentScore.multiply(BigDecimal.valueOf(0.4)))
+        // แยกผลคูณของแต่ละส่วนออกมาเป็นตัวแปร เพื่อส่งออกไปแสดงว่าคะแนนรวมมาจากไหนบ้าง
+        BigDecimal resumeContribution = resumeScore.multiply(RESUME_WEIGHT).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal assessmentContribution = assessmentScore.multiply(ASSESSMENT_WEIGHT).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal finalScore = resumeScore.multiply(RESUME_WEIGHT)
+                .add(assessmentScore.multiply(ASSESSMENT_WEIGHT))
                 .setScale(2, RoundingMode.HALF_UP);
 
         FinalScoreEntity finalScoreEntity = new FinalScoreEntity();
@@ -209,8 +224,32 @@ public class AssessmentService {
                 })
                 .collect(Collectors.joining("\n"));
 
+        // ประกอบที่มาของคะแนนจากค่าที่คำนวณไว้แล้วทั้งหมด ไม่มีค่าใดมาจากปัญญาประดิษฐ์
+        ScoreBreakdownDto breakdown = ScoreBreakdownDto.builder()
+                .totalResumeSkills(matchResult.getTotalResumeSkills())
+                .totalStandardSkills(matchResult.getTotalStandardSkills())
+                .matchedSkills(matchResult.getMatchedSkills())
+                .unmatchedSkills(matchResult.getUnmatchedSkills())
+                .precisionScore(matchResult.getPrecisionScore())
+                .penaltyFactor(matchResult.getPenaltyFactor())
+                .resumeScore(resumeScore)
+                .resumeScoreReason(matchResult.getReason())
+                .answeredQuestions(answers.size())
+                .maxScorePerQuestion(MAX_SCORE_PER_QUESTION)
+                .totalScoreObtained(totalScoreObtained)
+                .maxPossibleScore(maxPossibleScore)
+                .assessmentScore(assessmentScore)
+                .resumeWeight(RESUME_WEIGHT)
+                .assessmentWeight(ASSESSMENT_WEIGHT)
+                .resumeContribution(resumeContribution)
+                .assessmentContribution(assessmentContribution)
+                .finalScore(finalScore)
+                .roleUsedForMatching(effectiveRoleName)
+                .roleInferredByAi(roleInferredByAi)
+                .build();
+
         RecommendationResponseDto recommendationResult = callPythonRecommendationApi(
-                effectiveRoleName, standardSkills, hardSkills, assessmentSummary
+                effectiveRoleName, standardSkills, hardSkills, assessmentSummary, breakdown
         );
 
         List<String> missingSkillsList = recommendationResult.getMissing_skills() != null
@@ -235,6 +274,8 @@ public class AssessmentService {
                 .missingSkills(missingSkillsList)
                 .recommendationSummary(recommendationSummary)
                 .recommendationItems(recommendationItems)
+                .scoreBreakdown(breakdown)
+                .scoreExplanation(recommendationResult.getScore_explanation())
                 .build();
     }
 
@@ -292,16 +333,51 @@ public class AssessmentService {
         return "";
     }
 
+    /**
+     * ส่งข้อมูลไปให้ Python เขียนคำแนะนำและคำอธิบายที่มาของคะแนน
+     *
+     * ตัวเลขคะแนนทุกค่าใน scoreFacts คำนวณเสร็จแล้วจากฝั่งนี้ ปัญญาประดิษฐ์มีหน้าที่
+     * เรียบเรียงเป็นภาษาไทยเท่านั้น ห้ามคำนวณเอง เพราะถ้าให้คำนวณเองตัวเลขในคำอธิบาย
+     * จะไม่ตรงกับตัวเลขที่แสดงบนหน้าจอ ซึ่งเป็นข้อมูลที่ผู้ใช้เห็นพร้อมกันทั้งสองอย่าง
+     */
     private RecommendationResponseDto callPythonRecommendationApi(String desiredRoleName, List<String> standardSkills,
-                                                                  List<String> hardSkills, String assessmentSummary) {
+                                                                  List<String> hardSkills, String assessmentSummary,
+                                                                  ScoreBreakdownDto b) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        // ส่งเป็นข้อความบรรทัดต่อบรรทัด อ่านง่ายทั้งสำหรับแบบจำลองภาษาและตอนไล่ปัญหาใน log
+        String scoreFacts = String.join("\n",
+                "ตำแหน่งงานที่ใช้เทียบ: " + b.getRoleUsedForMatching()
+                        + (b.isRoleInferredByAi() ? " (ระบบวิเคราะห์ให้จากทักษะในเรซูเม่ ผู้ใช้ไม่ได้กรอกเอง)" : " (ผู้ใช้กรอกเอง)"),
+                "",
+                "ส่วนที่ 1 คะแนนเรซูเม่ (น้ำหนัก " + b.getResumeWeight() + ")",
+                "  ทักษะที่สกัดจากเรซูเม่ทั้งหมด: " + b.getTotalResumeSkills() + " รายการ",
+                "  ทักษะมาตรฐาน O*NET ของตำแหน่งนี้: " + b.getTotalStandardSkills() + " รายการ",
+                "  จับคู่ได้: " + b.getMatchedSkills().size() + " รายการ -> " + String.join(", ", b.getMatchedSkills()),
+                "  จับคู่ไม่ได้: " + b.getUnmatchedSkills().size() + " รายการ -> " + String.join(", ", b.getUnmatchedSkills()),
+                "  precision = (" + b.getMatchedSkills().size() + " / " + b.getTotalResumeSkills() + ") x 100 = " + b.getPrecisionScore(),
+                "  ตัวถ่วงตามจำนวนที่จับคู่ได้ = " + b.getPenaltyFactor(),
+                "  คะแนนเรซูเม่ = " + b.getPrecisionScore() + " x " + b.getPenaltyFactor() + " = " + b.getResumeScore(),
+                "  เหตุผล: " + b.getResumeScoreReason(),
+                "",
+                "ส่วนที่ 2 คะแนนแบบประเมินตนเอง (น้ำหนัก " + b.getAssessmentWeight() + ")",
+                "  ตอบทั้งหมด " + b.getAnsweredQuestions() + " ข้อ ข้อละไม่เกิน " + b.getMaxScorePerQuestion() + " คะแนน",
+                "  ได้ " + b.getTotalScoreObtained() + " จากเต็ม " + b.getMaxPossibleScore(),
+                "  คะแนนแบบประเมิน = (" + b.getTotalScoreObtained() + " / " + b.getMaxPossibleScore() + ") x 100 = " + b.getAssessmentScore(),
+                "",
+                "ส่วนที่ 3 คะแนนรวม",
+                "  จากเรซูเม่ = " + b.getResumeScore() + " x " + b.getResumeWeight() + " = " + b.getResumeContribution(),
+                "  จากแบบประเมิน = " + b.getAssessmentScore() + " x " + b.getAssessmentWeight() + " = " + b.getAssessmentContribution(),
+                "  คะแนนรวม = " + b.getResumeContribution() + " + " + b.getAssessmentContribution() + " = " + b.getFinalScore()
+        );
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("desiredRoleName", desiredRoleName);
         body.add("standardSkills", String.join(" | ", standardSkills));
         body.add("hardSkills", String.join(" | ", hardSkills));
         body.add("assessmentSummary", assessmentSummary);
+        body.add("scoreFacts", scoreFacts);
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
 

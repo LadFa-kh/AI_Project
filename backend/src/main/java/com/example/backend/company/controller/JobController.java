@@ -18,4 +18,10 @@ public class JobController {
     public ResponseEntity<JobDescriptionResponseDto> postJob(@RequestBody JobPostRequestDto request) {
         return ResponseEntity.ok(jobDescriptionService.createJobDescription(request));
     }
+
+    // หมายเหตุ: เคยมี GET /jobs/{id} อยู่ตรงนี้ ถอดออกแล้วเพราะซ้ำซ้อน
+    // WorkplaceController มี GET /workplaces/{id} ที่เรียก
+    // jobDescriptionService.getJobDescriptionById ตัวเดียวกันอยู่ก่อนแล้ว
+    // และหน้าบ้านใช้เส้นทางนั้น การมีสองเส้นทางที่ทำงานเหมือนกันเป๊ะทำให้
+    // คนอ่านโค้ดสับสนว่าควรใช้อันไหน และเวลาแก้ต้องแก้สองที่
 }

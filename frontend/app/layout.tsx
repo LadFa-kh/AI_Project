@@ -3,7 +3,11 @@ import { Inter, Poppins, Geist, Noto_Sans_Thai } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthProvider } from "@/lib/auth-context";
-import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme-context";
+import { cookies } from "next/headers";
+import { ThemeProvider } from "@/lib/theme-context";
+// นำเข้าจาก theme-shared ไม่ใช่ theme-context — ไฟล์นั้นเป็น "use client"
+// ทุก export จะกลายเป็น client reference เรียกจากฝั่งเซิร์ฟเวอร์ไม่ได้ (500)
+import { THEME_COOKIE, DEFAULT_THEME, isTheme } from "@/lib/theme-shared";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -49,14 +53,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // อ่านธีมจาก cookie ตั้งแต่ฝั่งเซิร์ฟเวอร์ แล้วใส่ data-theme ลงใน HTML
+  // ตั้งแต่ชุดแรกที่ส่งออกไป ฝั่งเซิร์ฟเวอร์กับฝั่งเบราว์เซอร์จึงตรงกันเป๊ะ
+  // ไม่มี hydration mismatch (เดิมใช้ localStorage + สคริปต์ inline ซึ่ง
+  // เซิร์ฟเวอร์อ่านไม่ได้ ทำให้ React ล้มทั้งหน้าด้วย error #418 แล้วกดสลับ
+  // ธีมไม่ติด) และไม่กระพริบ เพราะธีมถูกต้องมาตั้งแต่ byte แรก
+  // ดูคำอธิบายเต็มใน lib/theme-context.tsx
+  const cookieStore = await cookies();
+  const cookieTheme = cookieStore.get(THEME_COOKIE)?.value;
+  const theme = isTheme(cookieTheme) ? cookieTheme : DEFAULT_THEME;
+
   return (
     <html
       lang="th"
+      data-theme={theme}
       className={cn(
         "h-full",
         "antialiased",
@@ -68,17 +83,11 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
-        {/* Sets data-theme on <html> synchronously before hydration/first
-            paint, reading the same localStorage key ThemeProvider uses —
-            without this, the page would flash the wrong theme for a beat
-            while React mounts and ThemeProvider's effect catches up. See
-            lib/theme-context.tsx. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Google Identity Services — loaded once app-wide so both /login
             and /register can call window.google.accounts.id without each
             needing its own <script> tag. See lib/use-google-signin.ts. */}
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" id="google-identity-services" />
-        <ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
           <AuthProvider>
             <AppShell>{children}</AppShell>
           </AuthProvider>
