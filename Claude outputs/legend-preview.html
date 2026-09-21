@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="th" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<title>ตัวอย่าง legend หน้า skill-assessment</title>
+<style>
+  :root, [data-theme="dark"] {
+    --nocturne-bg: #000000;
+    --nocturne-surface: rgba(255, 255, 255, 0.03);
+    --nocturne-surface-hover: rgba(255, 255, 255, 0.06);
+    --nocturne-border: rgba(255, 255, 255, 0.1);
+    --nocturne-border-strong: rgba(255, 255, 255, 0.16);
+    --nocturne-text-primary: #ffffff;
+    --nocturne-text-secondary: color-mix(in srgb, #b8b0d9 85%, transparent);
+    --nocturne-text-muted: color-mix(in srgb, #b8b0d9 60%, transparent);
+  }
+  [data-theme="light"] {
+    --nocturne-bg: #faf9fc;
+    --nocturne-surface: rgba(20, 12, 40, 0.035);
+    --nocturne-surface-hover: rgba(20, 12, 40, 0.06);
+    --nocturne-border: rgba(20, 12, 40, 0.1);
+    --nocturne-border-strong: rgba(20, 12, 40, 0.18);
+    --nocturne-text-primary: #1a1625;
+    --nocturne-text-secondary: color-mix(in srgb, #4a4460 90%, transparent);
+    --nocturne-text-muted: color-mix(in srgb, #4a4460 78%, transparent);
+  }
+  body {
+    margin: 0;
+    background: var(--nocturne-bg);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .toggle {
+    color: var(--nocturne-text-primary);
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+  }
+  .toggle button {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--nocturne-border-strong);
+    background: var(--nocturne-surface);
+    color: var(--nocturne-text-primary);
+    cursor: pointer;
+  }
+  .card {
+    max-width: 520px;
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--nocturne-surface);
+    border: 1px solid var(--nocturne-border);
+  }
+  .questionNumber { font-size: 0.8rem; color: var(--nocturne-text-secondary); margin-bottom: 8px; }
+  .questionText { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--nocturne-text-primary); }
+  .questionHint { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--nocturne-text-secondary); }
+
+  .scaleLegend {
+    margin: 1.25rem 0 0;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    background: var(--nocturne-surface-hover);
+    border: 1px solid var(--nocturne-border);
+  }
+  .scaleLegendHeading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--nocturne-text-primary);
+    margin: 0 0 0.6rem;
+  }
+  .questionDotTag {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ec4899;
+  }
+  .scaleLegendList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .scaleLegendRow {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--nocturne-text-secondary);
+  }
+  .scaleLegendLabel {
+    flex: none;
+    min-width: 4.5rem;
+    font-weight: 700;
+    color: var(--nocturne-text-primary);
+  }
+
+  .levelSelector {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 0.5rem;
+  }
+  .levelBtn {
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--nocturne-border-strong);
+    background: var(--nocturne-surface-hover);
+    color: var(--nocturne-text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="toggle">
+    <button onclick="document.documentElement.setAttribute('data-theme','dark')">Dark</button>
+    <button onclick="document.documentElement.setAttribute('data-theme','light')">Light</button>
+  </div>
+
+  <div class="card">
+    <div class="questionNumber">คำถามที่ 1 / 5</div>
+    <p class="questionText">คุณมีทักษะการเขียนโปรแกรมด้วยภาษา Python ระดับใด</p>
+    <p class="questionHint">เลือกตัวเลือกที่ตรงกับความสามารถของคุณ</p>
+
+    <div class="levelSelector">
+      <button class="levelBtn">1. พอใช้</button>
+      <button class="levelBtn">2. มาตรฐาน</button>
+      <button class="levelBtn">3. ดี</button>
+      <button class="levelBtn">4. ดีมาก</button>
+    </div>
+
+    <div class="scaleLegend">
+      <p class="scaleLegendHeading"><span class="questionDotTag"></span> ความหมายของแต่ละระดับ</p>
+      <div class="scaleLegendList">
+        <div class="scaleLegendRow">
+          <span class="scaleLegendLabel">พอใช้</span>
+          <span>พอมีพื้นฐาน เคยลองทำหรือเรียนรู้มาบ้าง แต่ยังไม่คล่องหรือไม่มั่นใจนัก</span>
+        </div>
+        <div class="scaleLegendRow">
+          <span class="scaleLegendLabel">มาตรฐาน</span>
+          <span>ทำได้ในระดับทั่วไปตามที่คาดหวังจากผู้เริ่มต้นทำงานจริง</span>
+        </div>
+        <div class="scaleLegendRow">
+          <span class="scaleLegendLabel">ดี</span>
+          <span>คุ้นเคยและใช้งานได้อย่างมั่นใจ มีประสบการณ์ลงมือทำมาพอสมควร</span>
+        </div>
+        <div class="scaleLegendRow">
+          <span class="scaleLegendLabel">ดีมาก</span>
+          <span>เชี่ยวชาญ สามารถแก้ปัญหาที่ซับซ้อนหรือสอนผู้อื่นในเรื่องนี้ได้</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
