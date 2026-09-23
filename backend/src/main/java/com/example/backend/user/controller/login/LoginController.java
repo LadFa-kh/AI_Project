@@ -22,8 +22,11 @@ public class LoginController {
     private final LoginService loginService;
     private final CookieUtil cookieUtil;
     private final UserRepository userRepository;
+    private final com.example.backend.user.consent.ConsentService consentService;
 
-    public LoginController(LoginService loginService, CookieUtil cookieUtil, UserRepository userRepository) {
+    public LoginController(LoginService loginService, CookieUtil cookieUtil, UserRepository userRepository,
+                           com.example.backend.user.consent.ConsentService consentService) {
+        this.consentService = consentService;
         this.loginService = loginService;
         this.cookieUtil = cookieUtil;
         this.userRepository = userRepository;
@@ -91,6 +94,9 @@ public class LoginController {
                 .fullName(user.getFullName())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .authProvider(user.getAuthProvider() != null ? user.getAuthProvider().name() : "LOCAL")
+                .accountStatus(user.effectiveStatus().name())
+                .needsConsent(consentService.needsConsent(user))
+                .companyId(user.getCompany() != null ? user.getCompany().getId() : null)
                 .build();
 
         return ResponseEntity.ok(new ApiResponse<>(

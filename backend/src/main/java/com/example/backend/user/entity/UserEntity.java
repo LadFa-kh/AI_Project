@@ -56,4 +56,23 @@ public class UserEntity {
     private String googleId;
 
 
+
+    // B4: บริษัทที่ผู้ใช้สังกัด (เฉพาะ EMPLOYER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private com.example.backend.company.entity.CompanyEntity company;
+
+    // B5: สถานะบัญชี — null ถือว่า ACTIVE (บัญชีเก่าทั้งหมด)
+    public enum AccountStatus { ACTIVE, PENDING, REJECTED, SUSPENDED }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_status", length = 20)
+    private AccountStatus accountStatus;
+
+    @Column(name = "status_reason", columnDefinition = "TEXT")
+    private String statusReason;
+
+    public AccountStatus effectiveStatus() {
+        return accountStatus == null ? AccountStatus.ACTIVE : accountStatus;
+    }
 }

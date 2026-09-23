@@ -8,6 +8,8 @@ import com.example.backend.user.entity.UserEntity;
 import com.example.backend.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.example.backend.user.account.AccountGuard;
+import com.example.backend.user.consent.ConsentService;
 
 @Service
 public class LoginService {
@@ -16,9 +18,11 @@ public class LoginService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider; // คลาสสำหรับสร้าง JWT ของคุณ
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ConsentService consentService;
 
 
-    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository) {
+    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository, ConsentService consentService) {
+        this.consentService = consentService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -33,6 +37,9 @@ public class LoginService {
             throw new IllegalArgumentException("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
         }
 
+        // B5: บัญชีรออนุมัติ/ถูกปฏิเสธ/ระงับ → 403 พร้อม code
+        AccountGuard.requireActive(user);
+
         // สร้าง Access Token และ Refresh Token
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
@@ -40,7 +47,7 @@ public class LoginService {
         // (ทางเลือก) บันทึก Refresh Token ลง Database
         // saveRefreshTokenToDatabase(user, refreshToken);
 
-        return new AuthenticationResponseDto(
+        AuthenticationResponseDto dto = new AuthenticationResponseDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
@@ -48,5 +55,8 @@ public class LoginService {
                 accessToken,
                 refreshToken
         );
+        dto.setAccountStatus(user.effectiveStatus().name());
+        dto.setNeedsConsent(consentService.needsConsent(user));   // B9
+        return dto;
     }
 }

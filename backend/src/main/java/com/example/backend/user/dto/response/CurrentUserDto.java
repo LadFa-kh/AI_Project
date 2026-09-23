@@ -17,4 +17,12 @@ public class CurrentUserDto {
     private String fullName;
     private String role;
     private String authProvider;
+
+    // ===== ฟิลด์ใหม่ (optional) =====
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private String accountStatus;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private Boolean needsConsent;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private UUID companyId;
 }

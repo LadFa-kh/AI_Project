@@ -36,7 +36,9 @@ public class MatchingService {
                 .map(this::normalize)   // [FIX] normalize เหมือน SkillTaxonomyService
                 .collect(Collectors.toList());
 
-        List<JobDescriptionEntity> allJobs = jobDescriptionRepository.findAll();
+        List<JobDescriptionEntity> allJobs = jobDescriptionRepository.findAll().stream()
+                .filter(JobDescriptionService::isOpen)   // B3: ไม่จับคู่กับประกาศที่ปิด/ร่าง
+                .toList();
 
         record ScoredMatch(JobMatchResponseDto dto, double matchPercentage) {}
 

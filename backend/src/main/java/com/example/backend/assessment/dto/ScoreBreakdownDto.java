@@ -84,4 +84,14 @@ public class ScoreBreakdownDto {
 
     /** true เมื่อผู้ใช้ไม่ได้กรอกตำแหน่งงาน แล้วระบบวิเคราะห์ให้จากทักษะในเรซูเม่ */
     private boolean roleInferredByAi;
+
+    // ---------- B2: รายละเอียดการจับคู่ทักษะ (optional) ----------
+
+    /** ทักษะแต่ละตัวจับคู่กับอะไร ด้วยวิธีไหน (WORD / SEMANTIC / NONE) */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private List<com.example.backend.resume.service.SkillMatchDetail> matchDetails;
+
+    /** SEMANTIC / WORD_ONLY / WORD_FALLBACK */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private String matchMethod;
 }

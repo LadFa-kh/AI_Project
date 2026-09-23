@@ -297,3 +297,102 @@ def infer_role_from_skills(hardSkills: str = Form(default="")):
     except Exception as e:
         logger.exception("Role inference from skills failed")
         raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
+
+# -------------------------------------------------------------
+# [B1] เดาอาชีพที่เหมาะสม 1–4 ตำแหน่งจากทักษะในเรซูเม่ (ใช้ทำ careerMatches)
+# ตัวเลขเปอร์เซ็นต์ไม่ได้มาจากที่นี่ — Java คำนวณเองจากการจับคู่ทักษะกับ O*NET
+# -------------------------------------------------------------
+class RoleCandidatesSchema(BaseModel):
+    roles: List[str] = Field(
+        description="ชื่อตำแหน่งงานภาษาอังกฤษตามชื่ออาชีพมาตรฐาน O*NET เรียงจากเหมาะที่สุดไปน้อยที่สุด 1 ถึง 4 ชื่อ ไม่ซ้ำกัน"
+    )
+
+
+@app.post("/api/v1/python/infer-roles-from-skills", response_model=RoleCandidatesSchema)
+def infer_roles_from_skills(hardSkills: str = Form(default=""), maxRoles: int = Form(default=4)):
+    try:
+        skills_list = [s.strip() for s in hardSkills.split("|") if s.strip()] if hardSkills else []
+        max_roles = max(1, min(int(maxRoles), 4))
+        prompt = f"""
+        ต่อไปนี้คือทักษะด้านเทคนิค (hard skills) ที่พบในเรซูเม่ของผู้สมัคร:
+        {skills_list}
+
+        เลือกตำแหน่งงานที่ผู้สมัครน่าจะเหมาะ 1 ถึง {max_roles} ตำแหน่ง เรียงจากเหมาะที่สุด
+        ใช้ชื่อตำแหน่งภาษาอังกฤษที่ตรงกับชื่ออาชีพมาตรฐาน O*NET และห้ามซ้ำกัน
+        ถ้าทักษะชี้ไปทางเดียวชัดเจน ตอบตำแหน่งเดียวก็ได้
+        """
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=prompt,
+            config={'response_mime_type': 'application/json', 'response_schema': RoleCandidatesSchema},
+        )
+        result = RoleCandidatesSchema.model_validate_json(response.text)
+        seen, roles = set(), []
+        for r in result.roles:
+            key = r.strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                roles.append(r.strip())
+        return RoleCandidatesSchema(roles=roles[:max_roles])
+    except Exception as e:
+        logger.exception("Role candidates inference failed")
+        raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
+
+
+# -------------------------------------------------------------
+# [B2] LLM ตัดสินว่าคู่ทักษะ (ทักษะในเรซูเม่, ทักษะมาตรฐาน) หมายถึงสิ่งเดียวกัน/ครอบคลุมกันไหม
+# Java เป็นคนคัดคู่ผู้สมัคร (retrieval) และเก็บผลไว้ใน cache — ที่นี่แค่ตัดสิน
+# -------------------------------------------------------------
+class SkillPairIn(BaseModel):
+    resume_skill: str
+    standard_skill: str
+
+
+class SkillJudgeRequest(BaseModel):
+    pairs: List[SkillPairIn]
+
+
+class SkillPairVerdict(BaseModel):
+    resume_skill: str
+    standard_skill: str
+    is_match: bool = Field(description="true ถ้าทักษะในเรซูเม่เป็นสิ่งเดียวกัน เป็นส่วนหนึ่ง หรือเป็นเครื่องมือของทักษะมาตรฐานนั้นโดยตรง")
+    confidence: float = Field(description="ความมั่นใจ 0.0 ถึง 1.0")
+
+
+class SkillJudgeResponse(BaseModel):
+    verdicts: List[SkillPairVerdict]
+
+
+@app.post("/api/v1/python/judge-skill-matches", response_model=SkillJudgeResponse)
+def judge_skill_matches(req: SkillJudgeRequest):
+    if not req.pairs:
+        return SkillJudgeResponse(verdicts=[])
+    try:
+        pairs_text = "\n".join(
+            f'{i + 1}. resume_skill="{p.resume_skill}" | standard_skill="{p.standard_skill}"'
+            for i, p in enumerate(req.pairs[:60])
+        )
+        prompt = f"""
+        ตัดสินแต่ละคู่ว่า resume_skill (ทักษะในเรซูเม่) ถือว่าตรงกับ standard_skill (ทักษะมาตรฐาน O*NET) หรือไม่
+        ให้ตัดสินแบบเข้มงวด นับว่า "ตรง" เฉพาะกรณีต่อไปนี้เท่านั้น
+          1) เป็นสิ่งเดียวกัน ชื่อเรียกอื่น หรือตัวย่อ (เช่น "ReactJS" กับ "React", "K8s" กับ "Kubernetes")
+          2) resume_skill เป็นผลิตภัณฑ์/ภาษา/เครื่องมือที่ "จัดอยู่ในประเภท" standard_skill โดยตรง
+             (เช่น "PostgreSQL" กับ "Relational database management software", "Spring Data JPA" กับ "Spring Framework")
+        ไม่นับว่าตรงถ้า
+          - แค่อยู่ในสายงานเดียวกันหรือใช้ร่วมกันบ่อย (เช่น "HikariCP" กับ "Hibernate ORM", "JWT" กับ "Web application software")
+          - แค่ชื่อบริษัทหรือคำบางคำซ้ำกัน (เช่น "Google OAuth" กับ "Google Cloud software")
+          - เป็นหัวข้อความรู้ ไม่ใช่เครื่องมือ (เช่น "Computer Architecture" กับ "Microservices Architecture")
+        ถ้าไม่แน่ใจให้ตอบไม่ตรง และให้ confidence ตามความมั่นใจจริง
+        ตอบทุกคู่ตามลำดับ โดยคัดลอก resume_skill และ standard_skill กลับมาตรงตัว
+
+        {pairs_text}
+        """
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=prompt,
+            config={'response_mime_type': 'application/json', 'response_schema': SkillJudgeResponse},
+        )
+        return SkillJudgeResponse.model_validate_json(response.text)
+    except Exception as e:
+        logger.exception("Skill match judging failed")
+        raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")

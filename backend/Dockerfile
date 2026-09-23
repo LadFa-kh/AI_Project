@@ -7,24 +7,25 @@
 # การย้ายขั้นตอนคอมไพล์เข้ามาไว้ในนี้ทำให้ทุกครั้งที่สั่ง --build จะได้ไฟล์
 # jar ที่สร้างจากซอร์สโค้ดล่าสุดเสมอ
 # ─────────────────────────────────────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /build
+# FROM maven:3.9-eclipse-temurin-21 AS build
+# WORKDIR /build
 
 # ดาวน์โหลด dependency แยกเป็นชั้นของตัวเอง เพื่อให้ใช้ cache ซ้ำได้
 # ตราบใดที่ pom.xml ไม่เปลี่ยน การ build ครั้งถัดไปจึงเร็วขึ้นมาก
-COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+# COPY pom.xml .
+# RUN mvn -B -q dependency:go-offline
 
-COPY src ./src
+# COPY src ./src
 # ข้ามการรันเทสระหว่าง build เนื่องจากชุดทดสอบใช้ Testcontainers
 # ซึ่งต้องการ Docker daemon ที่ไม่มีอยู่ภายในขั้นตอนนี้
-RUN mvn -B -q clean package -DskipTests
+# RUN mvn -B -q clean package -DskipTests
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ขั้นที่ 2 : อิมเมจสำหรับรันจริง มีเฉพาะ JRE กับไฟล์ jar
 # ─────────────────────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /build/target/*.jar app.jar
+# วิธีบ้าน ๆ: สั่ง mvn clean package -DskipTests บนเครื่องก่อนทุกครั้ง แล้วค่อย docker compose up --build
+COPY target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

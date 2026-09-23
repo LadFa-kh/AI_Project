@@ -15,4 +15,9 @@ public class JobPostRequestDto {
     private String duration;
     private String salary;
     private String contactLink;
+
+    // B3: ไม่บังคับ — ไม่ส่งมา = OPEN
+    private String status;
+    private java.time.LocalDate openDate;
+    private java.time.LocalDate closeDate;
 }
