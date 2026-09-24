@@ -24,6 +24,9 @@ export type Workplace = {
   duration?: string;
   salary?: string;
   contactLink?: string;
+  // B4 (API_CHANGES.md §5.4) — link to /companies/{companyId}; absent on older rows.
+  companyId?: string | null;
+  companyLogoUrl?: string | null;
 };
 
 export async function getAllWorkplaces(): Promise<Workplace[]> {

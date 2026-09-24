@@ -30,4 +30,6 @@ export type DisplayJob = {
   duration?: string;
   salary?: string;
   contactLink?: string;
+  /** From GET /workplaces (B4) — card/detail link to /companies/{companyId}. */
+  companyId?: string | null;
 };

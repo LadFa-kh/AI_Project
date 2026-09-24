@@ -188,6 +188,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
         duration: cachedWorkplace.duration,
         salary: cachedWorkplace.salary,
         contactLink: cachedWorkplace.contactLink,
+        companyId: cachedWorkplace.companyId,
       });
       setStatus("success");
     } else {
@@ -209,6 +210,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
           duration: workplace.duration,
           salary: workplace.salary,
           contactLink: workplace.contactLink,
+          companyId: workplace.companyId,
         });
         setStatus("success");
       })
@@ -275,7 +277,15 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
             <div className={`${styles.headerRow} ${styles.animateIn} ${styles.delay2}`}>
               <div className={styles.headerTitleBlock}>
                 <h1 className={styles.titleText}>{detail.positionName}</h1>
-                <p className={styles.companyText}>{detail.companyName}</p>
+                <p className={styles.companyText}>
+                  {detail.companyId ? (
+                    <Link href={`/companies/${detail.companyId}`} className={styles.companyLink}>
+                      {detail.companyName}
+                    </Link>
+                  ) : (
+                    detail.companyName
+                  )}
+                </p>
                 {detail.jobType && <span className={styles.jobTypeBadge}>{detail.jobType}</span>}
               </div>
               {hasScore && <HeaderScoreRing score={matchPercent as number} />}

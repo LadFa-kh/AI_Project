@@ -121,6 +121,7 @@ export function InternshipMatchesView() {
         duration: w.duration,
         salary: w.salary,
         contactLink: w.contactLink,
+        companyId: w.companyId,
       };
     });
   }, [workplaces, matchByJobId]);

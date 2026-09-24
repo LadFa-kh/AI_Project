@@ -99,7 +99,15 @@ export function MatchCard({ match, revealDelayMs = 0 }: MatchCardProps) {
 
         <div className={styles.matchBody}>
           <h3 className={styles.matchTitle}>{match.positionName}</h3>
-          <p className={styles.matchCompany}>{match.companyName}</p>
+          <p className={styles.matchCompany}>
+            {match.companyId ? (
+              <Link href={`/companies/${match.companyId}`} className={styles.companyLink}>
+                {match.companyName}
+              </Link>
+            ) : (
+              match.companyName
+            )}
+          </p>
 
           {hasSkillChips && (
             <div className={`${styles.matchSkills} ${styles.chipHoverable}`}>

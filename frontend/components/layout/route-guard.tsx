@@ -13,13 +13,16 @@ import { useAuth } from "@/lib/auth-context";
 // /privacy-policy must be readable before sign-up (linked from the register
 // form's consent checkbox) — API_CHANGES.md §5.9.
 const PUBLIC_ROUTES = ["/", "/privacy-policy"];
+// Company profiles are public on the backend too (API_CHANGES.md §5.4).
+const PUBLIC_PREFIXES = ["/companies/"];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
 
-  const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const isPublic =
+    PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   useEffect(() => {
     if (isLoading || isPublic || isAuthenticated) return;

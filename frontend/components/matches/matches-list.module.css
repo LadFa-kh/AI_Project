@@ -441,3 +441,14 @@
     transform: none;
   }
 }
+
+/* Company name -> /companies/{id} (B4). Inherits the muted text color so the
+   row looks the same; underline + primary color only on hover/focus. */
+.companyLink {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--nocturne-border-strong);
+  text-underline-offset: 3px;
+}
+.companyLink:hover { color: var(--nocturne-text-primary); text-decoration-color: currentColor; }
+.companyLink:focus-visible { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; border-radius: 4px; }
