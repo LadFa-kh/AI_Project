@@ -1,0 +1,2061 @@
+From bb19cff5924801c7503446ced9b63fe50df28153 Mon Sep 17 00:00:00 2001
+From: LadFa-kh <ladfa.khamhaengphon@gmail.com>
+Date: Thu, 24 Sep 2026 15:24:45 +0000
+Subject: [PATCH] feat(frontend): careerMatches, employer sign-up + approval,
+ PDPA consent
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Implements the top 4 items of API_CHANGES.md §5.11 against backend B1–B11:
+- Result page: "สายงานที่เหมาะกับคุณ" ranking from careerMatches (only when no desired role was entered)
+- Register: choose student/employer, company name + tax id, pending-approval screen on EMPLOYER_PENDING (register and login)
+- Admin: new "อนุมัติผู้ประกาศงาน" tab (list by status, approve, reject with reason)
+- PDPA: send acceptedPolicyVersion on register; consent modal when needsConsent is true
+- ApiError now exposes backend `code`; branch on code, not message
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FXJgvtz3biB1HzBcHrNbzm
+---
+ frontend/app/login/page.tsx                   |  10 +-
+ .../components/admin/admin-dashboard-view.tsx | 268 +++++++++++++++++-
+ .../admin/admin-dashboard.module.css          |  47 +++
+ .../components/auth/consent-modal.module.css  | 146 ++++++++++
+ frontend/components/auth/consent-modal.tsx    | 150 ++++++++++
+ .../auth/employer-pending-notice.module.css   |  65 +++++
+ .../auth/employer-pending-notice.tsx          |  39 +++
+ frontend/components/auth/login-form.tsx       |  42 ++-
+ frontend/components/auth/register-form.tsx    | 195 +++++++++++--
+ frontend/components/auth/register.module.css  |  54 ++++
+ frontend/components/layout/app-shell.tsx      |  12 +-
+ .../result/career-match-ranking.tsx           |  90 ++++++
+ .../result/evaluation-result-card.tsx         |   6 +
+ .../result/evaluation-result.module.css       | 192 +++++++++++++
+ frontend/lib/admin-service.ts                 |  45 +++
+ frontend/lib/admin-types.ts                   |   3 +-
+ frontend/lib/api-client.ts                    |  56 +++-
+ frontend/lib/assessment-service.ts            |  25 ++
+ frontend/lib/auth-context.tsx                 |   9 +-
+ frontend/lib/auth-service.ts                  |  99 ++++++-
+ 20 files changed, 1505 insertions(+), 48 deletions(-)
+ create mode 100644 frontend/components/auth/consent-modal.module.css
+ create mode 100644 frontend/components/auth/consent-modal.tsx
+ create mode 100644 frontend/components/auth/employer-pending-notice.module.css
+ create mode 100644 frontend/components/auth/employer-pending-notice.tsx
+ create mode 100644 frontend/components/result/career-match-ranking.tsx
+
+diff --git a/frontend/app/login/page.tsx b/frontend/app/login/page.tsx
+index f6cb5a1..d995194 100644
+--- a/frontend/app/login/page.tsx
++++ b/frontend/app/login/page.tsx
+@@ -249,9 +249,17 @@ function FlipStage({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }
+     // Re-measure shortly after mount too, in case web fonts shift line
+     // heights after the first paint.
+     const t = setTimeout(measure, 50);
++    // Also re-measure whenever either face's content changes height —
++    // e.g. the register form's employer fields, field errors, or the
++    // "pending approval" notice replacing the form. Without this the stage
++    // keeps its old height and clips the card.
++    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
++    if (ro && frontRef.current) ro.observe(frontRef.current);
++    if (ro && backRef.current) ro.observe(backRef.current);
+     return () => {
+       window.removeEventListener("resize", measure);
+       clearTimeout(t);
++      ro?.disconnect();
+     };
+   }, [mode]);
+ 
+@@ -290,7 +298,7 @@ function FlipStage({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }
+               </div>
+             </div>
+ 
+-            <RegisterForm />
++            <RegisterForm onSwitchToLogin={() => setMode("login")} />
+ 
+             <p className={`${styles.footer} ${styles.animateIn} ${styles.delay5}`}>
+               มีบัญชีอยู่แล้ว?{" "}
+diff --git a/frontend/components/admin/admin-dashboard-view.tsx b/frontend/components/admin/admin-dashboard-view.tsx
+index df7acd7..22faeb2 100644
+--- a/frontend/components/admin/admin-dashboard-view.tsx
++++ b/frontend/components/admin/admin-dashboard-view.tsx
+@@ -22,6 +22,12 @@ import {
+   createJob,
+   updateJob,
+   deleteJob,
++  listEmployers,
++  approveEmployer,
++  rejectEmployer,
++  type AdminEmployer,
++  type EmployerAccountStatus,
++  type EmployerStatusFilter,
+   type AdminDashboardStats,
+   type AdminUser,
+   type AdminRole,
+@@ -29,7 +35,7 @@ import {
+   type AdminJob,
+   type AdminJobInput,
+ } from "@/lib/admin-service";
+-import { ApiError } from "@/lib/api-client";
++import { ApiError, describeError } from "@/lib/api-client";
+ import { ADMIN_TABS, type AdminTab } from "@/lib/admin-types";
+ import styles from "./admin-dashboard.module.css";
+ 
+@@ -514,6 +520,265 @@ function UsersTab() {
+   );
+ }
+ 
++// ===== Employers tab — approve/reject employer sign-ups (B5, API_CHANGES.md §5.5) =====
++const EMPLOYER_FILTERS: { value: EmployerStatusFilter; label: string }[] = [
++  { value: "PENDING", label: "รออนุมัติ" },
++  { value: "ACTIVE", label: "อนุมัติแล้ว" },
++  { value: "REJECTED", label: "ปฏิเสธแล้ว" },
++  { value: "ALL", label: "ทั้งหมด" },
++];
++
++const EMPLOYER_STATUS_LABEL: Record<EmployerAccountStatus, string> = {
++  PENDING: "รออนุมัติ",
++  ACTIVE: "อนุมัติแล้ว",
++  REJECTED: "ปฏิเสธแล้ว",
++  SUSPENDED: "ระงับ",
++};
++
++function RejectEmployerModal({
++  employer,
++  onClose,
++  onRejected,
++}: {
++  employer: AdminEmployer;
++  onClose: () => void;
++  onRejected: () => void;
++}) {
++  const [reason, setReason] = useState("");
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState("");
++
++  async function handleReject() {
++    if (!reason.trim()) {
++      setError("กรุณาระบุเหตุผลที่ปฏิเสธ");
++      return;
++    }
++    setSaving(true);
++    setError("");
++    try {
++      await rejectEmployer(employer.userId, reason.trim());
++      onRejected();
++      onClose();
++    } catch (err) {
++      setError(describeError(err, "ปฏิเสธไม่สำเร็จ กรุณาลองใหม่"));
++    } finally {
++      setSaving(false);
++    }
++  }
++
++  return createPortal(
++    <div className={styles.modalOverlay} onClick={onClose}>
++      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
++        <h3 className={styles.modalTitle}>ปฏิเสธผู้ประกาศงาน</h3>
++        <p className={styles.statSub} style={{ marginTop: -4, marginBottom: 12 }}>
++          {employer.companyName ?? "—"} · {employer.fullName} ({employer.email})
++        </p>
++        {error && (
++          <p className={styles.formError} role="alert" style={{ marginBottom: 12 }}>
++            {error}
++          </p>
++        )}
++        <div className={styles.formField}>
++          <label className={styles.formLabel} htmlFor="reject-reason">เหตุผล (แจ้งให้ผู้สมัครทราบ)</label>
++          <textarea
++            id="reject-reason"
++            className={`${styles.formInput} ${styles.formTextarea}`}
++            value={reason}
++            onChange={(e) => setReason(e.target.value)}
++            placeholder="เช่น ข้อมูลบริษัทไม่ครบ หรือไม่สามารถยืนยันตัวตนบริษัทได้"
++            rows={3}
++          />
++        </div>
++        <div className={styles.modalActions}>
++          <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>
++            ยกเลิก
++          </button>
++          <button type="button" className={styles.btnDanger} onClick={handleReject} disabled={saving}>
++            {saving ? "กำลังบันทึก..." : "ยืนยันปฏิเสธ"}
++          </button>
++        </div>
++      </div>
++    </div>,
++    document.body
++  );
++}
++
++function EmployersTab() {
++  const [filter, setFilter] = useState<EmployerStatusFilter>("PENDING");
++  const [status, setStatus] = useState<Status>("loading");
++  const [employers, setEmployers] = useState<AdminEmployer[]>([]);
++  const [error, setError] = useState("");
++  const [busyId, setBusyId] = useState<string | null>(null);
++  const [rejecting, setRejecting] = useState<AdminEmployer | null>(null);
++  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
++
++  const load = useCallback(async () => {
++    setStatus("loading");
++    setRowError(null);
++    try {
++      const result = await listEmployers(filter);
++      // Oldest request first — first come, first served.
++      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
++      setEmployers(result);
++      setStatus("success");
++    } catch (err) {
++      setError(describeError(err, "ไม่สามารถโหลดรายชื่อผู้ประกาศงานได้"));
++      setStatus("error");
++    }
++  }, [filter]);
++
++  useEffect(() => {
++    load();
++  }, [load]);
++
++  async function handleApprove(emp: AdminEmployer) {
++    if (!window.confirm(`อนุมัติ "${emp.companyName ?? emp.fullName}" เป็นผู้ประกาศงาน?`)) return;
++    setBusyId(emp.userId);
++    setRowError(null);
++    try {
++      await approveEmployer(emp.userId);
++      await load();
++    } catch (err) {
++      setRowError({ id: emp.userId, message: describeError(err, "อนุมัติไม่สำเร็จ") });
++    } finally {
++      setBusyId(null);
++    }
++  }
++
++  const badgeClass = (s: EmployerAccountStatus) =>
++    s === "ACTIVE" ? styles.badgeEmployer : s === "PENDING" ? styles.badgePending : styles.badgeRejected;
++
++  if (status === "error") return <ErrorPanel message={error} onRetry={load} />;
++
++  return (
++    <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
++      <div className={styles.sectionHeadRow}>
++        <div>
++          <h2 className={styles.sectionHeading}>ผู้ประกาศงาน</h2>
++          <p className={styles.sectionSub}>
++            {status === "loading" ? "กำลังโหลด..." : `${employers.length} รายการ`}
++          </p>
++        </div>
++        <select
++          className={styles.formSelect}
++          style={{ width: "auto", minWidth: 160 }}
++          value={filter}
++          onChange={(e) => setFilter(e.target.value as EmployerStatusFilter)}
++          aria-label="กรองตามสถานะ"
++        >
++          {EMPLOYER_FILTERS.map((f) => (
++            <option key={f.value} value={f.value}>
++              {f.label}
++            </option>
++          ))}
++        </select>
++      </div>
++
++      {status === "loading" ? (
++        <div className={styles.skeletonCard}>
++          <div className={styles.skeletonLine} style={{ height: 40 }} />
++          <div className={styles.skeletonLine} style={{ height: 40 }} />
++          <div className={styles.skeletonLine} style={{ height: 40 }} />
++        </div>
++      ) : employers.length === 0 ? (
++        <p className={styles.emptyState}>
++          {filter === "PENDING" ? "ไม่มีผู้ประกาศงานที่รออนุมัติ" : "ไม่พบรายการ"}
++        </p>
++      ) : (
++        <div className={styles.tableWrap}>
++          <table className={styles.table}>
++            <thead>
++              <tr>
++                <th>ผู้สมัคร</th>
++                <th>บริษัท</th>
++                <th>สถานะ</th>
++                <th>สมัครเมื่อ</th>
++                <th>จัดการ</th>
++              </tr>
++            </thead>
++            <tbody>
++              {employers.map((emp) => {
++                const busy = busyId === emp.userId;
++                const canApprove = emp.accountStatus === "PENDING" || emp.accountStatus === "REJECTED";
++                const canReject = emp.accountStatus === "PENDING";
++                return (
++                  <Fragment key={emp.userId}>
++                    <tr>
++                      <td>
++                        <div className={styles.userCell}>
++                          <span className={styles.avatar} aria-hidden="true">
++                            {(emp.fullName || emp.email).charAt(0).toUpperCase()}
++                          </span>
++                          <div>
++                            <div className={styles.userName}>{emp.fullName}</div>
++                            <div className={styles.userEmail}>{emp.email}</div>
++                            {emp.telephone && <div className={styles.userEmail}>{emp.telephone}</div>}
++                          </div>
++                        </div>
++                      </td>
++                      <td>
++                        <div className={styles.userName}>{emp.companyName ?? "—"}</div>
++                        <div className={styles.userEmail}>
++                          {emp.companyTaxId ? `เลขผู้เสียภาษี ${emp.companyTaxId}` : "ไม่ได้ระบุเลขผู้เสียภาษี"}
++                        </div>
++                      </td>
++                      <td className={styles.nowrap}>
++                        <span className={`${styles.badge} ${badgeClass(emp.accountStatus)}`}>
++                          {EMPLOYER_STATUS_LABEL[emp.accountStatus] ?? emp.accountStatus}
++                        </span>
++                      </td>
++                      <td className={styles.nowrap}>{new Date(emp.createdAt).toLocaleDateString("th-TH")}</td>
++                      <td className={styles.nowrap}>
++                        {canApprove || canReject ? (
++                          <div className={styles.rowActions}>
++                            {canApprove && (
++                              <button
++                                type="button"
++                                className={styles.btnApprove}
++                                onClick={() => handleApprove(emp)}
++                                disabled={busy}
++                              >
++                                {busy ? "กำลังอนุมัติ..." : "อนุมัติ"}
++                              </button>
++                            )}
++                            {canReject && (
++                              <button
++                                type="button"
++                                className={styles.btnReject}
++                                onClick={() => setRejecting(emp)}
++                                disabled={busy}
++                              >
++                                ปฏิเสธ
++                              </button>
++                            )}
++                          </div>
++                        ) : (
++                          "—"
++                        )}
++                      </td>
++                    </tr>
++                    {rowError?.id === emp.userId && (
++                      <tr>
++                        <td colSpan={5} style={{ borderBottom: "none", paddingTop: 0 }}>
++                          <p className={styles.formError} role="alert">{rowError.message}</p>
++                        </td>
++                      </tr>
++                    )}
++                  </Fragment>
++                );
++              })}
++            </tbody>
++          </table>
++        </div>
++      )}
++
++      {rejecting && (
++        <RejectEmployerModal employer={rejecting} onClose={() => setRejecting(null)} onRejected={load} />
++      )}
++    </div>
++  );
++}
++
+ // ===== Resumes tab =====
+ function ResumesTab() {
+   const [status, setStatus] = useState<Status>("loading");
+@@ -1003,6 +1268,7 @@ export function AdminDashboardView() {
+ 
+       {tab === "dashboard" && <DashboardTab />}
+       {tab === "users" && <UsersTab />}
++      {tab === "employers" && <EmployersTab />}
+       {tab === "resumes" && <ResumesTab />}
+       {tab === "jobs" && <JobsTab />}
+     </>
+diff --git a/frontend/components/admin/admin-dashboard.module.css b/frontend/components/admin/admin-dashboard.module.css
+index f56b206..68f30cd 100644
+--- a/frontend/components/admin/admin-dashboard.module.css
++++ b/frontend/components/admin/admin-dashboard.module.css
+@@ -454,3 +454,50 @@
+ }
+ .btnPrimary:hover:not(:disabled) { filter: brightness(1.08); }
+ .btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
++
++/* ===== Employer approval tab (B5) ===== */
++.badgePending { color: var(--nocturne-warning-text); background: rgba(252, 131, 55, 0.14); border: 1px solid rgba(252, 131, 55, 0.4); }
++.badgeRejected { color: var(--nocturne-badge-admin-text); background: rgba(236, 72, 153, 0.12); border: 1px solid rgba(236, 72, 153, 0.36); }
++
++.btnApprove,
++.btnReject {
++  min-height: 30px;
++  padding: 5px 12px;
++  font-family: inherit;
++  font-weight: 600;
++  font-size: 12.5px;
++  border-radius: 8px;
++  cursor: pointer;
++  white-space: nowrap;
++  transition: filter 0.18s ease-out, border-color 0.18s ease-out, background 0.18s ease-out;
++}
++.btnApprove {
++  color: #ffffff;
++  background: linear-gradient(135deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
++  border: 1px solid transparent;
++}
++.btnApprove:hover:not(:disabled) { filter: brightness(1.08); }
++.btnReject {
++  color: var(--nocturne-badge-admin-text);
++  background: transparent;
++  border: 1px solid rgba(236, 72, 153, 0.4);
++}
++.btnReject:hover:not(:disabled) { background: rgba(236, 72, 153, 0.1); }
++.btnApprove:disabled,
++.btnReject:disabled { opacity: 0.6; cursor: not-allowed; }
++.btnApprove:focus-visible,
++.btnReject:focus-visible { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; }
++
++.btnDanger {
++  padding: 9px 16px;
++  font-family: inherit;
++  font-weight: 600;
++  font-size: 13px;
++  color: var(--nocturne-badge-admin-text);
++  background: rgba(236, 72, 153, 0.14);
++  border: 1px solid rgba(236, 72, 153, 0.5);
++  border-radius: 9px;
++  cursor: pointer;
++}
++.btnDanger:hover:not(:disabled) { background: rgba(236, 72, 153, 0.22); }
++.btnDanger:disabled { opacity: 0.6; cursor: not-allowed; }
+diff --git a/frontend/components/auth/consent-modal.module.css b/frontend/components/auth/consent-modal.module.css
+new file mode 100644
+index 0000000..dcfa3a6
+--- /dev/null
++++ b/frontend/components/auth/consent-modal.module.css
+@@ -0,0 +1,146 @@
++.overlay {
++  position: fixed;
++  inset: 0;
++  z-index: 1000;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 16px;
++  background: rgba(5, 3, 12, 0.62);
++  backdrop-filter: blur(6px);
++}
++
++.dialog {
++  width: 100%;
++  max-width: 480px;
++  max-height: calc(100dvh - 32px);
++  overflow-y: auto;
++  padding: clamp(20px, 4vw, 28px);
++  border-radius: 24px;
++  background: var(--nocturne-card-bg);
++  border: 1px solid var(--nocturne-border-strong);
++  box-shadow: var(--nocturne-shadow);
++  display: flex;
++  flex-direction: column;
++  gap: 12px;
++}
++
++.eyebrow {
++  align-self: flex-start;
++  padding: 3px 10px;
++  border-radius: 999px;
++  font-size: 0.8rem;
++  font-weight: 700;
++  letter-spacing: 0.06em;
++  color: #ffffff;
++  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
++}
++
++.title {
++  margin: 0;
++  font-size: 1.25rem;
++  font-weight: 700;
++  color: var(--nocturne-text-primary);
++}
++
++.text {
++  margin: 0;
++  font-size: 0.9rem;
++  line-height: 1.65;
++  color: var(--nocturne-text-secondary);
++}
++
++.points {
++  margin: 0;
++  padding: 12px 16px 12px 32px;
++  border-radius: 12px;
++  background: var(--nocturne-surface-hover);
++  border: 1px solid var(--nocturne-border);
++  font-size: 0.85rem;
++  line-height: 1.7;
++  color: var(--nocturne-text-primary);
++}
++
++.meta {
++  margin: 0;
++  font-size: 0.8rem;
++  color: var(--nocturne-text-secondary);
++}
++
++.link {
++  color: var(--nocturne-text-primary);
++  text-decoration: underline;
++  text-underline-offset: 2px;
++}
++
++.checkRow {
++  display: flex;
++  align-items: flex-start;
++  gap: 10px;
++  margin-top: 4px;
++  font-size: 0.9rem;
++  line-height: 1.5;
++  color: var(--nocturne-text-primary);
++  cursor: pointer;
++}
++
++.checkbox {
++  flex: none;
++  width: 18px;
++  height: 18px;
++  margin-top: 2px;
++  accent-color: var(--color-home-hero-accent-1);
++  cursor: pointer;
++}
++
++.error {
++  margin: 0;
++  padding: 10px 13px;
++  border-radius: 10px;
++  font-size: 0.85rem;
++  background: color-mix(in srgb, var(--nocturne-badge-admin-text) 12%, transparent);
++  border: 1px solid color-mix(in srgb, var(--nocturne-badge-admin-text) 40%, transparent);
++  color: var(--nocturne-text-primary);
++}
++
++.actions {
++  display: flex;
++  justify-content: flex-end;
++  gap: 10px;
++  margin-top: 6px;
++  flex-wrap: wrap;
++}
++
++.btnPrimary,
++.btnGhost {
++  min-height: 44px;
++  padding: 0 20px;
++  border-radius: 999px;
++  font: inherit;
++  font-weight: 600;
++  font-size: 0.9rem;
++  cursor: pointer;
++  transition: filter 0.18s ease-out, border-color 0.18s ease-out, opacity 0.18s ease-out;
++}
++
++.btnPrimary {
++  color: #ffffff;
++  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
++  border: 1px solid transparent;
++}
++.btnPrimary:hover:not(:disabled) { filter: brightness(1.08); }
++.btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
++
++.btnGhost {
++  color: var(--nocturne-text-primary);
++  background: transparent;
++  border: 1px solid var(--nocturne-border-strong);
++}
++.btnGhost:hover:not(:disabled) { border-color: var(--nocturne-text-muted); }
++
++.btnPrimary:focus-visible,
++.btnGhost:focus-visible,
++.checkbox:focus-visible {
++  outline: 2px solid var(--color-home-hero-accent-1);
++  outline-offset: 2px;
++}
+diff --git a/frontend/components/auth/consent-modal.tsx b/frontend/components/auth/consent-modal.tsx
+new file mode 100644
+index 0000000..2a80cc7
+--- /dev/null
++++ b/frontend/components/auth/consent-modal.tsx
+@@ -0,0 +1,150 @@
++"use client";
++
++// PDPA consent gate (API_CHANGES.md §5.9). When login or GET /auth/me
++// returns needsConsent: true — the user never accepted, withdrew consent,
++// or the policy got a new version — block the app with this modal until
++// they accept (POST /users/me/consents { version }) or log out.
++//
++// Rendered via a portal onto <body> so no ancestor transform/filter can
++// trap its position:fixed overlay (same reason as the admin modals).
++
++import { useEffect, useRef, useState } from "react";
++import { createPortal } from "react-dom";
++import { useRouter } from "next/navigation";
++import { useAuth } from "@/lib/auth-context";
++import { acceptPolicy, getCurrentPolicy, type PolicyInfo } from "@/lib/auth-service";
++import { describeError } from "@/lib/api-client";
++import styles from "./consent-modal.module.css";
++
++const FALLBACK_POLICY: Pick<PolicyInfo, "version" | "url"> = { version: "1.0", url: "/privacy" };
++
++export function ConsentModal() {
++  const router = useRouter();
++  const { user, markConsented, clearSession } = useAuth();
++  const open = !!user?.needsConsent;
++
++  const [policy, setPolicy] = useState<Pick<PolicyInfo, "version" | "url" | "effectiveDate"> | null>(null);
++  const [checked, setChecked] = useState(false);
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++  const checkboxRef = useRef<HTMLInputElement>(null);
++
++  useEffect(() => {
++    if (!open) return;
++    let cancelled = false;
++    getCurrentPolicy()
++      .then((p) => {
++        if (!cancelled) setPolicy(p);
++      })
++      .catch(() => {
++        if (!cancelled) setPolicy({ ...FALLBACK_POLICY, effectiveDate: "" });
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, [open]);
++
++  // Lock page scroll + move focus into the dialog while it's open.
++  useEffect(() => {
++    if (!open) return;
++    const prev = document.body.style.overflow;
++    document.body.style.overflow = "hidden";
++    checkboxRef.current?.focus();
++    return () => {
++      document.body.style.overflow = prev;
++    };
++  }, [open]);
++
++  // `open` is false during SSR/first paint (user is null until /auth/me
++  // resolves), so createPortal below only ever runs in the browser.
++  if (!open) return null;
++
++  const version = policy?.version ?? FALLBACK_POLICY.version;
++
++  async function handleAccept() {
++    if (!checked) return;
++    setSaving(true);
++    setError(null);
++    try {
++      await acceptPolicy(version);
++      setChecked(false);
++      markConsented();
++    } catch (err) {
++      setError(describeError(err, "บันทึกการยอมรับไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
++    } finally {
++      setSaving(false);
++    }
++  }
++
++  async function handleLogout() {
++    await clearSession();
++    router.push("/login");
++  }
++
++  return createPortal(
++    <div className={styles.overlay}>
++      <div
++        className={styles.dialog}
++        role="dialog"
++        aria-modal="true"
++        aria-labelledby="consent-title"
++        aria-describedby="consent-desc"
++      >
++        <span className={styles.eyebrow}>PDPA</span>
++        <h2 id="consent-title" className={styles.title}>นโยบายความเป็นส่วนตัว</h2>
++        <p id="consent-desc" className={styles.text}>
++          ระบบใช้ข้อมูลในเรซูเม่และผลแบบประเมินของคุณเพื่อวิเคราะห์ทักษะและแนะนำสถานประกอบการเท่านั้น
++          กรุณาอ่านและยอมรับนโยบายความเป็นส่วนตัวก่อนใช้งานต่อ
++        </p>
++
++        <ul className={styles.points}>
++          <li>ข้อมูลที่เก็บ: ข้อมูลบัญชี ไฟล์เรซูเม่ ทักษะที่สกัดได้ และคำตอบแบบประเมิน</li>
++          <li>ข้อมูลเรซูเม่ถูกส่งให้ AI วิเคราะห์เพื่อคำนวณคะแนนและคำแนะนำ</li>
++          <li>คุณขอดาวน์โหลดข้อมูล ถอนความยินยอม หรือลบบัญชีได้ตลอดเวลา</li>
++        </ul>
++
++        <p className={styles.meta}>
++          เวอร์ชัน {version}
++          {policy?.effectiveDate ? ` · มีผลตั้งแต่ ${new Date(policy.effectiveDate).toLocaleDateString("th-TH")}` : ""}
++          {" · "}
++          <a href={policy?.url ?? FALLBACK_POLICY.url} target="_blank" rel="noopener noreferrer" className={styles.link}>
++            อ่านนโยบายฉบับเต็ม
++          </a>
++        </p>
++
++        <label className={styles.checkRow}>
++          <input
++            ref={checkboxRef}
++            type="checkbox"
++            checked={checked}
++            onChange={(e) => setChecked(e.target.checked)}
++            disabled={saving}
++            className={styles.checkbox}
++          />
++          <span>ฉันได้อ่านและยอมรับนโยบายความเป็นส่วนตัว</span>
++        </label>
++
++        {error && (
++          <p className={styles.error} role="alert">
++            {error}
++          </p>
++        )}
++
++        <div className={styles.actions}>
++          <button type="button" className={styles.btnGhost} onClick={handleLogout} disabled={saving}>
++            ออกจากระบบ
++          </button>
++          <button
++            type="button"
++            className={styles.btnPrimary}
++            onClick={handleAccept}
++            disabled={!checked || saving}
++          >
++            {saving ? "กำลังบันทึก..." : "ยอมรับและใช้งานต่อ"}
++          </button>
++        </div>
++      </div>
++    </div>,
++    document.body
++  );
++}
+diff --git a/frontend/components/auth/employer-pending-notice.module.css b/frontend/components/auth/employer-pending-notice.module.css
+new file mode 100644
+index 0000000..e66df18
+--- /dev/null
++++ b/frontend/components/auth/employer-pending-notice.module.css
+@@ -0,0 +1,65 @@
++.notice {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  gap: 12px;
++  padding: 20px 4px 4px;
++  text-align: center;
++}
++
++.icon {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  width: 52px;
++  height: 52px;
++  border-radius: 50%;
++  color: var(--nocturne-warning-text);
++  background: color-mix(in srgb, var(--color-home-primary) 14%, transparent);
++  border: 1px solid color-mix(in srgb, var(--color-home-primary) 40%, transparent);
++}
++
++.title {
++  margin: 4px 0 0;
++  font-size: 18px;
++  font-weight: 700;
++  line-height: 1.35;
++  color: var(--nocturne-text-primary);
++}
++
++.text {
++  margin: 0;
++  font-size: 14px;
++  line-height: 1.6;
++  color: var(--nocturne-text-secondary);
++}
++
++.steps {
++  width: 100%;
++  margin: 4px 0 0;
++  padding: 12px 16px 12px 32px;
++  border-radius: 12px;
++  background: var(--nocturne-surface-hover);
++  border: 1px solid var(--nocturne-border);
++  text-align: left;
++  font-size: 13px;
++  line-height: 1.7;
++  color: var(--nocturne-text-primary);
++}
++
++.backBtn {
++  width: 100%;
++  min-height: 44px;
++  margin-top: 6px;
++  font: inherit;
++  font-weight: 600;
++  font-size: 15px;
++  color: #ffffff;
++  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
++  border: 1px solid transparent;
++  border-radius: 10px;
++  cursor: pointer;
++  transition: filter 0.18s ease-out;
++}
++.backBtn:hover { filter: brightness(1.08); }
++.backBtn:focus-visible { outline: 2px solid var(--nocturne-badge-admin-text); outline-offset: 2px; }
+diff --git a/frontend/components/auth/employer-pending-notice.tsx b/frontend/components/auth/employer-pending-notice.tsx
+new file mode 100644
+index 0000000..fe3159e
+--- /dev/null
++++ b/frontend/components/auth/employer-pending-notice.tsx
+@@ -0,0 +1,39 @@
++// Shown instead of the form when an employer account is waiting for admin
++// approval — after register (201 + code EMPLOYER_PENDING, no cookie) or
++// when such an account tries to log in (403 EMPLOYER_PENDING).
++// See API_CHANGES.md §5.5.
++
++import styles from "./employer-pending-notice.module.css";
++
++type Props = {
++  /** Backend message, shown as-is under the heading when present. */
++  message?: string | null;
++  onBack?: () => void;
++  backLabel?: string;
++};
++
++export function EmployerPendingNotice({ message, onBack, backLabel = "กลับไปหน้าเข้าสู่ระบบ" }: Props) {
++  return (
++    <div className={styles.notice} role="status" aria-live="polite">
++      <span className={styles.icon} aria-hidden="true">
++        <svg width="26" height="26" viewBox="0 0 256 256" fill="currentColor">
++          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z" />
++        </svg>
++      </span>
++      <h2 className={styles.title}>บัญชีผู้ประกาศงานกำลังรอการอนุมัติ</h2>
++      <p className={styles.text}>
++        {message || "ผู้ดูแลระบบจะตรวจสอบข้อมูลบริษัทของคุณ เมื่ออนุมัติแล้วจะเข้าสู่ระบบและลงประกาศงานได้"}
++      </p>
++      <ul className={styles.steps}>
++        <li>ผู้ดูแลระบบตรวจสอบข้อมูลบริษัท</li>
++        <li>เมื่ออนุมัติแล้ว เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่สมัครไว้</li>
++        <li>ลงประกาศงานได้ทันทีหลังเข้าสู่ระบบ</li>
++      </ul>
++      {onBack && (
++        <button type="button" className={styles.backBtn} onClick={onBack}>
++          {backLabel}
++        </button>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/components/auth/login-form.tsx b/frontend/components/auth/login-form.tsx
+index e0fd48b..68349cd 100644
+--- a/frontend/components/auth/login-form.tsx
++++ b/frontend/components/auth/login-form.tsx
+@@ -3,9 +3,10 @@
+ import { useRouter } from "next/navigation";
+ import { useCallback, useState, type FormEvent } from "react";
+ import { login, loginWithGoogle } from "@/lib/auth-service";
+-import { ApiError, NetworkError } from "@/lib/api-client";
++import { describeError, getErrorCode } from "@/lib/api-client";
+ import { useAuth } from "@/lib/auth-context";
+ import { useGoogleSignIn } from "@/lib/use-google-signin";
++import { EmployerPendingNotice } from "./employer-pending-notice";
+ import styles from "./login.module.css";
+ 
+ type FieldErrors = {
+@@ -35,6 +36,8 @@ export function LoginForm() {
+   const [errors, setErrors] = useState<FieldErrors>({});
+   const [status, setStatus] = useState<"default" | "loading" | "error">("default");
+   const [formError, setFormError] = useState<string | null>(null);
++  // Employer account still awaiting admin approval (403 EMPLOYER_PENDING).
++  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+ 
+   const isLoading = status === "loading";
+ 
+@@ -61,11 +64,12 @@ export function LoginForm() {
+       router.push("/");
+     } catch (err) {
+       setStatus("error");
+-      setFormError(
+-        err instanceof ApiError || err instanceof NetworkError
+-          ? err.message
+-          : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+-      );
++      if (getErrorCode(err) === "EMPLOYER_PENDING") {
++        setPendingMessage(describeError(err, ""));
++        return;
++      }
++      // EMPLOYER_REJECTED / ACCOUNT_SUSPENDED: backend message explains why.
++      setFormError(describeError(err, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"));
+     }
+   }
+ 
+@@ -80,11 +84,11 @@ export function LoginForm() {
+         router.push("/");
+       } catch (err) {
+         setStatus("error");
+-        setFormError(
+-          err instanceof ApiError || err instanceof NetworkError
+-            ? err.message
+-            : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
+-        );
++        if (getErrorCode(err) === "EMPLOYER_PENDING") {
++          setPendingMessage(describeError(err, ""));
++          return;
++        }
++        setFormError(describeError(err, "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
+       }
+     },
+     [router, setSession]
+@@ -94,7 +98,20 @@ export function LoginForm() {
+     useGoogleSignIn(handleGoogleIdToken);
+ 
+   return (
+-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
++    <>
++    {pendingMessage !== null && (
++      <EmployerPendingNotice
++        message={pendingMessage}
++        backLabel="ลองเข้าสู่ระบบอีกครั้ง"
++        onBack={() => {
++          setPendingMessage(null);
++          setStatus("default");
++        }}
++      />
++    )}
++    {/* Kept mounted (just hidden) — unmounting would destroy the Google
++        button GIS rendered into googleContainerRef. */}
++    <form className={styles.form} onSubmit={handleSubmit} noValidate style={pendingMessage !== null ? { display: "none" } : undefined}>
+       {(formError || googleError) && (
+         <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
+           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+@@ -196,5 +213,6 @@ export function LoginForm() {
+         )}
+       </div>
+     </form>
++    </>
+   );
+ }
+diff --git a/frontend/components/auth/register-form.tsx b/frontend/components/auth/register-form.tsx
+index b73610e..30cc879 100644
+--- a/frontend/components/auth/register-form.tsx
++++ b/frontend/components/auth/register-form.tsx
+@@ -2,11 +2,12 @@
+ 
+ import Link from "next/link";
+ import { useRouter } from "next/navigation";
+-import { useCallback, useMemo, useState, type FormEvent } from "react";
+-import { register, loginWithGoogle } from "@/lib/auth-service";
+-import { ApiError, NetworkError } from "@/lib/api-client";
++import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
++import { register, loginWithGoogle, getCurrentPolicy, type RegisterRole } from "@/lib/auth-service";
++import { describeError, getErrorCode } from "@/lib/api-client";
+ import { useAuth } from "@/lib/auth-context";
+ import { useGoogleSignIn } from "@/lib/use-google-signin";
++import { EmployerPendingNotice } from "./employer-pending-notice";
+ import styles from "./register.module.css";
+ 
+ type FieldErrors = {
+@@ -14,9 +15,20 @@ type FieldErrors = {
+   email?: string | null;
+   password?: string | null;
+   confirmPassword?: string | null;
++  companyName?: string | null;
++  companyTaxId?: string | null;
+   terms?: string | null;
+ };
+ 
++const ACCOUNT_TYPES: { value: RegisterRole; label: string; hint: string }[] = [
++  { value: "STUDENT", label: "นักศึกษา", hint: "วิเคราะห์เรซูเม่และหาที่ฝึกงาน" },
++  { value: "EMPLOYER", label: "ผู้ประกาศงาน", hint: "ลงประกาศรับนักศึกษาฝึกงาน" },
++];
++
++// Used only if GET /policies/current fails — matches the backend's current
++// version so the consent is still recorded (API_CHANGES.md §5.9).
++const FALLBACK_POLICY_VERSION = "1.0";
++
+ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ 
+ function validateName(value: string): string | null {
+@@ -42,6 +54,19 @@ function validateConfirmPassword(password: string, confirm: string): string | nu
+   return null;
+ }
+ 
++function validateCompanyName(value: string): string | null {
++  if (!value.trim()) return "กรุณากรอกชื่อบริษัท";
++  return null;
++}
++
++// Optional field; backend requires 10–13 digits when present (§5.5).
++function validateTaxId(value: string): string | null {
++  const v = value.trim();
++  if (!v) return null;
++  if (!/^\d{10,13}$/.test(v)) return "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 10–13 หลัก";
++  return null;
++}
++
+ function getPasswordStrength(value: string): { score: number; label: string; color: string } {
+   if (!value) return { score: 0, label: "", color: "transparent" };
+   let score = 0;
+@@ -56,9 +81,19 @@ function getPasswordStrength(value: string): { score: number; label: string; col
+   return { score: 3, label: "แข็งแรง", color: "oklch(75% 0.14 150)" };
+ }
+ 
+-export function RegisterForm() {
++type RegisterFormProps = {
++  /** Switches the merged login/register page back to login mode. */
++  onSwitchToLogin?: () => void;
++};
++
++export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
+   const router = useRouter();
+   const { setSession } = useAuth();
++  const [accountType, setAccountType] = useState<RegisterRole>("STUDENT");
++  const [companyName, setCompanyName] = useState("");
++  const [companyTaxId, setCompanyTaxId] = useState("");
++  const [policyVersion, setPolicyVersion] = useState<string | null>(null);
++  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+   const [name, setName] = useState("");
+   const [email, setEmail] = useState("");
+   const [password, setPassword] = useState("");
+@@ -71,14 +106,32 @@ export function RegisterForm() {
+   const [formError, setFormError] = useState<string | null>(null);
+ 
+   const isLoading = status === "loading";
++  const isEmployer = accountType === "EMPLOYER";
+   const strength = useMemo(() => getPasswordStrength(password), [password]);
+ 
++  // Which policy version the checkbox is accepting. Public endpoint.
++  useEffect(() => {
++    let cancelled = false;
++    getCurrentPolicy()
++      .then((p) => {
++        if (!cancelled) setPolicyVersion(p.version);
++      })
++      .catch(() => {
++        if (!cancelled) setPolicyVersion(FALLBACK_POLICY_VERSION);
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, []);
++
+   function validate(): boolean {
+     const nextErrors: FieldErrors = {
+       name: validateName(name),
+       email: validateEmail(email),
+       password: validatePassword(password),
+       confirmPassword: validateConfirmPassword(password, confirmPassword),
++      companyName: isEmployer ? validateCompanyName(companyName) : null,
++      companyTaxId: isEmployer ? validateTaxId(companyTaxId) : null,
+       terms: agreedToTerms ? null : "คุณต้องยอมรับข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว",
+     };
+     setErrors(nextErrors);
+@@ -93,18 +146,31 @@ export function RegisterForm() {
+ 
+     setStatus("loading");
+     try {
+-      // Backend field is `fullname` (not `name`); `role` defaults server-side to STUDENT.
+-      const session = await register(email, password, name);
+-      await setSession(session);
++      // Backend field is `fullname` (not `name`); no role = STUDENT.
++      const result = await register({
++        email,
++        password,
++        fullname: name,
++        role: accountType,
++        companyName: isEmployer ? companyName.trim() : undefined,
++        companyTaxId: isEmployer ? companyTaxId.trim() || undefined : undefined,
++        acceptedPolicyVersion: policyVersion ?? FALLBACK_POLICY_VERSION,
++      });
+       setStatus("default");
++      if (result.kind === "pending") {
++        // Employer: account created but no cookie until an admin approves.
++        setPendingMessage(result.message);
++        return;
++      }
++      await setSession(result.session);
+       router.push("/");
+     } catch (err) {
+       setStatus("error");
+-      setFormError(
+-        err instanceof ApiError || err instanceof NetworkError
+-          ? err.message
+-          : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+-      );
++      if (getErrorCode(err) === "EMAIL_TAKEN") {
++        setErrors((prev) => ({ ...prev, email: describeError(err, "") }));
++        return;
++      }
++      setFormError(describeError(err, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"));
+     }
+   }
+ 
+@@ -119,11 +185,7 @@ export function RegisterForm() {
+         router.push("/");
+       } catch (err) {
+         setStatus("error");
+-        setFormError(
+-          err instanceof ApiError || err instanceof NetworkError
+-            ? err.message
+-            : "สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
+-        );
++        setFormError(describeError(err, "สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
+       }
+     },
+     [router, setSession]
+@@ -133,7 +195,19 @@ export function RegisterForm() {
+     useGoogleSignIn(handleGoogleIdToken);
+ 
+   return (
+-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
++    <>
++    {pendingMessage !== null && (
++      <EmployerPendingNotice
++        message={pendingMessage}
++        onBack={() => {
++          setPendingMessage(null);
++          onSwitchToLogin?.();
++        }}
++      />
++    )}
++    {/* Kept mounted (just hidden) while the pending notice shows — unmounting
++        would destroy the Google button that GIS rendered into googleContainerRef. */}
++    <form className={styles.form} onSubmit={handleSubmit} noValidate style={pendingMessage !== null ? { display: "none" } : undefined}>
+       {(formError || googleError) && (
+         <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
+           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+@@ -143,6 +217,32 @@ export function RegisterForm() {
+         </p>
+       )}
+ 
++      <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
++        <span className={styles.fieldLabel} id="account-type-label">สมัครในฐานะ</span>
++        <div className={styles.roleToggle} role="radiogroup" aria-labelledby="account-type-label">
++          {ACCOUNT_TYPES.map((t) => {
++            const active = accountType === t.value;
++            return (
++              <button
++                key={t.value}
++                type="button"
++                role="radio"
++                aria-checked={active}
++                className={`${styles.roleOption} ${active ? styles.roleOptionActive : ""}`}
++                onClick={() => {
++                  setAccountType(t.value);
++                  setErrors((prev) => ({ ...prev, companyName: null, companyTaxId: null }));
++                }}
++                disabled={isLoading}
++              >
++                <span className={styles.roleOptionLabel}>{t.label}</span>
++                <span className={styles.roleOptionHint}>{t.hint}</span>
++              </button>
++            );
++          })}
++        </div>
++      </div>
++
+       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
+         <label htmlFor="name">ชื่อ-นามสกุล</label>
+         <input
+@@ -179,6 +279,60 @@ export function RegisterForm() {
+         {errors.email && <p id="email-error" className={styles.fieldError}>{errors.email}</p>}
+       </div>
+ 
++      {isEmployer && (
++        <>
++          <div className={styles.field}>
++            <label htmlFor="companyName">ชื่อบริษัท</label>
++            <input
++              id="companyName"
++              name="companyName"
++              type="text"
++              autoComplete="organization"
++              value={companyName}
++              onChange={(e) => setCompanyName(e.target.value)}
++              disabled={isLoading}
++              aria-invalid={!!errors.companyName}
++              aria-describedby={errors.companyName ? "company-name-error" : undefined}
++              placeholder="บริษัท ตัวอย่าง จำกัด"
++              className={`${styles.input} ${errors.companyName ? styles.inputInvalid : ""}`}
++            />
++            {errors.companyName && (
++              <p id="company-name-error" className={styles.fieldError}>{errors.companyName}</p>
++            )}
++          </div>
++
++          <div className={styles.field}>
++            <label htmlFor="companyTaxId">
++              เลขประจำตัวผู้เสียภาษี <span className={styles.optionalTag}>(ไม่บังคับ)</span>
++            </label>
++            <input
++              id="companyTaxId"
++              name="companyTaxId"
++              type="text"
++              inputMode="numeric"
++              value={companyTaxId}
++              onChange={(e) => setCompanyTaxId(e.target.value.replace(/\D/g, "").slice(0, 13))}
++              disabled={isLoading}
++              aria-invalid={!!errors.companyTaxId}
++              aria-describedby={errors.companyTaxId ? "company-tax-error" : "company-tax-hint"}
++              placeholder="0105555012345"
++              className={`${styles.input} ${errors.companyTaxId ? styles.inputInvalid : ""}`}
++            />
++            {errors.companyTaxId ? (
++              <p id="company-tax-error" className={styles.fieldError}>{errors.companyTaxId}</p>
++            ) : (
++              <p id="company-tax-hint" className={styles.fieldHint}>
++                ตัวเลข 10–13 หลัก ช่วยให้ผู้ดูแลระบบตรวจสอบบริษัทได้เร็วขึ้น
++              </p>
++            )}
++          </div>
++
++          <p className={styles.fieldHint}>
++            บัญชีผู้ประกาศงานต้องรอผู้ดูแลระบบอนุมัติก่อนจึงจะเข้าสู่ระบบได้
++          </p>
++        </>
++      )}
++
+       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
+         <label htmlFor="password">รหัสผ่าน</label>
+         <div className={styles.inputWrap}>
+@@ -303,6 +457,9 @@ export function RegisterForm() {
+         {isLoading ? "กำลังสร้างบัญชี…" : "สร้างบัญชี"}
+       </button>
+ 
++      {/* Google sign-up always creates a STUDENT account — hidden (not
++          unmounted, GIS renders into googleContainerRef) for employers. */}
++      <div style={{ display: isEmployer ? "none" : "contents" }}>
+       <div className={`${styles.divider} ${styles.animateIn} ${styles.delay4}`}>
+         <span className={styles.dividerLine} />
+         <span className={styles.dividerText}>หรือ</span>
+@@ -318,6 +475,8 @@ export function RegisterForm() {
+           </div>
+         )}
+       </div>
++      </div>
+     </form>
++    </>
+   );
+ }
+diff --git a/frontend/components/auth/register.module.css b/frontend/components/auth/register.module.css
+index 40b9f05..a36bc9b 100644
+--- a/frontend/components/auth/register.module.css
++++ b/frontend/components/auth/register.module.css
+@@ -458,3 +458,57 @@
+     transition: none;
+   }
+ }
++
++/* ===== Account type picker (นักศึกษา / ผู้ประกาศงาน) — API_CHANGES.md §5.5 ===== */
++.fieldLabel {
++  font-size: 12px;
++  font-weight: 500;
++  color: var(--nocturne-text-secondary);
++}
++.roleToggle {
++  display: grid;
++  grid-template-columns: 1fr 1fr;
++  gap: 8px;
++}
++.roleOption {
++  display: flex;
++  flex-direction: column;
++  align-items: flex-start;
++  gap: 2px;
++  min-height: 56px;
++  padding: 10px 12px;
++  font: inherit;
++  text-align: left;
++  color: var(--nocturne-text-primary);
++  background: var(--nocturne-surface);
++  border: 1px solid var(--nocturne-border-strong);
++  border-radius: 10px;
++  cursor: pointer;
++  transition: border-color 0.18s ease-out, background 0.18s ease-out, box-shadow 0.18s ease-out;
++}
++.roleOption:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-home-hero-accent-1) 55%, transparent); }
++.roleOption:focus-visible { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; }
++.roleOptionActive {
++  background: color-mix(in srgb, var(--color-home-hero-accent-1) 12%, transparent);
++  border-color: var(--color-home-hero-accent-1);
++  box-shadow: 0 0 0 1px var(--color-home-hero-accent-1) inset;
++}
++.roleOptionLabel {
++  font-size: 14px;
++  font-weight: 600;
++}
++.roleOptionHint {
++  font-size: 12px;
++  line-height: 1.4;
++  color: var(--nocturne-text-secondary);
++}
++.fieldHint {
++  margin: 0;
++  font-size: 12px;
++  line-height: 1.5;
++  color: var(--nocturne-text-secondary);
++}
++.optionalTag {
++  font-weight: 400;
++  color: var(--nocturne-text-muted);
++}
+diff --git a/frontend/components/layout/app-shell.tsx b/frontend/components/layout/app-shell.tsx
+index 65ead1c..49296d3 100644
+--- a/frontend/components/layout/app-shell.tsx
++++ b/frontend/components/layout/app-shell.tsx
+@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
+ import type { ReactNode } from "react";
+ import { TopNav } from "./top-nav";
+ import { RouteGuard } from "./route-guard";
++import { ConsentModal } from "@/components/auth/consent-modal";
+ 
+ // The old Stardust sidebar (navbar.tsx / mobile-topbar.tsx / nav-context.tsx)
+ // has been retired app-wide per explicit request — every route now uses the
+@@ -22,8 +23,16 @@ export function AppShell({ children }: { children: ReactNode }) {
+ 
+   // Home ("/") renders its own TopNav inline as part of its hero section
+   // (see home-hero-demo.tsx) — rendering it again here would duplicate it.
++  // ConsentModal renders nothing unless the logged-in user has
++  // needsConsent: true (API_CHANGES.md §5.9) — mounted on every page that
++  // has a session, i.e. everything except /login and /register.
+   if (pathname === "/") {
+-    return <RouteGuard>{children}</RouteGuard>;
++    return (
++      <>
++        <RouteGuard>{children}</RouteGuard>
++        <ConsentModal />
++      </>
++    );
+   }
+ 
+   return (
+@@ -35,6 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
+       <div className="min-h-dvh pt-[88px] sm:pt-[96px]" style={{ background: "var(--nocturne-bg)" }}>
+         <RouteGuard>{children}</RouteGuard>
+       </div>
++      <ConsentModal />
+     </>
+   );
+ }
+diff --git a/frontend/components/result/career-match-ranking.tsx b/frontend/components/result/career-match-ranking.tsx
+new file mode 100644
+index 0000000..b379542
+--- /dev/null
++++ b/frontend/components/result/career-match-ranking.tsx
+@@ -0,0 +1,90 @@
++"use client";
++
++// "สายงานที่เหมาะกับคุณ" — B1 careerMatches (API_CHANGES.md §5.1).
++// Only rendered when the backend sends careerMatches, i.e. the user left the
++// desired-role field empty and the system picked roles for them. Shows the
++// top 1–4 roles as horizontal percent bars (percents come from the backend,
++// already sum to 100 — never recomputed here); the user ticks a role to see
++// the skills they already have and the ones still missing for it.
++
++import { useId, useState } from "react";
++import { InsightChipList } from "@/components/ui/insight-chip-list";
++import type { CareerMatch } from "@/lib/assessment-service";
++import styles from "./evaluation-result.module.css";
++
++export function CareerMatchRanking({ matches }: { matches: CareerMatch[] }) {
++  const [selected, setSelected] = useState(0);
++  const groupName = useId();
++
++  if (matches.length === 0) return null;
++  const current = matches[Math.min(selected, matches.length - 1)];
++
++  return (
++    <section className={`${styles.careerBlock} ${styles.animateIn} ${styles.delay2}`} aria-labelledby={`${groupName}-title`}>
++      <div className={styles.careerHead}>
++        <h2 id={`${groupName}-title`} className={styles.careerTitle}>
++          สายงานที่เหมาะกับคุณ
++        </h2>
++        <p className={styles.careerSub}>
++          คุณไม่ได้ระบุตำแหน่งงาน ระบบจึงวิเคราะห์สายงานที่ใกล้เคียงกับทักษะของคุณมากที่สุด
++          เลือกสายงานเพื่อดูทักษะที่มีแล้วและทักษะที่ยังขาด
++        </p>
++      </div>
++
++      <div className={styles.careerList} role="radiogroup" aria-labelledby={`${groupName}-title`}>
++        {matches.map((m, i) => {
++          const active = i === selected;
++          return (
++            <label
++              key={m.roleName}
++              className={`${styles.careerRow} ${active ? styles.careerRowActive : ""}`}
++            >
++              <input
++                type="radio"
++                name={groupName}
++                className={styles.careerRadio}
++                checked={active}
++                onChange={() => setSelected(i)}
++              />
++              <span className={styles.careerRank} aria-hidden="true">
++                {i + 1}
++              </span>
++              <span className={styles.careerMain}>
++                <span className={styles.careerNameRow}>
++                  <span className={styles.careerName}>{m.roleName}</span>
++                  {i === 0 && <span className={styles.careerBestTag}>เหมาะที่สุด</span>}
++                </span>
++                <span className={styles.careerBarTrack} aria-hidden="true">
++                  <span
++                    className={`${styles.careerBarFill} ${i === 0 ? styles.careerBarFillTop : ""}`}
++                    style={{ width: `${Math.max(0, Math.min(100, m.percent))}%` }}
++                  />
++                </span>
++              </span>
++              <span className={styles.careerPercent}>{m.percent}%</span>
++            </label>
++          );
++        })}
++      </div>
++
++      <p className={styles.careerNote}>
++        เปอร์เซ็นต์คือสัดส่วนความใกล้เคียงเมื่อเทียบระหว่างสายงานที่แสดง รวมกันเท่ากับ 100%
++      </p>
++
++      <div className={styles.careerDetail} aria-live="polite">
++        <p className={styles.careerDetailTitle}>
++          <span className={styles.careerDetailDot} aria-hidden="true" />
++          {current.roleName}
++        </p>
++        {current.missingSkills.length > 0 ? (
++          <InsightChipList heading="ทักษะที่ยังขาด" items={current.missingSkills} tone="warning" />
++        ) : (
++          <p className={styles.careerComplete}>คุณมีทักษะครบตามมาตรฐานของสายงานนี้แล้ว</p>
++        )}
++        {current.matchedSkills.length > 0 && (
++          <InsightChipList heading="ทักษะที่มีแล้ว" items={current.matchedSkills} tone="positive" />
++        )}
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/components/result/evaluation-result-card.tsx b/frontend/components/result/evaluation-result-card.tsx
+index 3df0de5..1e4ac16 100644
+--- a/frontend/components/result/evaluation-result-card.tsx
++++ b/frontend/components/result/evaluation-result-card.tsx
+@@ -18,6 +18,7 @@ import Link from "next/link";
+ import { useCallback, useEffect, useState } from "react";
+ import { ScoreBadge } from "@/components/ui/score-badge";
+ import { InsightChipList } from "@/components/ui/insight-chip-list";
++import { CareerMatchRanking } from "./career-match-ranking";
+ import type { EvaluationResult } from "@/lib/result-types";
+ import type { ScoreBreakdown } from "@/lib/assessment-service";
+ import { readAssessmentResult } from "@/lib/assessment-session";
+@@ -288,6 +289,11 @@ export function EvaluationResultCard() {
+         </div>
+       </div>
+ 
++      {/* B1: only present when the user didn't enter a desired role. */}
++      {result.careerMatches && result.careerMatches.length > 0 && (
++        <CareerMatchRanking matches={result.careerMatches} />
++      )}
++
+       {result.recommendationSummary && (
+         <div className={`${styles.aiCard} ${styles.animateIn} ${styles.delay2}`}>
+           <div className={styles.aiCardHeader}>
+diff --git a/frontend/components/result/evaluation-result.module.css b/frontend/components/result/evaluation-result.module.css
+index aa9e15e..794484b 100644
+--- a/frontend/components/result/evaluation-result.module.css
++++ b/frontend/components/result/evaluation-result.module.css
+@@ -438,6 +438,198 @@
+ }
+ .breakdownWarning svg { flex: none; margin-top: 1px; }
+ 
++/* ===== Career matches ("สายงานที่เหมาะกับคุณ") — B1, API_CHANGES.md §5.1.
++   Only shown when the user left the desired role empty. Percents come
++   straight from the backend (sum to 100). ===== */
++.careerBlock {
++  margin-top: 1.75rem;
++  padding: clamp(1.25rem, 3vw, 1.75rem);
++  border-radius: 24px;
++  background: var(--nocturne-surface);
++  border: 1px solid var(--nocturne-border);
++  text-align: left;
++  display: flex;
++  flex-direction: column;
++  gap: 16px;
++}
++
++.careerHead {
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++}
++
++.careerTitle {
++  margin: 0;
++  font-size: 1.1rem;
++  font-weight: 700;
++  color: var(--nocturne-text-primary);
++}
++
++.careerSub {
++  margin: 0;
++  font-size: 0.85rem;
++  line-height: 1.6;
++  color: var(--nocturne-text-secondary);
++}
++
++.careerList {
++  display: flex;
++  flex-direction: column;
++  gap: 8px;
++}
++
++.careerRow {
++  position: relative;
++  display: grid;
++  grid-template-columns: auto 1fr auto;
++  align-items: center;
++  gap: 12px;
++  padding: 12px 14px;
++  border-radius: 12px;
++  background: var(--nocturne-surface-hover);
++  border: 1px solid var(--nocturne-border);
++  cursor: pointer;
++  transition: border-color 0.18s ease-out, background 0.18s ease-out;
++}
++.careerRow:hover { border-color: var(--nocturne-border-strong); }
++.careerRow:focus-within { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; }
++.careerRowActive {
++  border-color: var(--color-home-hero-accent-1);
++  background: color-mix(in srgb, var(--color-home-hero-accent-1) 10%, transparent);
++}
++
++/* Visually hidden but still focusable/announced — the whole row is the label. */
++.careerRadio {
++  position: absolute;
++  opacity: 0;
++  width: 1px;
++  height: 1px;
++  pointer-events: none;
++}
++
++.careerRank {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  width: 28px;
++  height: 28px;
++  border-radius: 50%;
++  font-size: 0.85rem;
++  font-weight: 700;
++  color: var(--nocturne-text-primary);
++  background: var(--nocturne-surface);
++  border: 1px solid var(--nocturne-border-strong);
++}
++.careerRowActive .careerRank {
++  color: #ffffff;
++  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
++  border-color: transparent;
++}
++
++.careerMain {
++  min-width: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 8px;
++}
++
++.careerNameRow {
++  display: flex;
++  align-items: center;
++  flex-wrap: wrap;
++  gap: 8px;
++}
++
++.careerName {
++  font-size: 0.9rem;
++  font-weight: 600;
++  line-height: 1.4;
++  color: var(--nocturne-text-primary);
++  overflow-wrap: anywhere;
++}
++
++.careerBestTag {
++  padding: 2px 9px;
++  border-radius: 999px;
++  font-size: 0.8rem;
++  font-weight: 600;
++  color: var(--nocturne-success-text);
++  background: color-mix(in srgb, var(--nocturne-success-text) 14%, transparent);
++  border: 1px solid color-mix(in srgb, var(--nocturne-success-text) 40%, transparent);
++}
++
++.careerBarTrack {
++  display: block;
++  height: 8px;
++  border-radius: 999px;
++  background: var(--nocturne-border);
++  overflow: hidden;
++}
++
++.careerBarFill {
++  display: block;
++  height: 100%;
++  border-radius: inherit;
++  background: color-mix(in srgb, var(--color-home-hero-accent-1) 65%, transparent);
++  transition: width 0.6s ease-out;
++}
++.careerBarFillTop {
++  background: linear-gradient(90deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
++}
++
++.careerPercent {
++  min-width: 3.2rem;
++  text-align: right;
++  font-size: 1rem;
++  font-weight: 700;
++  font-variant-numeric: tabular-nums;
++  color: var(--nocturne-text-primary);
++}
++
++.careerNote {
++  margin: 0;
++  font-size: 0.8rem;
++  line-height: 1.5;
++  color: var(--nocturne-text-secondary);
++}
++
++.careerDetail {
++  display: flex;
++  flex-direction: column;
++  gap: 14px;
++  padding-top: 16px;
++  border-top: 1px solid var(--nocturne-border);
++}
++
++.careerDetailTitle {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.5rem;
++  margin: 0;
++  font-size: 0.9rem;
++  font-weight: 700;
++  color: var(--nocturne-text-primary);
++}
++
++.careerDetailDot {
++  flex: none;
++  width: 6px;
++  height: 6px;
++  border-radius: 50%;
++  background: var(--color-home-hero-accent-2);
++}
++
++.careerComplete {
++  margin: 0;
++  font-size: 0.85rem;
++  color: var(--nocturne-success-text);
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .careerBarFill { transition: none; }
++}
++
+ /* ===== CTA row ===== */
+ .ctaRow {
+   margin-top: 2rem;
+diff --git a/frontend/lib/admin-service.ts b/frontend/lib/admin-service.ts
+index ab94845..e33a1a0 100644
+--- a/frontend/lib/admin-service.ts
++++ b/frontend/lib/admin-service.ts
+@@ -166,3 +166,48 @@ export async function updateJob(id: string, input: AdminJobUpdateInput): Promise
+ export async function deleteJob(id: string): Promise<{ message: string }> {
+   return apiFetch<{ message: string }>(`/admin/jobs/${id}`, { method: "DELETE" });
+ }
++
++// ===== 5. Employer approval (B5 — API_CHANGES.md §5.5) =====
++// Unlike the older admin endpoints above, the B-round endpoints wrap their
++// payload in { status, message, data }. unwrap() accepts both shapes so a
++// future backend tweak either way doesn't break the page.
++
++export type EmployerAccountStatus = "PENDING" | "ACTIVE" | "REJECTED" | "SUSPENDED";
++export type EmployerStatusFilter = "PENDING" | "ACTIVE" | "REJECTED" | "ALL";
++
++export type AdminEmployer = {
++  userId: string;
++  email: string;
++  fullName: string;
++  telephone: string | null;
++  accountStatus: EmployerAccountStatus;
++  createdAt: string;
++  companyId: string | null;
++  companyName: string | null;
++  companyTaxId: string | null;
++  companyStatus: string | null;
++};
++
++function unwrap<T>(res: unknown): T {
++  if (res && typeof res === "object" && "data" in res && "status" in res) {
++    return (res as { data: T }).data;
++  }
++  return res as T;
++}
++
++export async function listEmployers(status: EmployerStatusFilter = "PENDING"): Promise<AdminEmployer[]> {
++  const res = await apiFetch<unknown>(`/admin/employers?status=${status}`, { method: "GET" });
++  const data = unwrap<AdminEmployer[] | null>(res);
++  return Array.isArray(data) ? data : [];
++}
++
++export async function approveEmployer(userId: string): Promise<void> {
++  await apiFetch<unknown>(`/admin/employers/${userId}/approve`, { method: "POST" });
++}
++
++export async function rejectEmployer(userId: string, reason: string): Promise<void> {
++  await apiFetch<unknown>(`/admin/employers/${userId}/reject`, {
++    method: "POST",
++    body: JSON.stringify({ reason }),
++  });
++}
+diff --git a/frontend/lib/admin-types.ts b/frontend/lib/admin-types.ts
+index d71c498..3f5a5f4 100644
+--- a/frontend/lib/admin-types.ts
++++ b/frontend/lib/admin-types.ts
+@@ -6,11 +6,12 @@
+ // Tabs shown on the admin page. "activity feed" / "7-day upload chart" from
+ // the original demo were dropped — backend has no endpoint for either (see
+ // README_Admin_API.md "สิ่งที่ยังไม่มี Endpoint").
+-export type AdminTab = "dashboard" | "users" | "resumes" | "jobs";
++export type AdminTab = "dashboard" | "users" | "employers" | "resumes" | "jobs";
+ 
+ export const ADMIN_TABS: { key: AdminTab; label: string }[] = [
+   { key: "dashboard", label: "ภาพรวม" },
+   { key: "users", label: "ผู้ใช้งาน" },
++  { key: "employers", label: "อนุมัติผู้ประกาศงาน" },
+   { key: "resumes", label: "เรซูเม่" },
+   { key: "jobs", label: "ประกาศงาน" },
+ ];
+diff --git a/frontend/lib/api-client.ts b/frontend/lib/api-client.ts
+index 0373556..53b4d41 100644
+--- a/frontend/lib/api-client.ts
++++ b/frontend/lib/api-client.ts
+@@ -12,15 +12,36 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+ export class ApiError extends Error {
+   status: number;
+   body: unknown;
++  /** Machine-readable error code from the backend (API_CHANGES.md §5.0),
++   *  e.g. "EMPLOYER_PENDING", "EMAIL_TAKEN". Branch on this, never on
++   *  `message` — backend may reword messages, codes stay stable. */
++  code: string | null;
++  /** Seconds from the `Retry-After` header (sent with 429 RATE_LIMITED). */
++  retryAfter: number | null;
+ 
+-  constructor(status: number, message: string, body: unknown) {
++  constructor(status: number, message: string, body: unknown, retryAfter: number | null = null) {
+     super(message);
+     this.name = "ApiError";
+     this.status = status;
+     this.body = body;
++    this.code = extractErrorCode(body);
++    this.retryAfter = retryAfter;
+   }
+ }
+ 
++function extractErrorCode(body: unknown): string | null {
++  if (body && typeof body === "object") {
++    const code = (body as Record<string, unknown>).code;
++    if (typeof code === "string" && code.trim()) return code;
++  }
++  return null;
++}
++
++/** Returns the backend error `code` if `err` is an ApiError that has one. */
++export function getErrorCode(err: unknown): string | null {
++  return err instanceof ApiError ? err.code : null;
++}
++
+ export class NetworkError extends Error {
+   constructor(message = "Network request failed. Check your connection and try again.") {
+     super(message);
+@@ -73,8 +94,39 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T>
+     : null;
+ 
+   if (!response.ok) {
+-    throw new ApiError(response.status, extractErrorMessage(body, response.status), body);
++    const retryHeader = Number(response.headers.get("retry-after"));
++    throw new ApiError(
++      response.status,
++      extractErrorMessage(body, response.status),
++      body,
++      Number.isFinite(retryHeader) && retryHeader > 0 ? retryHeader : null
++    );
+   }
+ 
+   return body as T;
+ }
++
++// Thai copy for error codes where the backend message alone isn't enough
++// (API_CHANGES.md §5.0). Anything not listed falls back to the backend's
++// own `message`, then to `fallback`.
++export function describeError(err: unknown, fallback: string): string {
++  if (err instanceof ApiError) {
++    switch (err.code) {
++      case "RATE_LIMITED":
++        return err.retryAfter
++          ? `ส่งคำขอถี่เกินไป กรุณารอ ${err.retryAfter} วินาทีแล้วลองใหม่`
++          : "ส่งคำขอถี่เกินไป กรุณารอสักครู่แล้วลองใหม่";
++      case "CREDITS_EXHAUSTED":
++        return "เครดิตการใช้งานของเดือนนี้หมดแล้ว กรุณารอรอบถัดไป";
++      case "EMAIL_TAKEN":
++        return "อีเมลนี้ถูกใช้สมัครแล้ว";
++      case "TELEPHONE_TAKEN":
++        return "เบอร์โทรนี้ถูกใช้สมัครแล้ว";
++      case "CONSENT_REQUIRED":
++        return "กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก";
++    }
++    return err.message || fallback;
++  }
++  if (err instanceof NetworkError) return err.message;
++  return fallback;
++}
+diff --git a/frontend/lib/assessment-service.ts b/frontend/lib/assessment-service.ts
+index b94a972..5a90fc3 100644
+--- a/frontend/lib/assessment-service.ts
++++ b/frontend/lib/assessment-service.ts
+@@ -52,6 +52,29 @@ export type ScoreBreakdown = {
+ 
+   roleUsedForMatching: string;
+   roleInferredByAi: boolean;
++
++  // B2 (API_CHANGES.md §5.2) — how each resume skill was matched.
++  matchMethod?: "SEMANTIC" | "WORD_FALLBACK";
++  matchDetails?: SkillMatchDetail[];
++};
++
++export type SkillMatchDetail = {
++  resumeSkill: string;
++  standardSkill: string | null;
++  method: "WORD" | "SEMANTIC" | "NONE";
++  confidence: number | null;
++};
++
++// B1 (API_CHANGES.md §5.1) — only present when the user left
++// desiredRoleName empty. 1–4 items, sorted by percent desc, integer
++// percents that always sum to 100 (computed by the backend — never
++// recompute or re-normalize client-side).
++export type CareerMatch = {
++  roleName: string;
++  percent: number;
++  matchedSkills: string[];
++  /** ≤ 10 items, most widely used in the market first. */
++  missingSkills: string[];
+ };
+ 
+ export type AssessmentSubmitResult = {
+@@ -70,6 +93,8 @@ export type AssessmentSubmitResult = {
+   // sessionStorage before this change won't have them.
+   scoreBreakdown?: ScoreBreakdown;
+   scoreExplanation?: string;
++
++  careerMatches?: CareerMatch[];
+ };
+ 
+ // Each option is prefixed like "1. พอใช้" / "2. มาตรฐาน" — the leading
+diff --git a/frontend/lib/auth-context.tsx b/frontend/lib/auth-context.tsx
+index 09b2c9b..248b51e 100644
+--- a/frontend/lib/auth-context.tsx
++++ b/frontend/lib/auth-context.tsx
+@@ -41,6 +41,8 @@ type AuthContextValue = {
+   isLoading: boolean;
+   setSession: (session: AuthSession) => void;
+   clearSession: () => Promise<void>;
++  /** Call after POST /users/me/consents succeeds — hides ConsentModal. */
++  markConsented: () => void;
+ };
+ 
+ const AuthContext = createContext<AuthContextValue | null>(null);
+@@ -79,6 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+     setUser(rest);
+   }, []);
+ 
++  const markConsented = useCallback(() => {
++    setUser((prev) => (prev ? { ...prev, needsConsent: false } : prev));
++  }, []);
++
+   const clearSession = useCallback(async () => {
+     try {
+       await logoutRequest();
+@@ -96,8 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+       isLoading,
+       setSession,
+       clearSession,
++      markConsented,
+     }),
+-    [user, isLoading, setSession, clearSession]
++    [user, isLoading, setSession, clearSession, markConsented]
+   );
+ 
+   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+diff --git a/frontend/lib/auth-service.ts b/frontend/lib/auth-service.ts
+index df25e8b..0d6fc27 100644
+--- a/frontend/lib/auth-service.ts
++++ b/frontend/lib/auth-service.ts
+@@ -1,7 +1,8 @@
+ // Auth API calls. Endpoints confirmed against live backend Swagger UI:
+ // POST /auth/login    { email, password }            -> { status, message, data: { userId, email, fullname, role, accessToken, refreshToken } }
+-// POST /auth/register { email, password, fullname, telephone? } -> same shape as login
+-// (role defaults server-side to STUDENT on register — not sent by the client)
++// POST /auth/register { email, password, fullname, telephone?, acceptedPolicyVersion?,
++//                       role?: "EMPLOYER", companyName?, companyTaxId? } -> same shape as login
++// (no role = STUDENT; role EMPLOYER → 201 + code EMPLOYER_PENDING, no cookie — API_CHANGES.md §5.5)
+ //
+ // Auth runs on an httpOnly `accessToken` cookie set automatically by the
+ // browser on login/register/google-login (see api-client.ts's
+@@ -25,21 +26,63 @@
+ 
+ import { apiFetch, ApiError } from "./api-client";
+ 
++export type AccountStatus = "ACTIVE" | "PENDING" | "REJECTED" | "SUSPENDED";
++
+ export type AuthUser = {
+   userId: string;
+   email: string;
+   fullname: string;
+   role: string;
++  // Added in backend round B5/B9 (API_CHANGES.md §5.5, §5.9) — optional so
++  // older responses/sessions without them still type-check.
++  accountStatus?: AccountStatus;
++  /** true = user must (re)accept the current privacy policy → ConsentModal. */
++  needsConsent?: boolean;
+ };
+ 
+ export type AuthSession = AuthUser & {
+-  accessToken: string;
+-  refreshToken: string;
++  accessToken: string | null;
++  refreshToken?: string | null;
++};
++
++export type RegisterRole = "STUDENT" | "EMPLOYER";
++
++export type RegisterInput = {
++  email: string;
++  password: string;
++  fullname: string;
++  telephone?: string;
++  /** Omit (or STUDENT) for a normal student account. */
++  role?: RegisterRole;
++  /** Required by the form when role = EMPLOYER. */
++  companyName?: string;
++  /** Optional, 10–13 digits. */
++  companyTaxId?: string;
++  /** Version from GET /policies/current the user ticked "accept" for. */
++  acceptedPolicyVersion?: string;
++};
++
++/**
++ * - `session`: account is usable now (cookie set) — students.
++ * - `pending`: employer account created but waits for admin approval;
++ *   no cookie, cannot log in yet (code EMPLOYER_PENDING, HTTP 201).
++ */
++export type RegisterResult =
++  | { kind: "session"; session: AuthSession }
++  | { kind: "pending"; message: string };
++
++export type PolicyInfo = {
++  policyType: string;
++  version: string;
++  url: string;
++  effectiveDate: string;
++  requiredOnRegister: boolean;
+ };
+ 
+ type ApiEnvelope<T> = {
+   status: number;
+   message: string;
++  code?: string;
+   data: T;
+ };
+ 
+@@ -52,6 +95,8 @@ type CurrentUserResponse = {
+   fullName: string;
+   role: string;
+   authProvider?: string;
++  accountStatus?: AccountStatus;
++  needsConsent?: boolean;
+ };
+ 
+ export async function login(email: string, password: string): Promise<AuthSession> {
+@@ -62,19 +107,49 @@ export async function login(email: string, password: string): Promise<AuthSessio
+   return res.data;
+ }
+ 
+-export async function register(
+-  email: string,
+-  password: string,
+-  fullname: string,
+-  telephone?: string
+-): Promise<AuthSession> {
++// Only sends the fields that apply — per API_CHANGES.md §5.5, don't send
++// extra/empty fields (e.g. no `role` at all for students).
++export async function register(input: RegisterInput): Promise<RegisterResult> {
++  const body: Record<string, string> = {
++    email: input.email,
++    password: input.password,
++    fullname: input.fullname,
++  };
++  if (input.telephone) body.telephone = input.telephone;
++  if (input.acceptedPolicyVersion) body.acceptedPolicyVersion = input.acceptedPolicyVersion;
++  if (input.role === "EMPLOYER") {
++    body.role = "EMPLOYER";
++    if (input.companyName) body.companyName = input.companyName;
++    if (input.companyTaxId) body.companyTaxId = input.companyTaxId;
++  }
++
+   const res = await apiFetch<ApiEnvelope<AuthSession>>("/auth/register", {
+     method: "POST",
+-    body: JSON.stringify({ email, password, fullname, ...(telephone ? { telephone } : {}) }),
++    body: JSON.stringify(body),
+   });
++
++  if (res.code === "EMPLOYER_PENDING" || res.data?.accountStatus === "PENDING") {
++    return { kind: "pending", message: res.message };
++  }
++  return { kind: "session", session: res.data };
++}
++
++// Public — no login needed. Used by the register form / consent modal to
++// know which policy version the user is accepting.
++export async function getCurrentPolicy(): Promise<PolicyInfo> {
++  const res = await apiFetch<ApiEnvelope<PolicyInfo>>("/policies/current", { method: "GET" });
+   return res.data;
+ }
+ 
++// Records consent for the logged-in user (after login returned
++// needsConsent: true). Body per API_CHANGES.md §5.9: { version }.
++export async function acceptPolicy(version: string): Promise<void> {
++  await apiFetch<unknown>("/users/me/consents", {
++    method: "POST",
++    body: JSON.stringify({ version }),
++  });
++}
++
+ export async function loginWithGoogle(idToken: string): Promise<AuthSession> {
+   const res = await apiFetch<ApiEnvelope<AuthSession>>("/auth/google", {
+     method: "POST",
+@@ -104,6 +179,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
+       email: res.email,
+       fullname: res.fullName,
+       role: res.role,
++      accountStatus: res.accountStatus,
++      needsConsent: res.needsConsent,
+     };
+   } catch (err) {
+     if (err instanceof ApiError && err.status === 401) return null;
+-- 
+2.43.0
+
