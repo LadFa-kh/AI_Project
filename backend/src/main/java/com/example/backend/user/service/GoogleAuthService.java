@@ -68,6 +68,8 @@ public class GoogleAuthService {
                 .map(existing -> linkGoogleAccountIfNeeded(existing, googleId))
                 .orElseGet(() -> createGoogleUser(email, googleId, fullName));
 
+        com.example.backend.user.account.AccountGuard.requireActive(user); // B5
+
         // 4. ออก JWT ของระบบเราเอง — เหมือน login ปกติทุกอย่าง
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);

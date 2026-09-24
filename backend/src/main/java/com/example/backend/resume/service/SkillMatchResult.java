@@ -43,4 +43,14 @@ public class SkillMatchResult {
 
     /** เหตุผลที่ได้คะแนนเท่านี้ ใช้ต่างกรณีกัน เช่นตอนที่คะแนนเป็น 0 เพราะหาทักษะมาตรฐานไม่เจอ */
     private String reason;
+
+    // ===== B2 (optional) =====
+    /** รายละเอียดการจับคู่ทีละทักษะ */
+    private List<SkillMatchDetail> matchDetails;
+
+    /** ทักษะมาตรฐานที่ถูกจับคู่ได้ (ใช้คำนวณ missing skills ของแต่ละอาชีพ) */
+    private List<String> coveredStandardSkills;
+
+    /** SEMANTIC = ใช้ LLM ช่วย, WORD_ONLY = ปิดไว้, WORD_FALLBACK = LLM ใช้ไม่ได้เลยถอยกลับมาจับคู่ด้วยคำ */
+    private String matchMethod;
 }

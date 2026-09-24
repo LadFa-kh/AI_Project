@@ -19,13 +19,23 @@ public class ResumeController {
 
     private final ResumeService resumeService;
     private final CurrentUserProvider currentUserProvider;
+    private final com.example.backend.usage.UsageService usageService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResumeUploadResponseDto> uploadResume(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) throws Exception {
 
-        UUID userId = currentUserProvider.getCurrentUserId(authentication);
-        return ResponseEntity.ok(resumeService.processAndSaveResume(userId, file));
+        var user = currentUserProvider.getCurrentUser(authentication);
+        // B8: ตรวจ/หักเครดิต — หักเฉพาะตอนสำเร็จ
+        return ResponseEntity.ok(usageService.run(user, com.example.backend.usage.UsageService.RESUME_UPLOAD, () -> {
+            try {
+                return resumeService.processAndSaveResume(user.getId(), file);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e.getMessage(), e); // ไปจบที่ handler 500 เหมือนเดิม
+            }
+        }));
     }
 }

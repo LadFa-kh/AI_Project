@@ -22,4 +22,11 @@ public class AssessmentScoreResponseDto {
 
     /** คำอธิบายที่มาของคะแนนเป็นภาษาไทย เรียบเรียงจากตัวเลขชุดเดียวกับ scoreBreakdown */
     private String scoreExplanation;
+
+    /**
+     * B1: อาชีพที่เหมาะ 1–4 รายการ (percent รวม 100) — มีเฉพาะตอนผู้ใช้ไม่ได้กรอกตำแหน่งงาน
+     * กรอกตำแหน่งมาเอง = ไม่มีฟิลด์นี้ใน JSON
+     */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private List<CareerMatchDto> careerMatches;
 }

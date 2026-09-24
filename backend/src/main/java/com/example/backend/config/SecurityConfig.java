@@ -45,9 +45,9 @@ public class SecurityConfig {
                 .filter(s -> !s.isEmpty())
                 .toList());
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);   // ← ตัวนี้แหละที่ทำให้ cookie ส่งข้าม origin ได้
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -67,10 +67,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/skills/**").permitAll()
                         .requestMatchers("/api/v1/workplaces/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/policies/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/companies/me").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/companies/*", "/api/v1/companies/*/jobs").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        // หน้าจัดการประกาศงานของผู้ประกาศ เปิดให้ EMPLOYER ใช้ได้
-                        // ADMIN ใส่ไว้ด้วยเพื่อให้ทดสอบและดูแลระบบได้โดยไม่ต้องสลับบัญชี
-                        // การกรองว่าเป็นประกาศของใครทำอยู่ในชั้นบริการ ไม่ได้พึ่งกฎข้อนี้
                         .requestMatchers("/api/v1/employer/**").hasAnyRole("EMPLOYER", "ADMIN")
                         .anyRequest().authenticated()
                 )

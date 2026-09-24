@@ -19,6 +19,8 @@ public class SkillTaxonomyService {
             "and", "or", "for", "with", "the", "in", "of", "a", "an", "senior", "junior", "lead"
     );
 
+    /** B10: cache ตามชื่อตำแหน่ง — ข้อมูล O*NET ไม่เปลี่ยนระหว่างรัน ไม่ต้อง query ซ้ำ (ผลเป็น read-only) */
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "standardSkills", key = "#desiredRoleName == null ? '' : #desiredRoleName.trim().toLowerCase()")
     public List<String> extractAndAggregateStandardSkills(String desiredRoleName) {
         if (desiredRoleName == null || desiredRoleName.isBlank()) {
             return Collections.emptyList();
@@ -37,10 +39,10 @@ public class SkillTaxonomyService {
             }
         }
 
-        return new ArrayList<>(aggregatedSkillsSet);
+        return List.copyOf(new java.util.TreeSet<>(aggregatedSkillsSet)); // เรียงคงที่ + แก้ไขไม่ได้ (ปลอดภัยต่อ cache)
     }
 
-    private String normalize(String skillName) {
+    public String normalize(String skillName) {
         return skillName
                 .replaceAll("\\(.*?\\)", "")
                 .replaceAll("[^a-zA-Z0-9\\s.#+]", "")
@@ -173,5 +175,83 @@ public class SkillTaxonomyService {
      */
     public BigDecimal calculateOnetSkillMatchScore(List<String> extractedSkills, List<String> standardSkills) {
         return calculateOnetSkillMatchDetail(extractedSkills, standardSkills).getResumeScore();
+    }
+
+    // =====================================================================
+    // B2: ตัวช่วยให้ SemanticSkillMatcher ใช้กติกาเดียวกันกับของเดิม
+    // =====================================================================
+
+    /** คืนทักษะมาตรฐานตัวแรกที่ตรงกับ userSkill ด้วยกติกา word boundary เดิม (ไม่เจอ = null) */
+    public String findWordMatch(String userSkill, List<String> standardSkills) {
+        String userLower = normalize(userSkill);
+        if (userLower.length() < 2) return null;
+        for (String stdSkill : standardSkills) {
+            String stdLower = normalize(stdSkill);
+            if (stdLower.length() < 2) continue;
+            if (isWordBoundaryMatch(userLower, stdLower) || isWordBoundaryMatch(stdLower, userLower)) {
+                return stdSkill;
+            }
+        }
+        return null;
+    }
+
+    /** คำนวณคะแนนจากผลการจับคู่ที่ได้มาแล้ว — สูตร precision x penalty เดิมทุกประการ */
+    public SkillMatchResult scoreFromMatches(List<String> extractedSkills, int totalStandard,
+                                             List<String> matched, List<String> unmatched) {
+        int totalResume = extractedSkills == null ? 0 : extractedSkills.size();
+        if (totalStandard == 0 || totalResume == 0) {
+            SkillMatchResult r = calculateOnetSkillMatchDetail(extractedSkills, totalStandard == 0 ? List.of() : List.of("_"));
+            r.setTotalStandardSkills(totalStandard);
+            return r;
+        }
+        int matchedCount = matched.size();
+        double precision = ((double) matchedCount / totalResume) * 100.0;
+        double penalty = matchedCount == 0 ? 0.0 : matchedCount == 1 ? PENALTY_ONE_MATCH
+                : matchedCount == 2 ? PENALTY_TWO_MATCHES : 1.0;
+        double score = Math.min(100.0, precision * penalty);
+        String why;
+        if (matchedCount == 0) {
+            why = "ไม่มีทักษะในเรซูเม่ที่ตรงกับทักษะมาตรฐานของตำแหน่งงานนี้เลย";
+        } else if (matchedCount < PENALTY_FREE_THRESHOLD) {
+            why = "จับคู่ทักษะได้ " + matchedCount + " รายการ ซึ่งยังน้อยกว่า " + PENALTY_FREE_THRESHOLD
+                    + " รายการ คะแนนจึงถูกคูณด้วยตัวถ่วง " + penalty + " เพื่อไม่ให้สูงเกินจริง";
+        } else {
+            why = "จับคู่ทักษะได้ " + matchedCount + " รายการ ตั้งแต่ " + PENALTY_FREE_THRESHOLD
+                    + " รายการขึ้นไปไม่มีการคูณตัวถ่วง";
+        }
+        return SkillMatchResult.builder()
+                .resumeScore(BigDecimal.valueOf(score).setScale(2, RoundingMode.HALF_UP))
+                .matchedSkills(matched)
+                .unmatchedSkills(unmatched)
+                .totalResumeSkills(totalResume)
+                .totalStandardSkills(totalStandard)
+                .precisionScore(BigDecimal.valueOf(precision).setScale(2, RoundingMode.HALF_UP))
+                .penaltyFactor(BigDecimal.valueOf(penalty).setScale(2, RoundingMode.HALF_UP))
+                .reason(why)
+                .build();
+    }
+
+    /** B1: ทักษะยอดนิยมของตำแหน่ง (ใช้ token เดียวกับ extractAndAggregateStandardSkills) */
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "hotSkills", key = "#roleName == null ? '' : #roleName.trim().toLowerCase()")
+    public List<String> hotSkillsForRole(String roleName) {
+        if (roleName == null || roleName.isBlank()) return List.of();
+        Set<String> out = new TreeSet<>();
+        for (String token : roleName.split("[,/\\-_&()\\s]+")) {
+            String t = token.trim().toLowerCase();
+            if (t.length() >= 3 && !STOP_WORDS.contains(t)) {
+                List<String> r = softwareSkillRepository.findHotSkillNamesByTitleQuery(t);
+                if (r != null) out.addAll(r);
+            }
+        }
+        return List.copyOf(out);
+    }
+
+    /** B1: ลำดับความนิยมของทักษะ (ตัวเลขน้อย = นิยมมาก) — ไม่อยู่ในรายการ = ท้ายสุด */
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "skillPopularity")
+    public Map<String, Integer> skillPopularityRank() {
+        List<String> ordered = softwareSkillRepository.findItHotSkillsByPopularity();
+        Map<String, Integer> rank = new HashMap<>();
+        for (int i = 0; i < ordered.size(); i++) rank.putIfAbsent(ordered.get(i), i);
+        return Map.copyOf(rank);
     }
 }

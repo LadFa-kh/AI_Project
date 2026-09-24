@@ -17,4 +17,11 @@ public class RegisterRequestDto {
     private String telephone;
     private Role role;
 
+
+    // ===== B5: ใช้เมื่อ role = EMPLOYER =====
+    private String companyName;
+    private String companyTaxId;
+
+    // ===== B9: เวอร์ชันนโยบายความเป็นส่วนตัวที่ผู้ใช้กดยอมรับ =====
+    private String acceptedPolicyVersion;
 }

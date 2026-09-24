@@ -25,11 +25,18 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** ข้อผิดพลาดทางธุรกิจที่มีรหัส code สำหรับ frontend */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Object>> handleBusiness(BusinessException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .body(new ApiResponse<>(ex.getStatus().value(), ex.getMessage(), null, ex.getCode()));
+    }
+
     /** ข้อมูลที่ผู้ใช้ส่งมาไม่ถูกต้องตามเงื่อนไขทางธุรกิจ เช่น อีเมลซ้ำ ตอบแบบประเมินไม่ครบ */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), null));
+                .body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), null, "BAD_REQUEST"));
     }
 
     /**
@@ -42,7 +49,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Object>> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiResponse<>(HttpStatus.CONFLICT.value(), ex.getMessage(), null));
+                .body(new ApiResponse<>(HttpStatus.CONFLICT.value(), ex.getMessage(), null, "CONFLICT"));
     }
 
     /** ข้อมูลไม่ผ่านการตรวจสอบด้วย Bean Validation เช่น @Email หรือ @NotBlank */
@@ -56,7 +63,7 @@ public class GlobalExceptionHandler {
             message = "ข้อมูลที่ส่งมาไม่ถูกต้อง";
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), message, null));
+                .body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), message, null, "VALIDATION_ERROR"));
     }
 
     /** ไฟล์ที่อัปโหลดมีขนาดเกินค่าที่กำหนดไว้ */
@@ -64,7 +71,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleFileTooLarge(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(new ApiResponse<>(HttpStatus.PAYLOAD_TOO_LARGE.value(),
-                        "ไฟล์มีขนาดเกิน 5 เมกะไบต์ กรุณาลดขนาดไฟล์แล้วอัปโหลดใหม่", null));
+                        "ไฟล์มีขนาดเกิน 5 เมกะไบต์ กรุณาลดขนาดไฟล์แล้วอัปโหลดใหม่", null, "FILE_TOO_LARGE"));
     }
 
     /**
@@ -81,11 +88,26 @@ public class GlobalExceptionHandler {
      * แต่ไม่ส่งรายละเอียดกลับไปให้ผู้ใช้ เนื่องจากข้อความภายในอาจเปิดเผย
      * โครงสร้างฐานข้อมูลหรือเส้นทางไฟล์ ซึ่งเป็นช่องทางให้ผู้ไม่หวังดีใช้ประโยชน์
      */
+    /** พารามิเตอร์ใน URL ผิดรูปแบบ เช่น id ที่ไม่ใช่ UUID → 400 แทน 500 */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Object>> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(),
+                        "ค่า '" + ex.getName() + "' ไม่ถูกต้อง: " + ex.getValue(), null, "INVALID_PARAMETER"));
+    }
+
+    /** ข้อมูลซ้ำ/ผิดเงื่อนไขในฐานข้อมูล (unique, foreign key) → 409 แทน 500 */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse<>(HttpStatus.CONFLICT.value(), "ข้อมูลซ้ำกับที่มีอยู่แล้ว หรือขัดกับข้อมูลอื่นในระบบ", null, "DATA_CONFLICT"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleUnexpected(Exception ex) {
         log.error("เกิดข้อผิดพลาดที่ไม่ได้คาดคิด", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง", null));
+                        "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง", null, "INTERNAL_ERROR"));
     }
 }

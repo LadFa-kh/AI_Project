@@ -61,6 +61,9 @@ public class AssessmentService {
     private static final String GENERATE_RECOMMENDATION_PATH = "/api/v1/python/generate-recommendation";
     private static final String TRANSLATE_ROLE_NAME_PATH = "/api/v1/python/translate-role-name";
     private static final String INFER_ROLE_PATH = "/api/v1/python/infer-role-from-skills"; // [NEW]
+    private static final String INFER_ROLES_PATH = "/api/v1/python/infer-roles-from-skills"; // B1
+    private static final int MAX_CAREER_MATCHES = 4;
+    private static final int MAX_MISSING_PER_CAREER = 10;
 
     private final AssessmentAnswerRepository answerRepository;
     private final AssessmentQuestionRepository questionRepository;
@@ -73,6 +76,7 @@ public class AssessmentService {
     private final ResumeSkillRepository resumeSkillRepository;
     private final SkillTaxonomyService skillTaxonomyService;
     private final DesiredRoleRepository desiredRoleRepository;
+    private final com.example.backend.resume.service.SemanticSkillMatcher semanticSkillMatcher;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${fastapi.base.url:http://fastapi-ai:8000}")
@@ -194,7 +198,18 @@ public class AssessmentService {
 
         List<String> standardSkills = skillTaxonomyService.extractAndAggregateStandardSkills(englishRoleName);
 
-        SkillMatchResult matchResult = skillTaxonomyService.calculateOnetSkillMatchDetail(hardSkills, standardSkills);
+        // B1: ขอรายชื่ออาชีพจาก LLM "ขนานไปพร้อมกัน" กับการจับคู่ทักษะ เพื่อไม่ให้เวลารวมเกิน 30 วินาที
+        java.util.concurrent.CompletableFuture<List<String>> roleCandidatesFuture = roleInferredByAi
+                ? java.util.concurrent.CompletableFuture.supplyAsync(() -> inferRoleCandidates(hardSkills))
+                : null;
+
+        // B2: จับคู่แบบเข้าใจความหมาย (มี fallback เป็นแบบคำอัตโนมัติถ้า LLM ใช้ไม่ได้)
+        SkillMatchResult matchResult = semanticSkillMatcher.match(hardSkills, standardSkills);
+
+        // B1: ไม่ได้กรอกตำแหน่ง → จัดอันดับอาชีพที่เหมาะ 1–4 อาชีพ
+        List<com.example.backend.assessment.dto.CareerMatchDto> careerMatches = roleInferredByAi
+                ? buildCareerMatches(hardSkills, englishRoleName, standardSkills, matchResult, roleCandidatesFuture)
+                : null;
         BigDecimal resumeScore = matchResult.getResumeScore();
 
         ResumeScoreEntity resumeScoreEntity = new ResumeScoreEntity();
@@ -246,6 +261,8 @@ public class AssessmentService {
                 .finalScore(finalScore)
                 .roleUsedForMatching(effectiveRoleName)
                 .roleInferredByAi(roleInferredByAi)
+                .matchDetails(matchResult.getMatchDetails())
+                .matchMethod(matchResult.getMatchMethod())
                 .build();
 
         RecommendationResponseDto recommendationResult = callPythonRecommendationApi(
@@ -276,8 +293,104 @@ public class AssessmentService {
                 .recommendationItems(recommendationItems)
                 .scoreBreakdown(breakdown)
                 .scoreExplanation(recommendationResult.getScore_explanation())
+                .careerMatches(careerMatches)
                 .build();
     }
+
+    // =====================================================================
+    // B1: careerMatches
+    // =====================================================================
+
+    /**
+     * ขอรายชื่ออาชีพ 1–4 ชื่อจาก Python แล้ว "คำนวณเอง" ว่าแต่ละอาชีพตรงแค่ไหน
+     * น้ำหนัก = resumeScore ของอาชีพนั้น (ถ้าทุกอาชีพได้ 0 ใช้จำนวนทักษะที่ตรงแทน)
+     * อาชีพที่ไม่มีทักษะตรงเลยถูกตัดทิ้ง แต่อาชีพหลักจะอยู่เสมอ (อย่างน้อย 1 รายการ)
+     */
+    private List<com.example.backend.assessment.dto.CareerMatchDto> buildCareerMatches(
+            List<String> hardSkills, String primaryRole, List<String> primaryStandard, SkillMatchResult primaryResult,
+            java.util.concurrent.CompletableFuture<List<String>> candidatesFuture) {
+        try {
+            LinkedHashMap<String, String> roles = new LinkedHashMap<>();
+            if (primaryRole != null && !primaryRole.isBlank()) roles.put(primaryRole.trim().toLowerCase(), primaryRole.trim());
+            List<String> candidates;
+            try {
+                candidates = candidatesFuture.get(15, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (Exception e) {
+                candidates = List.of(); // ช้าเกิน/ล้มเหลว → ใช้อาชีพหลักอาชีพเดียว
+            }
+            for (String r : candidates) {
+                if (roles.size() >= MAX_CAREER_MATCHES) break;
+                roles.putIfAbsent(r.trim().toLowerCase(), r.trim());
+            }
+            if (roles.isEmpty()) return null;
+
+            List<String> names = new ArrayList<>();
+            List<SkillMatchResult> results = new ArrayList<>();
+            List<List<String>> standards = new ArrayList<>();
+            boolean first = true;
+            for (String role : roles.values()) {
+                List<String> std = first ? primaryStandard : skillTaxonomyService.extractAndAggregateStandardSkills(role);
+                // อาชีพรอง: ใช้คำตรง + ผลใน cache เท่านั้น ไม่เรียก LLM ใหม่ (เร็ว)
+                SkillMatchResult r = first ? primaryResult : semanticSkillMatcher.match(hardSkills, std, false);
+                if (!first && (r.getMatchedSkills() == null || r.getMatchedSkills().isEmpty())) continue;
+                names.add(role);
+                results.add(r);
+                standards.add(std);
+                first = false;
+            }
+
+            // ยกกำลังสองเพื่อขยายความต่าง: คะแนน 77 กับ 70 ห่างกันนิดเดียวถ้าใช้ตรง ๆ (27% vs 24%)
+            // แต่ยกกำลังสองแล้วอาชีพที่ตรงกว่าจะเด่นขึ้นชัดเจน โดยลำดับยังเหมือนเดิมทุกประการ
+            List<Double> weights = results.stream().map(r -> Math.pow(r.getResumeScore().doubleValue(), 2)).toList();
+            if (weights.stream().allMatch(w -> w <= 0)) {
+                weights = results.stream().map(r -> (double) r.getMatchedSkills().size()).toList();
+            }
+            List<Integer> pct = CareerMatchCalculator.toPercentages(weights);
+
+            List<com.example.backend.assessment.dto.CareerMatchDto> out = new ArrayList<>();
+            for (int i = 0; i < names.size(); i++) {
+                SkillMatchResult r = results.get(i);
+                Set<String> covered = new HashSet<>(r.getCoveredStandardSkills() == null ? List.of() : r.getCoveredStandardSkills());
+                // เลือกจาก "ทักษะยอดนิยม" ของอาชีพนั้นก่อน (เดิมเรียงตามตัวอักษร ได้ของแปลก ๆ อย่าง 3M Post-it App)
+                Set<String> std = new HashSet<>(standards.get(i));
+                List<String> hot = skillTaxonomyService.hotSkillsForRole(names.get(i)).stream()
+                        .filter(std::contains).toList();
+                List<String> pool = hot.isEmpty() ? standards.get(i) : hot;
+                // เรียงตามความนิยมในตลาดสาย IT (เดิมเรียงตามตัวอักษร ได้ Adobe ขึ้นก่อน)
+                Map<String, Integer> rank = skillTaxonomyService.skillPopularityRank();
+                List<String> missing = pool.stream().filter(s -> !covered.contains(s))
+                        .sorted(java.util.Comparator.<String>comparingInt(s -> rank.getOrDefault(s, Integer.MAX_VALUE))
+                                .thenComparing(java.util.Comparator.naturalOrder()))
+                        .limit(MAX_MISSING_PER_CAREER).toList();
+                out.add(com.example.backend.assessment.dto.CareerMatchDto.builder()
+                        .roleName(names.get(i)).percent(pct.get(i))
+                        .matchedSkills(r.getMatchedSkills()).missingSkills(missing).build());
+            }
+            out.sort((a, b) -> Integer.compare(b.getPercent(), a.getPercent()));
+            return out;
+        } catch (Exception e) {
+            System.err.println("careerMatches failed, skipping: " + e.getMessage());
+            return null; // ไม่ให้ทั้ง submit พังเพราะส่วนเสริม
+        }
+    }
+
+    private List<String> inferRoleCandidates(List<String> hardSkills) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("hardSkills", String.join(" | ", hardSkills));
+        body.add("maxRoles", String.valueOf(MAX_CAREER_MATCHES));
+        try {
+            RoleCandidates res = restTemplate.postForObject(fastapiBaseUrl + INFER_ROLES_PATH,
+                    new HttpEntity<>(body, headers), RoleCandidates.class);
+            if (res != null && res.roles != null) return res.roles;
+        } catch (Exception e) {
+            System.err.println("Role candidates failed, using primary role only: " + e.getMessage());
+        }
+        return List.of();
+    }
+
+    static class RoleCandidates { public List<String> roles; }
 
     /**
      * แปล desiredRoleName เป็นชื่ออาชีพภาษาอังกฤษผ่าน Python/Gemini

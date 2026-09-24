@@ -24,8 +24,11 @@ public class CurrentUserProvider {
             throw new IllegalArgumentException("กรุณาเข้าสู่ระบบก่อนใช้งาน");
         }
 
-        return userRepository.findByEmail(authentication.getName())
+        UserEntity user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new IllegalArgumentException("ไม่พบข้อมูลผู้ใช้ที่เข้าสู่ระบบอยู่"));
+        // B5: token เก่าของบัญชีที่ถูกระงับ/ปฏิเสธภายหลัง ใช้ต่อไม่ได้
+        com.example.backend.user.account.AccountGuard.requireActive(user);
+        return user;
     }
 
     public UUID getCurrentUserId(Authentication authentication) {
