@@ -16,7 +16,7 @@ import { acceptPolicy, getCurrentPolicy, type PolicyInfo } from "@/lib/auth-serv
 import { describeError } from "@/lib/api-client";
 import styles from "./consent-modal.module.css";
 
-const FALLBACK_POLICY: Pick<PolicyInfo, "version" | "url"> = { version: "1.0", url: "/privacy" };
+const FALLBACK_POLICY: Pick<PolicyInfo, "version" | "url"> = { version: "1.0", url: "/privacy-policy" };
 
 export function ConsentModal() {
   const router = useRouter();

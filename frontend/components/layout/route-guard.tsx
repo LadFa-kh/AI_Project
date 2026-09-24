@@ -10,7 +10,9 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
-const PUBLIC_ROUTES = ["/"];
+// /privacy-policy must be readable before sign-up (linked from the register
+// form's consent checkbox) — API_CHANGES.md §5.9.
+const PUBLIC_ROUTES = ["/", "/privacy-policy"];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

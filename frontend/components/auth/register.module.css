@@ -159,7 +159,7 @@
 
 .heading {
   margin: 0;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-noto-thai), system-ui, sans-serif;
   font-weight: 600;
   font-size: clamp(28px, 4vw, 32px);
   letter-spacing: -0.02em;
@@ -349,7 +349,7 @@
   width: 100%;
   min-height: 44px;
   margin-top: 4px;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-noto-thai), system-ui, sans-serif;
   font-weight: 600;
   font-size: 15px;
   color: #ffffff;
@@ -400,7 +400,7 @@
   gap: 10px;
   width: 100%;
   min-height: 44px;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-noto-thai), system-ui, sans-serif;
   font-weight: 500;
   font-size: 14px;
   color: var(--nocturne-text-primary);

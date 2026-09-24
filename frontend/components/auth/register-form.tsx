@@ -443,7 +443,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
         />
         <label htmlFor="terms" className={styles.checkLabel}>
           ฉันยอมรับ <a href="/terms" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>ข้อกำหนดการใช้งาน</a> และ{" "}
-          <a href="/privacy" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>นโยบายความเป็นส่วนตัว</a>
+          <a href="/privacy-policy" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>นโยบายความเป็นส่วนตัว</a>
         </label>
       </div>
       {errors.terms && <p id="terms-error" className={styles.fieldError} style={{ marginTop: "-8px" }}>{errors.terms}</p>}

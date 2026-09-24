@@ -88,7 +88,7 @@
 
 .splitHeading {
   margin: 0;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-noto-thai), system-ui, sans-serif;
   font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.5rem);
   font-weight: 800;
   color: var(--nocturne-text-primary);
