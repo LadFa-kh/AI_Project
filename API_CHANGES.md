@@ -665,3 +665,42 @@ POST /api/v1/users/me/consents
 
 ขั้นตอนทดสอบทุกฟีเจอร์แบบทีละ Flow (นักศึกษา / ผู้ประกาศงาน / แอดมิน / สาธารณะ) พร้อมโค้ดที่วางใน Console ได้เลย
 อยู่ในไฟล์ **`TESTING_FLOWS.md`** ที่ root ของโปรเจกต์
+
+---
+
+### 5.13 ตอบ FRONTEND_REQUESTS (24 ก.ย. 2569)
+
+**ยืนยัน**
+- `GET /api/v1/admin/employers` ห่อใน `{ status, message, data }` และ `data` เป็น array
+- path หน้านโยบายคือ `/privacy-policy` (มาจาก `GET /policies/current` ช่อง `url`) — **เนื้อหาร่างอยู่ที่ `docs/PRIVACY_POLICY_TH.md`** (ยังต้องให้เจ้าของโครงงานตรวจก่อนเผยแพร่)
+- 403 `EMPLOYER_REJECTED` มีเหตุผลใน `message` อยู่แล้ว เช่น `"บัญชีผู้ประกาศงานไม่ผ่านการอนุมัติ (เหตุผล: ข้อมูลไม่ครบ)"`
+- `requiredOnRegister` ยังเป็น `false` จนกว่าหน้า `/privacy-policy` จะเสร็จ
+
+**ฟิลด์ใหม่ (optional ทั้งหมด)**
+
+`careerMatches[].roleNameTh` — ชื่อสายงานภาษาไทย:
+```json
+{ "roleName": "Software Developers, Applications", "roleNameTh": "นักพัฒนาซอฟต์แวร์ (แอปพลิเคชัน)", "percent": 32, "...": "..." }
+```
+
+`requiredSkillsDetail` ในประกาศงาน (`/workplaces`, `/workplaces/{id}`, `/workplaces?page=`) — **มีเฉพาะตอนล็อกอินและเคยอัปโหลดเรซูเม่แล้ว**
+เทียบกับเรซูเม่ล่าสุดของผู้ใช้ `requiredSkills` แบบเดิมยังอยู่เหมือนเดิม:
+```json
+"requiredSkills": ["Java", "Docker"],
+"requiredSkillsDetail": [ { "skillName": "Java", "isMatch": true }, { "skillName": "Docker", "isMatch": false } ]
+```
+
+**Cost per action (ADMIN)** — `GET /api/v1/admin/usage/cost?from=2026-09-01&to=2026-09-30`
+```json
+{ "data": {
+  "pricePer1M": { "input": 0.1, "output": 0.4, "currency": "USD" },
+  "byAction": [
+    { "name": "ASSESSMENT_SUBMIT", "samples": 12, "model": "gemini-3.1-flash-lite-preview", "avgInputTokens": 5400, "avgOutputTokens": 1300, "avgCost": 0.00106 },
+    { "name": "RESUME_UPLOAD", "...": "..." } ],
+  "byPythonEndpoint": [
+    { "name": "judge-skill-matches", "samples": 12, "avgLlmCalls": 1.0, "avgInputTokens": 2100, "avgOutputTokens": 900, "avgCost": 0.00057 } ] } }
+```
+(ตัวเลขข้างบนเป็นรูปแบบตัวอย่าง ไม่ใช่ค่าจริง)
+- เริ่มนับ token ตั้งแต่ deploy รอบนี้ — log ก่อนหน้านี้ไม่มีตัวเลข ต้องใช้งานจริงสักพักก่อนจะได้ค่าเฉลี่ย
+- `judge-skill-matches` = ค่าใช้จ่ายของ semantic matching (B2), `process-resume` = อัปโหลดเรซูเม่
+- ราคาต่อ 1M token ตั้งที่ backend (`app.llm.price.*`) ถ้ายังเป็น 0 ช่อง `avgCost` จะเป็น 0

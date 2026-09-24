@@ -47,7 +47,7 @@ import org.springframework.stereotype.Service;
         private final ResumeSkillRepository resumeSkillRepository;
         private final AssessmentQuestionRepository assessmentQuestionRepository;
         private final UserRepository userRepository;
-        private final RestTemplate restTemplate = new RestTemplate();
+        private final RestTemplate restTemplate = com.example.backend.usage.TokenMeter.instrument(new RestTemplate());
 
         @Value("${fastapi.base.url:http://fastapi-ai:8000}")
         private String fastapiBaseUrl;

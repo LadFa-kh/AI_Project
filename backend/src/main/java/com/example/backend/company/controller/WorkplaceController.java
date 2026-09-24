@@ -17,6 +17,7 @@ import java.util.UUID;
 public class WorkplaceController {
 
     private final JobDescriptionService jobDescriptionService;
+    private final com.example.backend.company.service.JobSkillAnnotator skillAnnotator;
 
     /**
      * B3: ค่าเริ่มต้นแสดงเฉพาะ OPEN (หน้าบ้านเดิมใช้ได้เหมือนเดิม)
@@ -33,15 +34,19 @@ public class WorkplaceController {
         if (page != null) {
             String st = all ? "ALL" : (isStaff(auth) && status != null ? status : "OPEN");
             PageResponse<JobDescriptionResponseDto> p = jobDescriptionService.searchJobs(st, q, page, size);
+            skillAnnotator.annotateAll(p.getContent(), auth);
             return ResponseEntity.ok(p);
         }
         List<JobDescriptionResponseDto> list = jobDescriptionService.getAllJobDescriptions(all);
+        skillAnnotator.annotateAll(list, auth);
         return ResponseEntity.ok(list);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<JobDescriptionResponseDto> getWorkplaceById(Authentication auth, @PathVariable UUID id) {
-        return ResponseEntity.ok(jobDescriptionService.getJobDescriptionById(id, isStaff(auth)));
+        JobDescriptionResponseDto job = jobDescriptionService.getJobDescriptionById(id, isStaff(auth));
+        skillAnnotator.annotateAll(List.of(job), auth);
+        return ResponseEntity.ok(job);
     }
 
     static boolean isStaff(Authentication auth) {

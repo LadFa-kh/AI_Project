@@ -13,6 +13,21 @@ from pythainlp.tokenize import word_tokenize
 app = FastAPI()
 logger = logging.getLogger(__name__)
 
+
+@app.middleware("http")
+async def llm_usage_headers(request, call_next):
+    acc = {"in": 0, "out": 0, "calls": 0, "model": ""}
+    token = _usage_var.set(acc)
+    try:
+        response = await call_next(request)
+    finally:
+        _usage_var.reset(token)
+    response.headers["X-LLM-Input-Tokens"] = str(acc["in"])
+    response.headers["X-LLM-Output-Tokens"] = str(acc["out"])
+    response.headers["X-LLM-Calls"] = str(acc["calls"])
+    response.headers["X-LLM-Model"] = acc["model"]
+    return response
+
 # -------------------------------------------------------------
 # 1. Pydantic Schemas
 # -------------------------------------------------------------
@@ -98,6 +113,32 @@ client = genai.Client(
     http_options={"api_version": "v1beta", "base_url": BASE_URL},
     api_key=COMET_API_KEY,
 )
+
+
+# -------------------------------------------------------------
+# 3.1 [Cost per action] นับ token ที่ใช้ต่อ 1 คำขอ แล้วส่งกลับให้ Java ทาง response header
+#   X-LLM-Input-Tokens / X-LLM-Output-Tokens / X-LLM-Calls / X-LLM-Model
+# Java รวมค่าจากทุก endpoint ที่เรียกใน 1 action แล้วบันทึกลง usage_logs
+# -------------------------------------------------------------
+import contextvars
+_usage_var = contextvars.ContextVar("llm_usage", default=None)
+_orig_generate_content = client.models.generate_content
+
+
+def _metered_generate_content(*args, **kwargs):
+    resp = _orig_generate_content(*args, **kwargs)
+    acc = _usage_var.get()
+    if acc is not None:
+        um = getattr(resp, "usage_metadata", None)
+        if um is not None:
+            acc["in"] += int(getattr(um, "prompt_token_count", 0) or 0)
+            acc["out"] += int(getattr(um, "candidates_token_count", 0) or 0) + int(getattr(um, "thoughts_token_count", 0) or 0)
+        acc["calls"] += 1
+        acc["model"] = str(kwargs.get("model", "") or "")
+    return resp
+
+
+client.models.generate_content = _metered_generate_content
 
 
 # -------------------------------------------------------------
@@ -306,10 +347,14 @@ class RoleCandidatesSchema(BaseModel):
     roles: List[str] = Field(
         description="ชื่อตำแหน่งงานภาษาอังกฤษตามชื่ออาชีพมาตรฐาน O*NET เรียงจากเหมาะที่สุดไปน้อยที่สุด 1 ถึง 4 ชื่อ ไม่ซ้ำกัน"
     )
+    roles_th: List[str] = Field(
+        default_factory=list,
+        description="ชื่อตำแหน่งภาษาไทยที่คนไทยเข้าใจ ลำดับเดียวกับ roles ทุกตัว (เช่น 'Software Developers, Applications' = 'นักพัฒนาซอฟต์แวร์ (แอปพลิเคชัน)')"
+    )
 
 
 @app.post("/api/v1/python/infer-roles-from-skills", response_model=RoleCandidatesSchema)
-def infer_roles_from_skills(hardSkills: str = Form(default=""), maxRoles: int = Form(default=4)):
+def infer_roles_from_skills(hardSkills: str = Form(default=""), maxRoles: int = Form(default=4), primaryRole: str = Form(default="")):
     try:
         skills_list = [s.strip() for s in hardSkills.split("|") if s.strip()] if hardSkills else []
         max_roles = max(1, min(int(maxRoles), 4))
@@ -320,6 +365,8 @@ def infer_roles_from_skills(hardSkills: str = Form(default=""), maxRoles: int = 
         เลือกตำแหน่งงานที่ผู้สมัครน่าจะเหมาะ 1 ถึง {max_roles} ตำแหน่ง เรียงจากเหมาะที่สุด
         ใช้ชื่อตำแหน่งภาษาอังกฤษที่ตรงกับชื่ออาชีพมาตรฐาน O*NET และห้ามซ้ำกัน
         ถ้าทักษะชี้ไปทางเดียวชัดเจน ตอบตำแหน่งเดียวก็ได้
+        และให้ roles_th เป็นชื่อภาษาไทยของแต่ละตำแหน่ง ลำดับเดียวกับ roles
+        ถ้าในรายการด้านล่างมีตำแหน่งหลักอยู่แล้ว ให้ใส่เป็นตำแหน่งแรก: {primaryRole}
         """
         response = client.models.generate_content(
             model="gemini-3.1-flash-lite-preview",
@@ -327,13 +374,14 @@ def infer_roles_from_skills(hardSkills: str = Form(default=""), maxRoles: int = 
             config={'response_mime_type': 'application/json', 'response_schema': RoleCandidatesSchema},
         )
         result = RoleCandidatesSchema.model_validate_json(response.text)
-        seen, roles = set(), []
-        for r in result.roles:
+        seen, roles, roles_th = set(), [], []
+        for i, r in enumerate(result.roles):
             key = r.strip().lower()
             if key and key not in seen:
                 seen.add(key)
                 roles.append(r.strip())
-        return RoleCandidatesSchema(roles=roles[:max_roles])
+                roles_th.append(result.roles_th[i].strip() if i < len(result.roles_th) else "")
+        return RoleCandidatesSchema(roles=roles[:max_roles], roles_th=roles_th[:max_roles])
     except Exception as e:
         logger.exception("Role candidates inference failed")
         raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")

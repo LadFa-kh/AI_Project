@@ -27,6 +27,9 @@ public interface UsageLogRepository extends JpaRepository<UsageLogEntity, UUID> 
 
     List<UsageLogEntity> findByUser_Id(UUID userId);
 
+    @Query("select u from UsageLogEntity u where u.success = true and u.inputTokens is not null and u.createdAt >= :from and u.createdAt < :to")
+    List<UsageLogEntity> findMetered(@Param("from") Instant from, @Param("to") Instant to);
+
     @Modifying
     @Query("update UsageLogEntity u set u.user = null where u.user.id = :userId")
     int anonymizeUser(@Param("userId") UUID userId);
