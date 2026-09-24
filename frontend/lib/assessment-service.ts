@@ -52,6 +52,29 @@ export type ScoreBreakdown = {
 
   roleUsedForMatching: string;
   roleInferredByAi: boolean;
+
+  // B2 (API_CHANGES.md §5.2) — how each resume skill was matched.
+  matchMethod?: "SEMANTIC" | "WORD_FALLBACK";
+  matchDetails?: SkillMatchDetail[];
+};
+
+export type SkillMatchDetail = {
+  resumeSkill: string;
+  standardSkill: string | null;
+  method: "WORD" | "SEMANTIC" | "NONE";
+  confidence: number | null;
+};
+
+// B1 (API_CHANGES.md §5.1) — only present when the user left
+// desiredRoleName empty. 1–4 items, sorted by percent desc, integer
+// percents that always sum to 100 (computed by the backend — never
+// recompute or re-normalize client-side).
+export type CareerMatch = {
+  roleName: string;
+  percent: number;
+  matchedSkills: string[];
+  /** ≤ 10 items, most widely used in the market first. */
+  missingSkills: string[];
 };
 
 export type AssessmentSubmitResult = {
@@ -70,6 +93,8 @@ export type AssessmentSubmitResult = {
   // sessionStorage before this change won't have them.
   scoreBreakdown?: ScoreBreakdown;
   scoreExplanation?: string;
+
+  careerMatches?: CareerMatch[];
 };
 
 // Each option is prefixed like "1. พอใช้" / "2. มาตรฐาน" — the leading

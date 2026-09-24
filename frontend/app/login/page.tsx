@@ -249,9 +249,17 @@ function FlipStage({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }
     // Re-measure shortly after mount too, in case web fonts shift line
     // heights after the first paint.
     const t = setTimeout(measure, 50);
+    // Also re-measure whenever either face's content changes height —
+    // e.g. the register form's employer fields, field errors, or the
+    // "pending approval" notice replacing the form. Without this the stage
+    // keeps its old height and clips the card.
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro && frontRef.current) ro.observe(frontRef.current);
+    if (ro && backRef.current) ro.observe(backRef.current);
     return () => {
       window.removeEventListener("resize", measure);
       clearTimeout(t);
+      ro?.disconnect();
     };
   }, [mode]);
 
@@ -290,7 +298,7 @@ function FlipStage({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }
               </div>
             </div>
 
-            <RegisterForm />
+            <RegisterForm onSwitchToLogin={() => setMode("login")} />
 
             <p className={`${styles.footer} ${styles.animateIn} ${styles.delay5}`}>
               มีบัญชีอยู่แล้ว?{" "}

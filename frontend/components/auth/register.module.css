@@ -458,3 +458,57 @@
     transition: none;
   }
 }
+
+/* ===== Account type picker (นักศึกษา / ผู้ประกาศงาน) — API_CHANGES.md §5.5 ===== */
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nocturne-text-secondary);
+}
+.roleToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.roleOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 56px;
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+  color: var(--nocturne-text-primary);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border-strong);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.18s ease-out, background 0.18s ease-out, box-shadow 0.18s ease-out;
+}
+.roleOption:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-home-hero-accent-1) 55%, transparent); }
+.roleOption:focus-visible { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; }
+.roleOptionActive {
+  background: color-mix(in srgb, var(--color-home-hero-accent-1) 12%, transparent);
+  border-color: var(--color-home-hero-accent-1);
+  box-shadow: 0 0 0 1px var(--color-home-hero-accent-1) inset;
+}
+.roleOptionLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+.roleOptionHint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--nocturne-text-secondary);
+}
+.fieldHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--nocturne-text-secondary);
+}
+.optionalTag {
+  font-weight: 400;
+  color: var(--nocturne-text-muted);
+}

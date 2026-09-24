@@ -12,13 +12,34 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 export class ApiError extends Error {
   status: number;
   body: unknown;
+  /** Machine-readable error code from the backend (API_CHANGES.md §5.0),
+   *  e.g. "EMPLOYER_PENDING", "EMAIL_TAKEN". Branch on this, never on
+   *  `message` — backend may reword messages, codes stay stable. */
+  code: string | null;
+  /** Seconds from the `Retry-After` header (sent with 429 RATE_LIMITED). */
+  retryAfter: number | null;
 
-  constructor(status: number, message: string, body: unknown) {
+  constructor(status: number, message: string, body: unknown, retryAfter: number | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.body = body;
+    this.code = extractErrorCode(body);
+    this.retryAfter = retryAfter;
   }
+}
+
+function extractErrorCode(body: unknown): string | null {
+  if (body && typeof body === "object") {
+    const code = (body as Record<string, unknown>).code;
+    if (typeof code === "string" && code.trim()) return code;
+  }
+  return null;
+}
+
+/** Returns the backend error `code` if `err` is an ApiError that has one. */
+export function getErrorCode(err: unknown): string | null {
+  return err instanceof ApiError ? err.code : null;
 }
 
 export class NetworkError extends Error {
@@ -73,8 +94,39 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     : null;
 
   if (!response.ok) {
-    throw new ApiError(response.status, extractErrorMessage(body, response.status), body);
+    const retryHeader = Number(response.headers.get("retry-after"));
+    throw new ApiError(
+      response.status,
+      extractErrorMessage(body, response.status),
+      body,
+      Number.isFinite(retryHeader) && retryHeader > 0 ? retryHeader : null
+    );
   }
 
   return body as T;
+}
+
+// Thai copy for error codes where the backend message alone isn't enough
+// (API_CHANGES.md §5.0). Anything not listed falls back to the backend's
+// own `message`, then to `fallback`.
+export function describeError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    switch (err.code) {
+      case "RATE_LIMITED":
+        return err.retryAfter
+          ? `ส่งคำขอถี่เกินไป กรุณารอ ${err.retryAfter} วินาทีแล้วลองใหม่`
+          : "ส่งคำขอถี่เกินไป กรุณารอสักครู่แล้วลองใหม่";
+      case "CREDITS_EXHAUSTED":
+        return "เครดิตการใช้งานของเดือนนี้หมดแล้ว กรุณารอรอบถัดไป";
+      case "EMAIL_TAKEN":
+        return "อีเมลนี้ถูกใช้สมัครแล้ว";
+      case "TELEPHONE_TAKEN":
+        return "เบอร์โทรนี้ถูกใช้สมัครแล้ว";
+      case "CONSENT_REQUIRED":
+        return "กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก";
+    }
+    return err.message || fallback;
+  }
+  if (err instanceof NetworkError) return err.message;
+  return fallback;
 }

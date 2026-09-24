@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent } from "react";
 import { login, loginWithGoogle } from "@/lib/auth-service";
-import { ApiError, NetworkError } from "@/lib/api-client";
+import { describeError, getErrorCode } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleSignIn } from "@/lib/use-google-signin";
+import { EmployerPendingNotice } from "./employer-pending-notice";
 import styles from "./login.module.css";
 
 type FieldErrors = {
@@ -35,6 +36,8 @@ export function LoginForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<"default" | "loading" | "error">("default");
   const [formError, setFormError] = useState<string | null>(null);
+  // Employer account still awaiting admin approval (403 EMPLOYER_PENDING).
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
   const isLoading = status === "loading";
 
@@ -61,11 +64,12 @@ export function LoginForm() {
       router.push("/");
     } catch (err) {
       setStatus("error");
-      setFormError(
-        err instanceof ApiError || err instanceof NetworkError
-          ? err.message
-          : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
-      );
+      if (getErrorCode(err) === "EMPLOYER_PENDING") {
+        setPendingMessage(describeError(err, ""));
+        return;
+      }
+      // EMPLOYER_REJECTED / ACCOUNT_SUSPENDED: backend message explains why.
+      setFormError(describeError(err, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"));
     }
   }
 
@@ -80,11 +84,11 @@ export function LoginForm() {
         router.push("/");
       } catch (err) {
         setStatus("error");
-        setFormError(
-          err instanceof ApiError || err instanceof NetworkError
-            ? err.message
-            : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
-        );
+        if (getErrorCode(err) === "EMPLOYER_PENDING") {
+          setPendingMessage(describeError(err, ""));
+          return;
+        }
+        setFormError(describeError(err, "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
       }
     },
     [router, setSession]
@@ -94,7 +98,20 @@ export function LoginForm() {
     useGoogleSignIn(handleGoogleIdToken);
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
+    <>
+    {pendingMessage !== null && (
+      <EmployerPendingNotice
+        message={pendingMessage}
+        backLabel="ลองเข้าสู่ระบบอีกครั้ง"
+        onBack={() => {
+          setPendingMessage(null);
+          setStatus("default");
+        }}
+      />
+    )}
+    {/* Kept mounted (just hidden) — unmounting would destroy the Google
+        button GIS rendered into googleContainerRef. */}
+    <form className={styles.form} onSubmit={handleSubmit} noValidate style={pendingMessage !== null ? { display: "none" } : undefined}>
       {(formError || googleError) && (
         <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -196,5 +213,6 @@ export function LoginForm() {
         )}
       </div>
     </form>
+    </>
   );
 }

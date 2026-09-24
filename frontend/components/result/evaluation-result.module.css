@@ -438,6 +438,198 @@
 }
 .breakdownWarning svg { flex: none; margin-top: 1px; }
 
+/* ===== Career matches ("สายงานที่เหมาะกับคุณ") — B1, API_CHANGES.md §5.1.
+   Only shown when the user left the desired role empty. Percents come
+   straight from the backend (sum to 100). ===== */
+.careerBlock {
+  margin-top: 1.75rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: 24px;
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.careerHead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.careerTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--nocturne-text-primary);
+}
+
+.careerSub {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--nocturne-text-secondary);
+}
+
+.careerList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.careerRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--nocturne-surface-hover);
+  border: 1px solid var(--nocturne-border);
+  cursor: pointer;
+  transition: border-color 0.18s ease-out, background 0.18s ease-out;
+}
+.careerRow:hover { border-color: var(--nocturne-border-strong); }
+.careerRow:focus-within { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; }
+.careerRowActive {
+  border-color: var(--color-home-hero-accent-1);
+  background: color-mix(in srgb, var(--color-home-hero-accent-1) 10%, transparent);
+}
+
+/* Visually hidden but still focusable/announced — the whole row is the label. */
+.careerRadio {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.careerRank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--nocturne-text-primary);
+  background: var(--nocturne-surface);
+  border: 1px solid var(--nocturne-border-strong);
+}
+.careerRowActive .careerRank {
+  color: #ffffff;
+  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
+  border-color: transparent;
+}
+
+.careerMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.careerNameRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.careerName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--nocturne-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.careerBestTag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nocturne-success-text);
+  background: color-mix(in srgb, var(--nocturne-success-text) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nocturne-success-text) 40%, transparent);
+}
+
+.careerBarTrack {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--nocturne-border);
+  overflow: hidden;
+}
+
+.careerBarFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--color-home-hero-accent-1) 65%, transparent);
+  transition: width 0.6s ease-out;
+}
+.careerBarFillTop {
+  background: linear-gradient(90deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
+}
+
+.careerPercent {
+  min-width: 3.2rem;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--nocturne-text-primary);
+}
+
+.careerNote {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--nocturne-text-secondary);
+}
+
+.careerDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--nocturne-border);
+}
+
+.careerDetailTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--nocturne-text-primary);
+}
+
+.careerDetailDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-home-hero-accent-2);
+}
+
+.careerComplete {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--nocturne-success-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .careerBarFill { transition: none; }
+}
+
 /* ===== CTA row ===== */
 .ctaRow {
   margin-top: 2rem;

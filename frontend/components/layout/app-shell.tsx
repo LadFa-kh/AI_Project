@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { TopNav } from "./top-nav";
 import { RouteGuard } from "./route-guard";
+import { ConsentModal } from "@/components/auth/consent-modal";
 
 // The old Stardust sidebar (navbar.tsx / mobile-topbar.tsx / nav-context.tsx)
 // has been retired app-wide per explicit request — every route now uses the
@@ -22,8 +23,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Home ("/") renders its own TopNav inline as part of its hero section
   // (see home-hero-demo.tsx) — rendering it again here would duplicate it.
+  // ConsentModal renders nothing unless the logged-in user has
+  // needsConsent: true (API_CHANGES.md §5.9) — mounted on every page that
+  // has a session, i.e. everything except /login and /register.
   if (pathname === "/") {
-    return <RouteGuard>{children}</RouteGuard>;
+    return (
+      <>
+        <RouteGuard>{children}</RouteGuard>
+        <ConsentModal />
+      </>
+    );
   }
 
   return (
@@ -35,6 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-dvh pt-[88px] sm:pt-[96px]" style={{ background: "var(--nocturne-bg)" }}>
         <RouteGuard>{children}</RouteGuard>
       </div>
+      <ConsentModal />
     </>
   );
 }

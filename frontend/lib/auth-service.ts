@@ -1,7 +1,8 @@
 // Auth API calls. Endpoints confirmed against live backend Swagger UI:
 // POST /auth/login    { email, password }            -> { status, message, data: { userId, email, fullname, role, accessToken, refreshToken } }
-// POST /auth/register { email, password, fullname, telephone? } -> same shape as login
-// (role defaults server-side to STUDENT on register — not sent by the client)
+// POST /auth/register { email, password, fullname, telephone?, acceptedPolicyVersion?,
+//                       role?: "EMPLOYER", companyName?, companyTaxId? } -> same shape as login
+// (no role = STUDENT; role EMPLOYER → 201 + code EMPLOYER_PENDING, no cookie — API_CHANGES.md §5.5)
 //
 // Auth runs on an httpOnly `accessToken` cookie set automatically by the
 // browser on login/register/google-login (see api-client.ts's
@@ -25,21 +26,63 @@
 
 import { apiFetch, ApiError } from "./api-client";
 
+export type AccountStatus = "ACTIVE" | "PENDING" | "REJECTED" | "SUSPENDED";
+
 export type AuthUser = {
   userId: string;
   email: string;
   fullname: string;
   role: string;
+  // Added in backend round B5/B9 (API_CHANGES.md §5.5, §5.9) — optional so
+  // older responses/sessions without them still type-check.
+  accountStatus?: AccountStatus;
+  /** true = user must (re)accept the current privacy policy → ConsentModal. */
+  needsConsent?: boolean;
 };
 
 export type AuthSession = AuthUser & {
-  accessToken: string;
-  refreshToken: string;
+  accessToken: string | null;
+  refreshToken?: string | null;
+};
+
+export type RegisterRole = "STUDENT" | "EMPLOYER";
+
+export type RegisterInput = {
+  email: string;
+  password: string;
+  fullname: string;
+  telephone?: string;
+  /** Omit (or STUDENT) for a normal student account. */
+  role?: RegisterRole;
+  /** Required by the form when role = EMPLOYER. */
+  companyName?: string;
+  /** Optional, 10–13 digits. */
+  companyTaxId?: string;
+  /** Version from GET /policies/current the user ticked "accept" for. */
+  acceptedPolicyVersion?: string;
+};
+
+/**
+ * - `session`: account is usable now (cookie set) — students.
+ * - `pending`: employer account created but waits for admin approval;
+ *   no cookie, cannot log in yet (code EMPLOYER_PENDING, HTTP 201).
+ */
+export type RegisterResult =
+  | { kind: "session"; session: AuthSession }
+  | { kind: "pending"; message: string };
+
+export type PolicyInfo = {
+  policyType: string;
+  version: string;
+  url: string;
+  effectiveDate: string;
+  requiredOnRegister: boolean;
 };
 
 type ApiEnvelope<T> = {
   status: number;
   message: string;
+  code?: string;
   data: T;
 };
 
@@ -52,6 +95,8 @@ type CurrentUserResponse = {
   fullName: string;
   role: string;
   authProvider?: string;
+  accountStatus?: AccountStatus;
+  needsConsent?: boolean;
 };
 
 export async function login(email: string, password: string): Promise<AuthSession> {
@@ -62,17 +107,47 @@ export async function login(email: string, password: string): Promise<AuthSessio
   return res.data;
 }
 
-export async function register(
-  email: string,
-  password: string,
-  fullname: string,
-  telephone?: string
-): Promise<AuthSession> {
+// Only sends the fields that apply — per API_CHANGES.md §5.5, don't send
+// extra/empty fields (e.g. no `role` at all for students).
+export async function register(input: RegisterInput): Promise<RegisterResult> {
+  const body: Record<string, string> = {
+    email: input.email,
+    password: input.password,
+    fullname: input.fullname,
+  };
+  if (input.telephone) body.telephone = input.telephone;
+  if (input.acceptedPolicyVersion) body.acceptedPolicyVersion = input.acceptedPolicyVersion;
+  if (input.role === "EMPLOYER") {
+    body.role = "EMPLOYER";
+    if (input.companyName) body.companyName = input.companyName;
+    if (input.companyTaxId) body.companyTaxId = input.companyTaxId;
+  }
+
   const res = await apiFetch<ApiEnvelope<AuthSession>>("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, password, fullname, ...(telephone ? { telephone } : {}) }),
+    body: JSON.stringify(body),
   });
+
+  if (res.code === "EMPLOYER_PENDING" || res.data?.accountStatus === "PENDING") {
+    return { kind: "pending", message: res.message };
+  }
+  return { kind: "session", session: res.data };
+}
+
+// Public — no login needed. Used by the register form / consent modal to
+// know which policy version the user is accepting.
+export async function getCurrentPolicy(): Promise<PolicyInfo> {
+  const res = await apiFetch<ApiEnvelope<PolicyInfo>>("/policies/current", { method: "GET" });
   return res.data;
+}
+
+// Records consent for the logged-in user (after login returned
+// needsConsent: true). Body per API_CHANGES.md §5.9: { version }.
+export async function acceptPolicy(version: string): Promise<void> {
+  await apiFetch<unknown>("/users/me/consents", {
+    method: "POST",
+    body: JSON.stringify({ version }),
+  });
 }
 
 export async function loginWithGoogle(idToken: string): Promise<AuthSession> {
@@ -104,6 +179,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       email: res.email,
       fullname: res.fullName,
       role: res.role,
+      accountStatus: res.accountStatus,
+      needsConsent: res.needsConsent,
     };
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return null;

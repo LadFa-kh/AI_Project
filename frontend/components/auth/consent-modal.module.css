@@ -1,0 +1,146 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 3, 12, 0.62);
+  backdrop-filter: blur(6px);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: clamp(20px, 4vw, 28px);
+  border-radius: 24px;
+  background: var(--nocturne-card-bg);
+  border: 1px solid var(--nocturne-border-strong);
+  box-shadow: var(--nocturne-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--nocturne-text-primary);
+}
+
+.text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--nocturne-text-secondary);
+}
+
+.points {
+  margin: 0;
+  padding: 12px 16px 12px 32px;
+  border-radius: 12px;
+  background: var(--nocturne-surface-hover);
+  border: 1px solid var(--nocturne-border);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--nocturne-text-primary);
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--nocturne-text-secondary);
+}
+
+.link {
+  color: var(--nocturne-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--nocturne-text-primary);
+  cursor: pointer;
+}
+
+.checkbox {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--color-home-hero-accent-1);
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background: color-mix(in srgb, var(--nocturne-badge-admin-text) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nocturne-badge-admin-text) 40%, transparent);
+  color: var(--nocturne-text-primary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary,
+.btnGhost {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: filter 0.18s ease-out, border-color 0.18s ease-out, opacity 0.18s ease-out;
+}
+
+.btnPrimary {
+  color: #ffffff;
+  background: linear-gradient(120deg, var(--color-home-hero-accent-1), var(--color-home-hero-accent-2));
+  border: 1px solid transparent;
+}
+.btnPrimary:hover:not(:disabled) { filter: brightness(1.08); }
+.btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btnGhost {
+  color: var(--nocturne-text-primary);
+  background: transparent;
+  border: 1px solid var(--nocturne-border-strong);
+}
+.btnGhost:hover:not(:disabled) { border-color: var(--nocturne-text-muted); }
+
+.btnPrimary:focus-visible,
+.btnGhost:focus-visible,
+.checkbox:focus-visible {
+  outline: 2px solid var(--color-home-hero-accent-1);
+  outline-offset: 2px;
+}

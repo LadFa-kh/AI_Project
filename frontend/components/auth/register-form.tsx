@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, type FormEvent } from "react";
-import { register, loginWithGoogle } from "@/lib/auth-service";
-import { ApiError, NetworkError } from "@/lib/api-client";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { register, loginWithGoogle, getCurrentPolicy, type RegisterRole } from "@/lib/auth-service";
+import { describeError, getErrorCode } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleSignIn } from "@/lib/use-google-signin";
+import { EmployerPendingNotice } from "./employer-pending-notice";
 import styles from "./register.module.css";
 
 type FieldErrors = {
@@ -14,8 +15,19 @@ type FieldErrors = {
   email?: string | null;
   password?: string | null;
   confirmPassword?: string | null;
+  companyName?: string | null;
+  companyTaxId?: string | null;
   terms?: string | null;
 };
+
+const ACCOUNT_TYPES: { value: RegisterRole; label: string; hint: string }[] = [
+  { value: "STUDENT", label: "นักศึกษา", hint: "วิเคราะห์เรซูเม่และหาที่ฝึกงาน" },
+  { value: "EMPLOYER", label: "ผู้ประกาศงาน", hint: "ลงประกาศรับนักศึกษาฝึกงาน" },
+];
+
+// Used only if GET /policies/current fails — matches the backend's current
+// version so the consent is still recorded (API_CHANGES.md §5.9).
+const FALLBACK_POLICY_VERSION = "1.0";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,6 +54,19 @@ function validateConfirmPassword(password: string, confirm: string): string | nu
   return null;
 }
 
+function validateCompanyName(value: string): string | null {
+  if (!value.trim()) return "กรุณากรอกชื่อบริษัท";
+  return null;
+}
+
+// Optional field; backend requires 10–13 digits when present (§5.5).
+function validateTaxId(value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  if (!/^\d{10,13}$/.test(v)) return "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 10–13 หลัก";
+  return null;
+}
+
 function getPasswordStrength(value: string): { score: number; label: string; color: string } {
   if (!value) return { score: 0, label: "", color: "transparent" };
   let score = 0;
@@ -56,9 +81,19 @@ function getPasswordStrength(value: string): { score: number; label: string; col
   return { score: 3, label: "แข็งแรง", color: "oklch(75% 0.14 150)" };
 }
 
-export function RegisterForm() {
+type RegisterFormProps = {
+  /** Switches the merged login/register page back to login mode. */
+  onSwitchToLogin?: () => void;
+};
+
+export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
   const router = useRouter();
   const { setSession } = useAuth();
+  const [accountType, setAccountType] = useState<RegisterRole>("STUDENT");
+  const [companyName, setCompanyName] = useState("");
+  const [companyTaxId, setCompanyTaxId] = useState("");
+  const [policyVersion, setPolicyVersion] = useState<string | null>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +106,23 @@ export function RegisterForm() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const isLoading = status === "loading";
+  const isEmployer = accountType === "EMPLOYER";
   const strength = useMemo(() => getPasswordStrength(password), [password]);
+
+  // Which policy version the checkbox is accepting. Public endpoint.
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentPolicy()
+      .then((p) => {
+        if (!cancelled) setPolicyVersion(p.version);
+      })
+      .catch(() => {
+        if (!cancelled) setPolicyVersion(FALLBACK_POLICY_VERSION);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function validate(): boolean {
     const nextErrors: FieldErrors = {
@@ -79,6 +130,8 @@ export function RegisterForm() {
       email: validateEmail(email),
       password: validatePassword(password),
       confirmPassword: validateConfirmPassword(password, confirmPassword),
+      companyName: isEmployer ? validateCompanyName(companyName) : null,
+      companyTaxId: isEmployer ? validateTaxId(companyTaxId) : null,
       terms: agreedToTerms ? null : "คุณต้องยอมรับข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว",
     };
     setErrors(nextErrors);
@@ -93,18 +146,31 @@ export function RegisterForm() {
 
     setStatus("loading");
     try {
-      // Backend field is `fullname` (not `name`); `role` defaults server-side to STUDENT.
-      const session = await register(email, password, name);
-      await setSession(session);
+      // Backend field is `fullname` (not `name`); no role = STUDENT.
+      const result = await register({
+        email,
+        password,
+        fullname: name,
+        role: accountType,
+        companyName: isEmployer ? companyName.trim() : undefined,
+        companyTaxId: isEmployer ? companyTaxId.trim() || undefined : undefined,
+        acceptedPolicyVersion: policyVersion ?? FALLBACK_POLICY_VERSION,
+      });
       setStatus("default");
+      if (result.kind === "pending") {
+        // Employer: account created but no cookie until an admin approves.
+        setPendingMessage(result.message);
+        return;
+      }
+      await setSession(result.session);
       router.push("/");
     } catch (err) {
       setStatus("error");
-      setFormError(
-        err instanceof ApiError || err instanceof NetworkError
-          ? err.message
-          : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
-      );
+      if (getErrorCode(err) === "EMAIL_TAKEN") {
+        setErrors((prev) => ({ ...prev, email: describeError(err, "") }));
+        return;
+      }
+      setFormError(describeError(err, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"));
     }
   }
 
@@ -119,11 +185,7 @@ export function RegisterForm() {
         router.push("/");
       } catch (err) {
         setStatus("error");
-        setFormError(
-          err instanceof ApiError || err instanceof NetworkError
-            ? err.message
-            : "สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
-        );
+        setFormError(describeError(err, "สมัครสมาชิกด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
       }
     },
     [router, setSession]
@@ -133,7 +195,19 @@ export function RegisterForm() {
     useGoogleSignIn(handleGoogleIdToken);
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
+    <>
+    {pendingMessage !== null && (
+      <EmployerPendingNotice
+        message={pendingMessage}
+        onBack={() => {
+          setPendingMessage(null);
+          onSwitchToLogin?.();
+        }}
+      />
+    )}
+    {/* Kept mounted (just hidden) while the pending notice shows — unmounting
+        would destroy the Google button that GIS rendered into googleContainerRef. */}
+    <form className={styles.form} onSubmit={handleSubmit} noValidate style={pendingMessage !== null ? { display: "none" } : undefined}>
       {(formError || googleError) && (
         <p className={`${styles.formError} ${styles.animateIn}`} role="alert">
           <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -142,6 +216,32 @@ export function RegisterForm() {
           {formError || googleError}
         </p>
       )}
+
+      <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
+        <span className={styles.fieldLabel} id="account-type-label">สมัครในฐานะ</span>
+        <div className={styles.roleToggle} role="radiogroup" aria-labelledby="account-type-label">
+          {ACCOUNT_TYPES.map((t) => {
+            const active = accountType === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                className={`${styles.roleOption} ${active ? styles.roleOptionActive : ""}`}
+                onClick={() => {
+                  setAccountType(t.value);
+                  setErrors((prev) => ({ ...prev, companyName: null, companyTaxId: null }));
+                }}
+                disabled={isLoading}
+              >
+                <span className={styles.roleOptionLabel}>{t.label}</span>
+                <span className={styles.roleOptionHint}>{t.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
         <label htmlFor="name">ชื่อ-นามสกุล</label>
@@ -178,6 +278,60 @@ export function RegisterForm() {
         />
         {errors.email && <p id="email-error" className={styles.fieldError}>{errors.email}</p>}
       </div>
+
+      {isEmployer && (
+        <>
+          <div className={styles.field}>
+            <label htmlFor="companyName">ชื่อบริษัท</label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              autoComplete="organization"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={isLoading}
+              aria-invalid={!!errors.companyName}
+              aria-describedby={errors.companyName ? "company-name-error" : undefined}
+              placeholder="บริษัท ตัวอย่าง จำกัด"
+              className={`${styles.input} ${errors.companyName ? styles.inputInvalid : ""}`}
+            />
+            {errors.companyName && (
+              <p id="company-name-error" className={styles.fieldError}>{errors.companyName}</p>
+            )}
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="companyTaxId">
+              เลขประจำตัวผู้เสียภาษี <span className={styles.optionalTag}>(ไม่บังคับ)</span>
+            </label>
+            <input
+              id="companyTaxId"
+              name="companyTaxId"
+              type="text"
+              inputMode="numeric"
+              value={companyTaxId}
+              onChange={(e) => setCompanyTaxId(e.target.value.replace(/\D/g, "").slice(0, 13))}
+              disabled={isLoading}
+              aria-invalid={!!errors.companyTaxId}
+              aria-describedby={errors.companyTaxId ? "company-tax-error" : "company-tax-hint"}
+              placeholder="0105555012345"
+              className={`${styles.input} ${errors.companyTaxId ? styles.inputInvalid : ""}`}
+            />
+            {errors.companyTaxId ? (
+              <p id="company-tax-error" className={styles.fieldError}>{errors.companyTaxId}</p>
+            ) : (
+              <p id="company-tax-hint" className={styles.fieldHint}>
+                ตัวเลข 10–13 หลัก ช่วยให้ผู้ดูแลระบบตรวจสอบบริษัทได้เร็วขึ้น
+              </p>
+            )}
+          </div>
+
+          <p className={styles.fieldHint}>
+            บัญชีผู้ประกาศงานต้องรอผู้ดูแลระบบอนุมัติก่อนจึงจะเข้าสู่ระบบได้
+          </p>
+        </>
+      )}
 
       <div className={`${styles.field} ${styles.animateIn} ${styles.delay3}`}>
         <label htmlFor="password">รหัสผ่าน</label>
@@ -303,6 +457,9 @@ export function RegisterForm() {
         {isLoading ? "กำลังสร้างบัญชี…" : "สร้างบัญชี"}
       </button>
 
+      {/* Google sign-up always creates a STUDENT account — hidden (not
+          unmounted, GIS renders into googleContainerRef) for employers. */}
+      <div style={{ display: isEmployer ? "none" : "contents" }}>
       <div className={`${styles.divider} ${styles.animateIn} ${styles.delay4}`}>
         <span className={styles.dividerLine} />
         <span className={styles.dividerText}>หรือ</span>
@@ -318,6 +475,8 @@ export function RegisterForm() {
           </div>
         )}
       </div>
+      </div>
     </form>
+    </>
   );
 }

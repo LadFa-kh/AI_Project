@@ -41,6 +41,8 @@ type AuthContextValue = {
   isLoading: boolean;
   setSession: (session: AuthSession) => void;
   clearSession: () => Promise<void>;
+  /** Call after POST /users/me/consents succeeds — hides ConsentModal. */
+  markConsented: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -79,6 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(rest);
   }, []);
 
+  const markConsented = useCallback(() => {
+    setUser((prev) => (prev ? { ...prev, needsConsent: false } : prev));
+  }, []);
+
   const clearSession = useCallback(async () => {
     try {
       await logoutRequest();
@@ -96,8 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       setSession,
       clearSession,
+      markConsented,
     }),
-    [user, isLoading, setSession, clearSession]
+    [user, isLoading, setSession, clearSession, markConsented]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

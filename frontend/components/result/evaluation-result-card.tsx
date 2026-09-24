@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { InsightChipList } from "@/components/ui/insight-chip-list";
+import { CareerMatchRanking } from "./career-match-ranking";
 import type { EvaluationResult } from "@/lib/result-types";
 import type { ScoreBreakdown } from "@/lib/assessment-service";
 import { readAssessmentResult } from "@/lib/assessment-session";
@@ -287,6 +288,11 @@ export function EvaluationResultCard() {
           </div>
         </div>
       </div>
+
+      {/* B1: only present when the user didn't enter a desired role. */}
+      {result.careerMatches && result.careerMatches.length > 0 && (
+        <CareerMatchRanking matches={result.careerMatches} />
+      )}
 
       {result.recommendationSummary && (
         <div className={`${styles.aiCard} ${styles.animateIn} ${styles.delay2}`}>

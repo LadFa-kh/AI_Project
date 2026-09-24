@@ -166,3 +166,48 @@ export async function updateJob(id: string, input: AdminJobUpdateInput): Promise
 export async function deleteJob(id: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/admin/jobs/${id}`, { method: "DELETE" });
 }
+
+// ===== 5. Employer approval (B5 — API_CHANGES.md §5.5) =====
+// Unlike the older admin endpoints above, the B-round endpoints wrap their
+// payload in { status, message, data }. unwrap() accepts both shapes so a
+// future backend tweak either way doesn't break the page.
+
+export type EmployerAccountStatus = "PENDING" | "ACTIVE" | "REJECTED" | "SUSPENDED";
+export type EmployerStatusFilter = "PENDING" | "ACTIVE" | "REJECTED" | "ALL";
+
+export type AdminEmployer = {
+  userId: string;
+  email: string;
+  fullName: string;
+  telephone: string | null;
+  accountStatus: EmployerAccountStatus;
+  createdAt: string;
+  companyId: string | null;
+  companyName: string | null;
+  companyTaxId: string | null;
+  companyStatus: string | null;
+};
+
+function unwrap<T>(res: unknown): T {
+  if (res && typeof res === "object" && "data" in res && "status" in res) {
+    return (res as { data: T }).data;
+  }
+  return res as T;
+}
+
+export async function listEmployers(status: EmployerStatusFilter = "PENDING"): Promise<AdminEmployer[]> {
+  const res = await apiFetch<unknown>(`/admin/employers?status=${status}`, { method: "GET" });
+  const data = unwrap<AdminEmployer[] | null>(res);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function approveEmployer(userId: string): Promise<void> {
+  await apiFetch<unknown>(`/admin/employers/${userId}/approve`, { method: "POST" });
+}
+
+export async function rejectEmployer(userId: string, reason: string): Promise<void> {
+  await apiFetch<unknown>(`/admin/employers/${userId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}

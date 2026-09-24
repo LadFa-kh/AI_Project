@@ -22,6 +22,12 @@ import {
   createJob,
   updateJob,
   deleteJob,
+  listEmployers,
+  approveEmployer,
+  rejectEmployer,
+  type AdminEmployer,
+  type EmployerAccountStatus,
+  type EmployerStatusFilter,
   type AdminDashboardStats,
   type AdminUser,
   type AdminRole,
@@ -29,7 +35,7 @@ import {
   type AdminJob,
   type AdminJobInput,
 } from "@/lib/admin-service";
-import { ApiError } from "@/lib/api-client";
+import { ApiError, describeError } from "@/lib/api-client";
 import { ADMIN_TABS, type AdminTab } from "@/lib/admin-types";
 import styles from "./admin-dashboard.module.css";
 
@@ -509,6 +515,265 @@ function UsersTab() {
           onClose={() => setEditing(null)}
           onSaved={(updated) => setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))}
         />
+      )}
+    </div>
+  );
+}
+
+// ===== Employers tab — approve/reject employer sign-ups (B5, API_CHANGES.md §5.5) =====
+const EMPLOYER_FILTERS: { value: EmployerStatusFilter; label: string }[] = [
+  { value: "PENDING", label: "รออนุมัติ" },
+  { value: "ACTIVE", label: "อนุมัติแล้ว" },
+  { value: "REJECTED", label: "ปฏิเสธแล้ว" },
+  { value: "ALL", label: "ทั้งหมด" },
+];
+
+const EMPLOYER_STATUS_LABEL: Record<EmployerAccountStatus, string> = {
+  PENDING: "รออนุมัติ",
+  ACTIVE: "อนุมัติแล้ว",
+  REJECTED: "ปฏิเสธแล้ว",
+  SUSPENDED: "ระงับ",
+};
+
+function RejectEmployerModal({
+  employer,
+  onClose,
+  onRejected,
+}: {
+  employer: AdminEmployer;
+  onClose: () => void;
+  onRejected: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleReject() {
+    if (!reason.trim()) {
+      setError("กรุณาระบุเหตุผลที่ปฏิเสธ");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await rejectEmployer(employer.userId, reason.trim());
+      onRejected();
+      onClose();
+    } catch (err) {
+      setError(describeError(err, "ปฏิเสธไม่สำเร็จ กรุณาลองใหม่"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return createPortal(
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <h3 className={styles.modalTitle}>ปฏิเสธผู้ประกาศงาน</h3>
+        <p className={styles.statSub} style={{ marginTop: -4, marginBottom: 12 }}>
+          {employer.companyName ?? "—"} · {employer.fullName} ({employer.email})
+        </p>
+        {error && (
+          <p className={styles.formError} role="alert" style={{ marginBottom: 12 }}>
+            {error}
+          </p>
+        )}
+        <div className={styles.formField}>
+          <label className={styles.formLabel} htmlFor="reject-reason">เหตุผล (แจ้งให้ผู้สมัครทราบ)</label>
+          <textarea
+            id="reject-reason"
+            className={`${styles.formInput} ${styles.formTextarea}`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="เช่น ข้อมูลบริษัทไม่ครบ หรือไม่สามารถยืนยันตัวตนบริษัทได้"
+            rows={3}
+          />
+        </div>
+        <div className={styles.modalActions}>
+          <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>
+            ยกเลิก
+          </button>
+          <button type="button" className={styles.btnDanger} onClick={handleReject} disabled={saving}>
+            {saving ? "กำลังบันทึก..." : "ยืนยันปฏิเสธ"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function EmployersTab() {
+  const [filter, setFilter] = useState<EmployerStatusFilter>("PENDING");
+  const [status, setStatus] = useState<Status>("loading");
+  const [employers, setEmployers] = useState<AdminEmployer[]>([]);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<AdminEmployer | null>(null);
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+
+  const load = useCallback(async () => {
+    setStatus("loading");
+    setRowError(null);
+    try {
+      const result = await listEmployers(filter);
+      // Oldest request first — first come, first served.
+      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setEmployers(result);
+      setStatus("success");
+    } catch (err) {
+      setError(describeError(err, "ไม่สามารถโหลดรายชื่อผู้ประกาศงานได้"));
+      setStatus("error");
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleApprove(emp: AdminEmployer) {
+    if (!window.confirm(`อนุมัติ "${emp.companyName ?? emp.fullName}" เป็นผู้ประกาศงาน?`)) return;
+    setBusyId(emp.userId);
+    setRowError(null);
+    try {
+      await approveEmployer(emp.userId);
+      await load();
+    } catch (err) {
+      setRowError({ id: emp.userId, message: describeError(err, "อนุมัติไม่สำเร็จ") });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const badgeClass = (s: EmployerAccountStatus) =>
+    s === "ACTIVE" ? styles.badgeEmployer : s === "PENDING" ? styles.badgePending : styles.badgeRejected;
+
+  if (status === "error") return <ErrorPanel message={error} onRetry={load} />;
+
+  return (
+    <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
+      <div className={styles.sectionHeadRow}>
+        <div>
+          <h2 className={styles.sectionHeading}>ผู้ประกาศงาน</h2>
+          <p className={styles.sectionSub}>
+            {status === "loading" ? "กำลังโหลด..." : `${employers.length} รายการ`}
+          </p>
+        </div>
+        <select
+          className={styles.formSelect}
+          style={{ width: "auto", minWidth: 160 }}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as EmployerStatusFilter)}
+          aria-label="กรองตามสถานะ"
+        >
+          {EMPLOYER_FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {status === "loading" ? (
+        <div className={styles.skeletonCard}>
+          <div className={styles.skeletonLine} style={{ height: 40 }} />
+          <div className={styles.skeletonLine} style={{ height: 40 }} />
+          <div className={styles.skeletonLine} style={{ height: 40 }} />
+        </div>
+      ) : employers.length === 0 ? (
+        <p className={styles.emptyState}>
+          {filter === "PENDING" ? "ไม่มีผู้ประกาศงานที่รออนุมัติ" : "ไม่พบรายการ"}
+        </p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>ผู้สมัคร</th>
+                <th>บริษัท</th>
+                <th>สถานะ</th>
+                <th>สมัครเมื่อ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employers.map((emp) => {
+                const busy = busyId === emp.userId;
+                const canApprove = emp.accountStatus === "PENDING" || emp.accountStatus === "REJECTED";
+                const canReject = emp.accountStatus === "PENDING";
+                return (
+                  <Fragment key={emp.userId}>
+                    <tr>
+                      <td>
+                        <div className={styles.userCell}>
+                          <span className={styles.avatar} aria-hidden="true">
+                            {(emp.fullName || emp.email).charAt(0).toUpperCase()}
+                          </span>
+                          <div>
+                            <div className={styles.userName}>{emp.fullName}</div>
+                            <div className={styles.userEmail}>{emp.email}</div>
+                            {emp.telephone && <div className={styles.userEmail}>{emp.telephone}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className={styles.userName}>{emp.companyName ?? "—"}</div>
+                        <div className={styles.userEmail}>
+                          {emp.companyTaxId ? `เลขผู้เสียภาษี ${emp.companyTaxId}` : "ไม่ได้ระบุเลขผู้เสียภาษี"}
+                        </div>
+                      </td>
+                      <td className={styles.nowrap}>
+                        <span className={`${styles.badge} ${badgeClass(emp.accountStatus)}`}>
+                          {EMPLOYER_STATUS_LABEL[emp.accountStatus] ?? emp.accountStatus}
+                        </span>
+                      </td>
+                      <td className={styles.nowrap}>{new Date(emp.createdAt).toLocaleDateString("th-TH")}</td>
+                      <td className={styles.nowrap}>
+                        {canApprove || canReject ? (
+                          <div className={styles.rowActions}>
+                            {canApprove && (
+                              <button
+                                type="button"
+                                className={styles.btnApprove}
+                                onClick={() => handleApprove(emp)}
+                                disabled={busy}
+                              >
+                                {busy ? "กำลังอนุมัติ..." : "อนุมัติ"}
+                              </button>
+                            )}
+                            {canReject && (
+                              <button
+                                type="button"
+                                className={styles.btnReject}
+                                onClick={() => setRejecting(emp)}
+                                disabled={busy}
+                              >
+                                ปฏิเสธ
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                    {rowError?.id === emp.userId && (
+                      <tr>
+                        <td colSpan={5} style={{ borderBottom: "none", paddingTop: 0 }}>
+                          <p className={styles.formError} role="alert">{rowError.message}</p>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {rejecting && (
+        <RejectEmployerModal employer={rejecting} onClose={() => setRejecting(null)} onRejected={load} />
       )}
     </div>
   );
@@ -1003,6 +1268,7 @@ export function AdminDashboardView() {
 
       {tab === "dashboard" && <DashboardTab />}
       {tab === "users" && <UsersTab />}
+      {tab === "employers" && <EmployersTab />}
       {tab === "resumes" && <ResumesTab />}
       {tab === "jobs" && <JobsTab />}
     </>
