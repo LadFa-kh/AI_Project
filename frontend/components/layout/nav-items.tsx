@@ -16,6 +16,8 @@ export type NavItemDef = {
    * page currently only works if the backend grants EMPLOYER access too.
    */
   employerOnly?: boolean;
+  /** Only shown to STUDENT accounts (e.g. /internships — B6). */
+  studentOnly?: boolean;
 };
 
 function Icon({ path }: { path: string }) {
@@ -60,6 +62,14 @@ export const NAV_ITEMS: NavItemDef[] = [
     label: "ตำแหน่งฝึกงานที่แนะนำ",
     icon: (
       <Icon path="M216,56H176V48a24,24,0,0,0-24-24H104A24,24,0,0,0,80,48v8H40A16,16,0,0,0,24,72V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V72A16,16,0,0,0,216,56ZM96,48a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96ZM216,72V115.4a151.66,151.66,0,0,1-72,20.71V128a8,8,0,0,0-8-8H120a8,8,0,0,0-8,8v8.11A151.66,151.66,0,0,1,40,115.4V72ZM136,144v16h-16V144ZM40,192V133.53a167.55,167.55,0,0,0,64,17.2V152a16,16,0,0,0,16,16h16a16,16,0,0,0,16-16v-1.27a167.55,167.55,0,0,0,64-17.2V192Z" />
+    ),
+  },
+  {
+    href: "/internships",
+    label: "ประวัติฝึกงาน",
+    studentOnly: true,
+    icon: (
+      <Icon path="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z" />
     ),
   },
   {

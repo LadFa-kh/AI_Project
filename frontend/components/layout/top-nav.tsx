@@ -37,6 +37,7 @@ export function TopNav() {
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly) return user?.role === "ADMIN";
     if (item.employerOnly) return user?.role === "EMPLOYER";
+    if (item.studentOnly) return user?.role === "STUDENT";
     return true;
   });
 

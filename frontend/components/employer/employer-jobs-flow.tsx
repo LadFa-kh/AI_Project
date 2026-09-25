@@ -10,14 +10,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployerJobsView } from "./employer-jobs-view";
 import { EmployerCompanyView } from "./employer-company-view";
+import { EmployerInternshipsView } from "./employer-internships-view";
 import styles from "@/components/admin/admin-dashboard.module.css";
 
 const HEADING = "ประกาศงานของบริษัทคุณ";
 
-type EmployerTab = "jobs" | "company";
+type EmployerTab = "jobs" | "interns" | "company";
 
 const EMPLOYER_TABS: { key: EmployerTab; label: string }[] = [
   { key: "jobs", label: "ประกาศงาน" },
+  { key: "interns", label: "ผู้ฝึกงาน" },
   { key: "company", label: "ข้อมูลบริษัท" },
 ];
 
@@ -153,6 +155,7 @@ export function EmployerJobsFlow() {
         </div>
 
         {tab === "jobs" && <EmployerJobsView />}
+        {tab === "interns" && <EmployerInternshipsView />}
         {tab === "company" && <EmployerCompanyView />}
       </main>
     </div>
