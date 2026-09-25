@@ -15,4 +15,8 @@ public class JobMatchResponseDto {
     private BigDecimal userFinalScore;
     private List<String> matchedSkills;
     private List<String> missingSkills;
+
+    /** ทักษะใน matchedSkills ที่ AI เป็นคนตัดสินว่าตรง (ไม่ตรงด้วยคำ) — ไม่มี = ไม่ส่งฟิลด์นี้ */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private List<String> aiMatchedSkills;
 }
