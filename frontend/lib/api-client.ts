@@ -9,6 +9,11 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+/** Absolute-or-proxied URL for links/downloads that bypass apiFetch (e.g. CSV template). */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -94,7 +99,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
         // on bodyless GETs forces an unnecessary CORS preflight (OPTIONS)
         // that some backend endpoints (e.g. /skills/search) aren't
         // configured to answer, which fails the whole request.
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        // FormData (file upload) must NOT get a Content-Type — the browser
+        // sets multipart/form-data with the boundary itself.
+        ...(init?.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
         ...init?.headers,
       },
     });

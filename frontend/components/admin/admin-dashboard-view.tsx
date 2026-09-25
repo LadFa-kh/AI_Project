@@ -38,6 +38,7 @@ import {
 import { ApiError, describeError } from "@/lib/api-client";
 import { ADMIN_TABS, type AdminTab } from "@/lib/admin-types";
 import styles from "./admin-dashboard.module.css";
+import { CompaniesTab, InternshipsTab, UsageTab } from "./admin-ops-tabs";
 
 type Status = "loading" | "error" | "success";
 
@@ -1271,6 +1272,9 @@ export function AdminDashboardView() {
       {tab === "employers" && <EmployersTab />}
       {tab === "resumes" && <ResumesTab />}
       {tab === "jobs" && <JobsTab />}
+      {tab === "companies" && <CompaniesTab />}
+      {tab === "internships" && <InternshipsTab />}
+      {tab === "usage" && <UsageTab />}
     </>
   );
 }
