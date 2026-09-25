@@ -1,8 +1,10 @@
 "use client";
 
 // "สายงานที่เหมาะกับคุณ" — B1 careerMatches (API_CHANGES.md §5.1).
-// Only rendered when the backend sends careerMatches, i.e. the user left the
-// desired-role field empty and the system picked roles for them. Shows the
+// Rendered whenever the backend sends careerMatches. Originally only when the
+// desired-role field was left empty; we asked backend (FRONTEND_REQUESTS รอบ 5
+// ข้อ 2.8) to send it even when a role was chosen — `chosenRole` then changes
+// the copy and tags the matching row. Shows the
 // top 1–4 roles as horizontal percent bars (percents come from the backend,
 // already sum to 100 — never recomputed here); the user ticks a role to see
 // the skills they already have and the ones still missing for it.
@@ -12,7 +14,14 @@ import { InsightChipList } from "@/components/ui/insight-chip-list";
 import type { CareerMatch } from "@/lib/assessment-service";
 import styles from "./evaluation-result.module.css";
 
-export function CareerMatchRanking({ matches }: { matches: CareerMatch[] }) {
+/** Loose compare so "Software Developers" matches "Software Developers, Applications" etc. */
+function sameRole(a: string, b: string): boolean {
+  const x = a.trim().toLowerCase();
+  const y = b.trim().toLowerCase();
+  return !!x && !!y && (x === y || x.startsWith(y) || y.startsWith(x));
+}
+
+export function CareerMatchRanking({ matches, chosenRole }: { matches: CareerMatch[]; chosenRole?: string | null }) {
   const [selected, setSelected] = useState(0);
   const groupName = useId();
 
@@ -26,8 +35,17 @@ export function CareerMatchRanking({ matches }: { matches: CareerMatch[] }) {
           สายงานที่เหมาะกับคุณ
         </h2>
         <p className={styles.careerSub}>
-          คุณไม่ได้ระบุตำแหน่งงาน ระบบจึงวิเคราะห์สายงานที่ใกล้เคียงกับทักษะของคุณมากที่สุด
-          เลือกสายงานเพื่อดูทักษะที่มีแล้วและทักษะที่ยังขาด
+          {chosenRole ? (
+            <>
+              นอกจากตำแหน่ง <strong>{chosenRole}</strong> ที่คุณเลือก ระบบวิเคราะห์สายงานที่ใกล้เคียงกับทักษะของคุณมากที่สุดมาให้ด้วย
+              เลือกสายงานเพื่อดูทักษะที่มีแล้วและทักษะที่ยังขาด
+            </>
+          ) : (
+            <>
+              คุณไม่ได้ระบุตำแหน่งงาน ระบบจึงวิเคราะห์สายงานที่ใกล้เคียงกับทักษะของคุณมากที่สุด
+              เลือกสายงานเพื่อดูทักษะที่มีแล้วและทักษะที่ยังขาด
+            </>
+          )}
         </p>
       </div>
 
@@ -56,6 +74,9 @@ export function CareerMatchRanking({ matches }: { matches: CareerMatch[] }) {
                     {m.roleNameTh && <span className={styles.careerNameEn}>{m.roleName}</span>}
                   </span>
                   {i === 0 && <span className={styles.careerBestTag}>เหมาะที่สุด</span>}
+                  {chosenRole && sameRole(m.roleName, chosenRole) && (
+                    <span className={styles.careerBestTag}>ตำแหน่งที่คุณเลือก</span>
+                  )}
                 </span>
                 <span className={styles.careerBarTrack} aria-hidden="true">
                   <span

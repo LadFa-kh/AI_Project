@@ -308,9 +308,16 @@ export function EvaluationResultCard() {
         </div>
       </div>
 
-      {/* B1: only present when the user didn't enter a desired role. */}
+      {/* B1: shown whenever backend sends careerMatches — with or without a chosen role (รอบ 5 ข้อ 2.8). */}
       {result.careerMatches && result.careerMatches.length > 0 && (
-        <CareerMatchRanking matches={result.careerMatches} />
+        <CareerMatchRanking
+          matches={result.careerMatches}
+          chosenRole={
+            result.scoreBreakdown && !result.scoreBreakdown.roleInferredByAi
+              ? result.scoreBreakdown.roleUsedForMatching
+              : null
+          }
+        />
       )}
 
       {result.recommendationSummary && (
