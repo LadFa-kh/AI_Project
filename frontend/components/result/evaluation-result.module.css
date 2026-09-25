@@ -402,7 +402,9 @@
   border: 1px solid var(--nocturne-border);
   font-size: 12.5px;
   line-height: 1.6;
-  font-family: ui-monospace, "Cascadia Code", monospace;
+  /* was monospace — Thai words in the formula fell back to the OS Thai font */
+  font-family: var(--font-noto-thai), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   color: var(--nocturne-text-primary);
   overflow-wrap: break-word;
 }

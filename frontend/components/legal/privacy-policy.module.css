@@ -146,6 +146,7 @@
 }
 
 .section code {
+  font-family: inherit;
   font-size: 0.9em;
   padding: 1px 6px;
   border-radius: 6px;

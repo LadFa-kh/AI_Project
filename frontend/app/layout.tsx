@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Poppins, Noto_Sans_Thai } from "next/font/google";
+import { Noto_Sans_Thai } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthProvider } from "@/lib/auth-context";
@@ -11,22 +11,10 @@ import { THEME_COOKIE, DEFAULT_THEME, isTheme } from "@/lib/theme-shared";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-poppins",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-inter",
-});
-
-// Primary typeface app-wide (Thai + Latin subsets). Wired in as the first
-// entry of --font-sans in app/globals.css and of the body font stack, so
-// every page renders Thai with Noto Sans Thai instead of the OS fallback
-// (Tahoma/Leelawadee on Windows). Inter stays as the Latin fallback.
+// THE ONLY typeface of the app (Thai + Latin subsets, Google Fonts standard).
+// Inter/Poppins were removed so every page — Thai and English text alike —
+// renders in one font (อาจารย์ feedback: ฟอนต์แต่ละหน้าไม่เหมือนกัน).
+// Used via --font-sans / --font-noto-thai in app/globals.css.
 const notoSansThai = Noto_Sans_Thai({
   subsets: ["thai", "latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -71,8 +59,6 @@ export default async function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        poppins.variable,
-        inter.variable,
         "font-sans",
         notoSansThai.variable
       )}
