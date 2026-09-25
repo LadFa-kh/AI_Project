@@ -442,8 +442,8 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
           className={styles.checkbox}
         />
         <label htmlFor="terms" className={styles.checkLabel}>
-          ฉันยอมรับ <a href="/terms" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>ข้อกำหนดการใช้งาน</a> และ{" "}
-          <a href="/privacy-policy" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>นโยบายความเป็นส่วนตัว</a>
+          ฉันยอมรับ <a href="/terms" target="_blank" rel="noopener noreferrer" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>ข้อกำหนดการใช้งาน</a> และ{" "}
+          <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>นโยบายความเป็นส่วนตัว</a>
         </label>
       </div>
       {errors.terms && <p id="terms-error" className={styles.fieldError} style={{ marginTop: "-8px" }}>{errors.terms}</p>}
