@@ -4,6 +4,8 @@ type InsightChipListProps = {
   heading: string;
   items: string[];
   tone: "positive" | "warning";
+  /** Optional per-chip note, e.g. B2's "AI" tag for semantically matched skills. */
+  annotate?: (item: string) => { tag: string; title: string } | null;
 };
 
 const ICONS: Record<InsightChipListProps["tone"], { path: string; label: string }> = {
@@ -19,7 +21,7 @@ const ICONS: Record<InsightChipListProps["tone"], { path: string; label: string 
 
 /** Positive/warning-tinted chip list, shared for strengths & gaps-style sections.
  *  Tone is conveyed by both color and icon+label (not color alone) for accessibility. */
-export function InsightChipList({ heading, items, tone }: InsightChipListProps) {
+export function InsightChipList({ heading, items, tone, annotate }: InsightChipListProps) {
   const icon = ICONS[tone];
   const chipClass = tone === "positive" ? styles.chipPositive : styles.chipWarning;
 
@@ -27,17 +29,26 @@ export function InsightChipList({ heading, items, tone }: InsightChipListProps) 
     <div>
       <h2 className={styles.sectionHeading}>{heading}</h2>
       <div className={styles.chipList}>
-        {items.map((item) => (
-          <div key={item} className={`${styles.chip} ${chipClass}`}>
-            <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-              <path d={icon.path} />
-            </svg>
-            <span>
-              <span className="sr-only">{icon.label}: </span>
-              {item}
-            </span>
-          </div>
-        ))}
+        {items.map((item) => {
+          const note = annotate?.(item) ?? null;
+          return (
+            <div key={item} className={`${styles.chip} ${chipClass}`} title={note?.title}>
+              <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d={icon.path} />
+              </svg>
+              <span>
+                <span className="sr-only">{icon.label}: </span>
+                {item}
+              </span>
+              {note && (
+                <span className={styles.chipTag}>
+                  {note.tag}
+                  <span className="sr-only"> ({note.title})</span>
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -125,7 +125,26 @@ function ScoreBreakdownSection({
               {(breakdown.matchedSkills.length > 0 || breakdown.unmatchedSkills.length > 0) && (
                 <div style={{ marginTop: 10 }}>
                   {breakdown.matchedSkills.length > 0 && (
-                    <InsightChipList heading="ทักษะที่ตรงกับตำแหน่ง" items={breakdown.matchedSkills} tone="positive" />
+                    <InsightChipList
+                      heading="ทักษะที่ตรงกับตำแหน่ง"
+                      items={breakdown.matchedSkills}
+                      tone="positive"
+                      annotate={(skill) => {
+                        // B2: SEMANTIC = AI judged the meaning equivalent (e.g. Spring Data JPA → Spring Framework).
+                        const d = breakdown.matchDetails?.find(
+                          (m) => m.method === "SEMANTIC" && (m.resumeSkill === skill || m.standardSkill === skill)
+                        );
+                        if (!d) return null;
+                        const other = d.resumeSkill === skill ? d.standardSkill : d.resumeSkill;
+                        return { tag: "AI", title: `AI จับคู่จากความหมาย: ตรงกับ ${other ?? "-"}` };
+                      }}
+                    />
+                  )}
+                  {breakdown.matchDetails?.some((m) => m.method === "SEMANTIC") && (
+                    <p className={styles.breakdownReason}>ป้าย AI = ชื่อทักษะไม่ตรงกันตรง ๆ แต่ AI ตัดสินว่าความหมายเดียวกัน (ชี้เพื่อดูว่าตรงกับทักษะใด)</p>
+                  )}
+                  {breakdown.matchMethod === "WORD_FALLBACK" && (
+                    <p className={styles.breakdownReason}>รอบนี้ระบบจับคู่จากชื่อทักษะอย่างเดียว (AI ไม่พร้อมใช้งานชั่วคราว) ผลอาจต่ำกว่าความจริงเล็กน้อย</p>
                   )}
                   {breakdown.unmatchedSkills.length > 0 && (
                     <div style={{ marginTop: 16 }}>

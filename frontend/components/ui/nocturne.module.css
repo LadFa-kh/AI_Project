@@ -828,3 +828,17 @@
 .sidebarCollapsed .processStepLabel {
   display: none;
 }
+
+/* Small inline tag inside a .chip — e.g. "AI" on semantically matched skills (B2). */
+.chipTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--nocturne-badge-student-text);
+  background: color-mix(in srgb, var(--color-home-hero-accent-3) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-home-hero-accent-3) 45%, transparent);
+}
