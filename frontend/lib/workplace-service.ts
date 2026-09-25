@@ -27,7 +27,26 @@ export type Workplace = {
   // B4 (API_CHANGES.md §5.4) — link to /companies/{companyId}; absent on older rows.
   companyId?: string | null;
   companyLogoUrl?: string | null;
+  /** §5.13 — only when logged in AND the user has uploaded a resume; compared with their latest resume. */
+  requiredSkillsDetail?: { skillName: string; isMatch: boolean }[] | null;
 };
+
+/**
+ * Splits requiredSkillsDetail into matched/missing lists (same shape the
+ * matching API returns) so cards/detail can color each skill. Returns {}
+ * when the field is absent, so callers keep the plain requiredSkills view.
+ */
+export function skillsFromDetail(w: Pick<Workplace, "requiredSkillsDetail">): {
+  matchedSkills?: string[];
+  missingSkills?: string[];
+} {
+  const detail = w.requiredSkillsDetail;
+  if (!detail?.length) return {};
+  return {
+    matchedSkills: detail.filter((d) => d.isMatch).map((d) => d.skillName),
+    missingSkills: detail.filter((d) => !d.isMatch).map((d) => d.skillName),
+  };
+}
 
 export async function getAllWorkplaces(): Promise<Workplace[]> {
   return apiFetch<Workplace[]>("/workplaces", { method: "GET" });

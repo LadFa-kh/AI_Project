@@ -64,6 +64,26 @@ export async function listImports(page = 0, size = 20): Promise<Paged<Record<str
   return toPaged<Record<string, unknown>>(await apiFetch<unknown>(`/admin/imports${qs({ page, size })}`, { method: "GET" }));
 }
 
+// ===== Cost per action (§5.13) — GET /admin/usage/cost?from=&to= =====
+export type CostRow = {
+  name: string;
+  samples: number;
+  model?: string | null;
+  avgLlmCalls?: number | null;
+  avgInputTokens: number;
+  avgOutputTokens: number;
+  avgCost: number;
+};
+export type UsageCost = {
+  pricePer1M: { input: number; output: number; currency: string };
+  byAction: CostRow[];
+  byPythonEndpoint: CostRow[];
+};
+
+export async function getUsageCost(from?: string, to?: string): Promise<UsageCost> {
+  return unwrap<UsageCost>(await apiFetch<unknown>(`/admin/usage/cost${qs({ from, to })}`, { method: "GET" }));
+}
+
 // ===== Usage (B8) — shapes not documented; rendered generically =====
 export async function getUsageSummary(from?: string, to?: string): Promise<unknown> {
   return unwrap<unknown>(await apiFetch<unknown>(`/admin/usage/summary${qs({ from, to })}`, { method: "GET" }));
