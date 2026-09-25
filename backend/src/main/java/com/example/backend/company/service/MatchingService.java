@@ -5,6 +5,7 @@ import com.example.backend.company.repository.JobDescriptionRepository;
 import com.example.backend.finalscore.entity.FinalScoreEntity;
 import com.example.backend.finalscore.repository.FinalScoreRepository;
 import com.example.backend.company.dto.JobMatchResponseDto;
+import com.example.backend.handle.BusinessException;
 import com.example.backend.resume.entity.ResumeSkillEntity;
 import com.example.backend.resume.repository.ResumeSkillRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,8 @@ public class MatchingService {
 
     public List<JobMatchResponseDto> getMatchedJobs(UUID userId, UUID resumeId) {
         FinalScoreEntity finalScoreEntity = finalScoreRepository.findByUserIdAndResumeId(userId, resumeId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "ไม่พบผลคะแนนของ resume นี้ — resume ต้องทำแบบประเมินให้เสร็จก่อนถึงจะจับคู่บริษัทได้"
+                .orElseThrow(() -> BusinessException.notFound("ASSESSMENT_NOT_FOUND",
+                        "ยังไม่มีผลประเมินของเรซูเม่นี้ — ทำแบบประเมินให้เสร็จก่อนถึงจะจับคู่ที่ฝึกงานได้"
                 ));
         BigDecimal userFinalScore = finalScoreEntity.getFinalScore();
 

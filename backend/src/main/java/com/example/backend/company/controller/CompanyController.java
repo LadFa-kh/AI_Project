@@ -6,6 +6,7 @@ import com.example.backend.company.service.CompanyService;
 import com.example.backend.company.service.JobDescriptionService;
 import com.example.backend.config.CurrentUserProvider;
 import com.example.backend.handle.ApiResponse;
+import com.example.backend.handle.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/** B4: โปรไฟล์บริษัท — GET /{id} และ /{id}/jobs เปิดสาธารณะ, /me ต้องล็อกอิน */
+/** B4: โปรไฟล์บริษัท — GET (รายชื่อ), /{id} และ /{id}/jobs เปิดสาธารณะ, /me ต้องล็อกอิน */
 @RestController
 @RequestMapping("/api/v1/companies")
 @RequiredArgsConstructor
@@ -23,6 +24,15 @@ public class CompanyController {
     private final CompanyService companyService;
     private final JobDescriptionService jobDescriptionService;
     private final CurrentUserProvider currentUserProvider;
+
+    /** รายชื่อบริษัท ACTIVE (สาธารณะ, แบ่งหน้า) — ?q=ค้นชื่อ&page=0&size=20 */
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<CompanyDto>>> listPublic(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(new ApiResponse<>(200, "OK", companyService.publicList(q, page, size)));
+    }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<CompanyDto>> getMine(Authentication auth) {
