@@ -198,11 +198,16 @@ export function TopNav() {
                     boxShadow: "var(--nocturne-shadow)",
                   }}
                 >
-                  {/* ลิงก์ "โปรไฟล์" (/profile) และ "ตั้งค่า" (/settings) ถูกถอดออก
-                      ชั่วคราว — ยังไม่มีทั้งสองหน้าใน app/ ตัวลิงก์เองทำให้ Next.js
-                      prefetch ไปยัง route ที่ไม่มีอยู่ แล้วขึ้น 404 ใน console ทุกครั้ง
-                      ที่เรนเดอร์แถบนำทาง (คือแทบทุกหน้า) ใส่กลับเมื่อสร้างสองหน้านี้จริง
-                      เหตุผลเดียวกับลิงก์ "ลืมรหัสผ่าน?" ใน login-form.tsx */}
+                  {/* "โปรไฟล์" (/profile) ยังไม่มีหน้า — ใส่เฉพาะ "ตั้งค่าบัญชี" (/settings, B9) */}
+                  <Link
+                    href="/settings"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="block w-full px-4 py-2 text-left text-xs transition-colors hover:opacity-80 sm:text-sm"
+                    style={{ color: "var(--nocturne-text-primary)" }}
+                  >
+                    ตั้งค่าบัญชี
+                  </Link>
                   <button
                     type="button"
                     role="menuitem"

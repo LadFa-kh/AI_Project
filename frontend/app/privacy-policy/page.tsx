@@ -84,9 +84,9 @@ export default function PrivacyPolicyPage() {
         <section className={styles.section}>
           <h2>6. สิทธิ์ของคุณในฐานะเจ้าของข้อมูล</h2>
           <ul>
-            <li><strong>สิทธิ์เข้าถึงและขอรับสำเนา</strong> — ดาวน์โหลดข้อมูลของคุณเป็นไฟล์ JSON ได้จากหน้าตั้งค่าบัญชี</li>
-            <li><strong>สิทธิ์ถอนความยินยอม</strong> — ถอนความยินยอมได้จากหน้าตั้งค่าบัญชี</li>
-            <li><strong>สิทธิ์ขอลบข้อมูล</strong> — ลบบัญชีและข้อมูลที่เกี่ยวข้องได้ด้วยตนเอง</li>
+            <li><strong>สิทธิ์เข้าถึงและขอรับสำเนา</strong> — ดาวน์โหลดข้อมูลของคุณเป็นไฟล์ JSON ได้จาก<Link href="/settings" className={styles.link}>หน้าตั้งค่าบัญชี</Link></li>
+            <li><strong>สิทธิ์ถอนความยินยอม</strong> — ถอนความยินยอมได้จาก<Link href="/settings" className={styles.link}>หน้าตั้งค่าบัญชี</Link></li>
+            <li><strong>สิทธิ์ขอลบข้อมูล</strong> — ลบบัญชีและข้อมูลที่เกี่ยวข้องได้ด้วยตนเองที่<Link href="/settings" className={styles.link}>หน้าตั้งค่าบัญชี</Link></li>
             <li><strong>สิทธิ์ขอแก้ไข คัดค้าน หรือระงับการใช้ข้อมูล</strong> — ติดต่อผู้ดูแลระบบตามช่องทางด้านล่าง</li>
           </ul>
         </section>

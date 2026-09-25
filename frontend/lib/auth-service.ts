@@ -38,6 +38,8 @@ export type AuthUser = {
   accountStatus?: AccountStatus;
   /** true = user must (re)accept the current privacy policy → ConsentModal. */
   needsConsent?: boolean;
+  /** From GET /auth/me (e.g. "GOOGLE" / "LOCAL") — decides the delete-account confirmation (B9). */
+  authProvider?: string;
 };
 
 export type AuthSession = AuthUser & {
@@ -181,6 +183,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       role: res.role,
       accountStatus: res.accountStatus,
       needsConsent: res.needsConsent,
+      authProvider: res.authProvider,
     };
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return null;
