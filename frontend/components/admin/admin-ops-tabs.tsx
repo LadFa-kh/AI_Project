@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import { describeError } from "@/lib/api-client";
 import {
   IMPORT_TEMPLATE_URL,
+  getUsageCost,
   getUsageSummary,
   importCompanies,
   listAdminCompanies,
@@ -18,6 +19,8 @@ import {
   listUsage,
   setCompanyStatus,
   type AdminCompany,
+  type CostRow,
+  type UsageCost,
   type ImportResult,
   type Paged,
 } from "@/lib/admin-ops-service";
@@ -442,6 +445,103 @@ export function CompaniesTab() {
   );
 }
 
+// ---------- Cost per action (§5.13) ----------
+
+const COST_LABEL: Record<string, string> = {
+  RESUME_UPLOAD: "อัปโหลดเรซูเม่",
+  ASSESSMENT_SUBMIT: "ส่งแบบประเมิน",
+  "process-resume": "Python: วิเคราะห์เรซูเม่",
+  "judge-skill-matches": "Python: Semantic matching (B2)",
+};
+
+function formatCost(value: number, currency: string): string {
+  if (!value) return `0 ${currency}`;
+  // Per-action costs are fractions of a cent — show enough significant digits.
+  return `${value.toLocaleString("en-US", { maximumSignificantDigits: 3 })} ${currency}`;
+}
+
+function CostTable({ title, rows, currency }: { title: string; rows: CostRow[]; currency: string }) {
+  return (
+    <div style={{ position: "relative", zIndex: 1, marginTop: 16 }}>
+      <h3 className={styles.sectionHeading} style={{ marginBottom: 8 }}>{title}</h3>
+      {rows.length === 0 ? (
+        <p className={styles.statSub}>ยังไม่มีข้อมูลในช่วงนี้ (เริ่มนับ token ตั้งแต่ backend deploy รอบ §5.13)</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>รายการ</th><th>model</th><th>จำนวนครั้ง</th><th>LLM calls เฉลี่ย</th>
+                <th>input tokens เฉลี่ย</th><th>output tokens เฉลี่ย</th><th>ต้นทุนเฉลี่ย / ครั้ง</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.name}>
+                  <td>
+                    <div className={styles.userName}>{COST_LABEL[r.name] ?? r.name}</div>
+                    <div className={styles.userEmail}>{r.name}</div>
+                  </td>
+                  <td>{r.model ?? "—"}</td>
+                  <td>{r.samples.toLocaleString("th-TH")}</td>
+                  <td>{r.avgLlmCalls != null ? r.avgLlmCalls.toFixed(1) : "—"}</td>
+                  <td>{Math.round(r.avgInputTokens).toLocaleString("th-TH")}</td>
+                  <td>{Math.round(r.avgOutputTokens).toLocaleString("th-TH")}</td>
+                  <td className={styles.nowrap}>{formatCost(r.avgCost, currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CostPanel({ from, to }: { from: string; to: string }) {
+  const [cost, setCost] = useState<UsageCost | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getUsageCost(from, to)
+      .then((c) => { if (!cancelled) { setCost(c); setError(""); } })
+      .catch((err: unknown) => { if (!cancelled) setError(describeError(err, "โหลดข้อมูลต้นทุนไม่ได้")); });
+    return () => { cancelled = true; };
+  }, [from, to]);
+
+  const currency = cost?.pricePer1M?.currency ?? "USD";
+  const priceUnset = !!cost && !cost.pricePer1M?.input && !cost.pricePer1M?.output;
+
+  return (
+    <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
+      <div className={styles.sectionHeadRow}>
+        <div>
+          <h2 className={styles.sectionHeading}>ต้นทุนต่อครั้ง (Cost per action)</h2>
+          <p className={styles.sectionSub}>
+            {cost
+              ? `ราคาต่อ 1M tokens — input ${cost.pricePer1M.input} / output ${cost.pricePer1M.output} ${currency}`
+              : "ค่าเฉลี่ย token และต้นทุนต่อการใช้งาน 1 ครั้ง"}
+          </p>
+        </div>
+      </div>
+      {error ? (
+        <p className={styles.formError} role="alert">{error}</p>
+      ) : !cost ? (
+        <div className={styles.skeletonCard}><div className={styles.skeletonLine} style={{ height: 60 }} /></div>
+      ) : (
+        <>
+          {priceUnset && (
+            <p className={styles.formError} role="status">ยังไม่ได้ตั้งราคาต่อ token ที่ backend (app.llm.price.*) — ต้นทุนจะแสดงเป็น 0</p>
+          )}
+          <CostTable title="ต่อการใช้งานของผู้ใช้" rows={cost.byAction ?? []} currency={currency} />
+          <CostTable title="ต่อ endpoint ฝั่ง Python (AI)" rows={cost.byPythonEndpoint ?? []} currency={currency} />
+        </>
+      )}
+    </div>
+  );
+}
+
 // ---------- Usage (B8) ----------
 
 function monthStartIso(): string {
@@ -484,7 +584,7 @@ export function UsageTab() {
       <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
         <div className={styles.sectionHeadRow}>
           <div>
-            <h2 className={styles.sectionHeading}>สรุปการใช้งาน (Cost per action)</h2>
+            <h2 className={styles.sectionHeading}>สรุปการใช้งาน</h2>
             <p className={styles.sectionSub}>จำนวนครั้ง / เครดิตที่ใช้ในช่วงวันที่เลือก</p>
           </div>
           <form
@@ -508,6 +608,8 @@ export function UsageTab() {
           <SummaryView data={summary} />
         )}
       </div>
+
+      <CostPanel from={range.from} to={range.to} />
 
       <div className={`${styles.card} ${styles.animateIn} ${styles.delay3}`}>
         <div className={styles.sectionHeadRow}>

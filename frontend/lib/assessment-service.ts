@@ -71,6 +71,8 @@ export type SkillMatchDetail = {
 // recompute or re-normalize client-side).
 export type CareerMatch = {
   roleName: string;
+  /** Thai role name (API_CHANGES.md §5.13) — optional; fall back to roleName. */
+  roleNameTh?: string | null;
   percent: number;
   matchedSkills: string[];
   /** ≤ 10 items, most widely used in the market first. */

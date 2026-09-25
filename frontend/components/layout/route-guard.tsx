@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 
 // /privacy-policy must be readable before sign-up (linked from the register
 // form's consent checkbox) — API_CHANGES.md §5.9.
-const PUBLIC_ROUTES = ["/", "/privacy-policy"];
+const PUBLIC_ROUTES = ["/", "/privacy-policy", "/terms"];
 // Company profiles are public on the backend too (API_CHANGES.md §5.4).
 const PUBLIC_PREFIXES = ["/companies/"];
 

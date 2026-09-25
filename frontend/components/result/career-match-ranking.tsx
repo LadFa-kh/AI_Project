@@ -51,7 +51,10 @@ export function CareerMatchRanking({ matches }: { matches: CareerMatch[] }) {
               </span>
               <span className={styles.careerMain}>
                 <span className={styles.careerNameRow}>
-                  <span className={styles.careerName}>{m.roleName}</span>
+                  <span className={styles.careerName}>
+                    {m.roleNameTh || m.roleName}
+                    {m.roleNameTh && <span className={styles.careerNameEn}>{m.roleName}</span>}
+                  </span>
                   {i === 0 && <span className={styles.careerBestTag}>เหมาะที่สุด</span>}
                 </span>
                 <span className={styles.careerBarTrack} aria-hidden="true">
@@ -74,7 +77,7 @@ export function CareerMatchRanking({ matches }: { matches: CareerMatch[] }) {
       <div className={styles.careerDetail} aria-live="polite">
         <p className={styles.careerDetailTitle}>
           <span className={styles.careerDetailDot} aria-hidden="true" />
-          {current.roleName}
+          {current.roleNameTh || current.roleName}
         </p>
         {current.missingSkills.length > 0 ? (
           <InsightChipList heading="ทักษะที่ยังขาด" items={current.missingSkills} tone="warning" />

@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMatchingRecommendations, type InternshipMatch } from "@/lib/matching-service";
-import { getAllWorkplaces, type Workplace } from "@/lib/workplace-service";
+import { getAllWorkplaces, skillsFromDetail, type Workplace } from "@/lib/workplace-service";
 import { readAssessmentResult } from "@/lib/assessment-session";
 import { writeMatchList } from "@/lib/match-session";
 import { writeWorkplaceList } from "@/lib/workplace-session";
@@ -108,6 +108,8 @@ export function InternshipMatchesView() {
     if (!workplaces) return [];
     return workplaces.map((w) => {
       const scored = matchByJobId.get(w.id);
+      // Per-job skill fit: scored recommendation first, else requiredSkillsDetail (§5.13).
+      const fromDetail = scored ? {} : skillsFromDetail(w);
       return {
         jobId: w.id,
         companyName: w.companyName,
@@ -115,8 +117,8 @@ export function InternshipMatchesView() {
         jobType: w.jobType,
         requiredSkills: w.requiredSkills,
         userFinalScore: scored?.userFinalScore,
-        matchedSkills: scored?.matchedSkills,
-        missingSkills: scored?.missingSkills,
+        matchedSkills: scored?.matchedSkills ?? fromDetail.matchedSkills,
+        missingSkills: scored?.missingSkills ?? fromDetail.missingSkills,
         jobDescription: w.jobDescription,
         duration: w.duration,
         salary: w.salary,

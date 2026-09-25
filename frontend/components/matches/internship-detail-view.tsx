@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { RequiredSkillChip } from "./required-skill-chip";
 import { readMatchById } from "@/lib/match-session";
 import { readWorkplaceById } from "@/lib/workplace-session";
-import { getWorkplaceById } from "@/lib/workplace-service";
+import { getWorkplaceById, skillsFromDetail } from "@/lib/workplace-service";
 import type { InternshipDetail } from "@/lib/internship-detail-types";
 import styles from "./match-detail.module.css";
 
@@ -199,8 +199,11 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
       .then((workplace) => {
         if (cancelled) return;
         // เก็บคะแนนและทักษะที่ตรง/ขาดจาก match ไว้ (ถ้ามี) แล้วเติมรายละเอียดงานจาก backend
+        const hasMatchSkills = !!(match?.matchedSkills?.length || match?.missingSkills?.length);
         setDetail({
           ...(match ?? {}),
+          // ไม่มีข้อมูลจาก match → ใช้ requiredSkillsDetail (§5.13) แยกทักษะที่มี/ขาด
+          ...(hasMatchSkills ? {} : skillsFromDetail(workplace)),
           jobId: workplace.id,
           companyName: workplace.companyName,
           positionName: workplace.positionName,
