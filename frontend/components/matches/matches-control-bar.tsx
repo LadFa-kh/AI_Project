@@ -12,6 +12,8 @@ type MatchesControlBarProps = {
   activeSkills: string[];
   onSkillToggle: (skill: string) => void;
   onClearSkills: () => void;
+  /** false = hide the "ตรงกับคุณ / ทั้งหมด" select (browse-only / no personal matching). */
+  showModeSelect?: boolean;
 };
 
 // "ทั้งหมด" (all workplaces) can surface dozens of distinct required skills
@@ -26,6 +28,7 @@ export function MatchesControlBar({
   activeSkills,
   onSkillToggle,
   onClearSkills,
+  showModeSelect = true,
 }: MatchesControlBarProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -41,18 +44,22 @@ export function MatchesControlBar({
 
   return (
     <div className={styles.controlBar}>
-      <label htmlFor="match-filter-mode" className="sr-only">
-        กรองตำแหน่งที่แนะนำ
-      </label>
-      <select
-        id="match-filter-mode"
-        value={filterMode}
-        onChange={(e) => onFilterModeChange(e.target.value as MatchFilterMode)}
-        className={styles.sortSelect}
-      >
-        <option value="matching">ตรงกับคุณ</option>
-        <option value="all">ทั้งหมด</option>
-      </select>
+      {showModeSelect && (
+        <>
+          <label htmlFor="match-filter-mode" className="sr-only">
+            กรองตำแหน่งที่แนะนำ
+          </label>
+          <select
+            id="match-filter-mode"
+            value={filterMode}
+            onChange={(e) => onFilterModeChange(e.target.value as MatchFilterMode)}
+            className={styles.sortSelect}
+          >
+            <option value="matching">ตรงกับคุณ</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
+        </>
+      )}
 
       <div className={styles.filterChips} role="group" aria-label="กรองตามทักษะที่ต้องการ (เลือกได้หลายทักษะ)">
         <button

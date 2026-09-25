@@ -17,6 +17,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { RequiredSkillChip } from "./required-skill-chip";
+import { BackLink } from "@/components/ui/back-link";
 import { readMatchById } from "@/lib/match-session";
 import { readWorkplaceById } from "@/lib/workplace-session";
 import { getWorkplaceById, skillsFromDetail } from "@/lib/workplace-service";
@@ -244,12 +245,12 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
       </div>
 
       <main className={styles.main}>
-        <Link href="/internship-matches" className={`${styles.backLink} ${styles.animateIn} ${styles.delay1}`}>
+        <BackLink fallbackHref="/jobs" className={`${styles.backLink} ${styles.animateIn} ${styles.delay1}`}>
           <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
             <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
           </svg>
-          กลับสู่รายการตำแหน่งที่แนะนำ
-        </Link>
+          ย้อนกลับ
+        </BackLink>
 
         {status === "loading" && (
           <div className={`${styles.detailCard} ${styles.animateIn} ${styles.delay2}`} aria-hidden="true">
@@ -269,8 +270,8 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
               </svg>
               ไม่พบข้อมูลตำแหน่งนี้ — กรุณากลับไปที่หน้ารายการเพื่อดูใหม่อีกครั้ง
             </p>
-            <Link href="/internship-matches" className={styles.ghostBtn}>
-              กลับสู่รายการ
+            <Link href="/jobs" className={styles.ghostBtn}>
+              ดูตำแหน่งทั้งหมด
             </Link>
           </div>
         )}
@@ -355,7 +356,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
                   ลิงก์สมัคร
                 </a>
               )}
-              <Link href="/internship-matches" className={styles.ghostBtn}>
+              <Link href="/jobs" className={styles.ghostBtn}>
                 กลับสู่รายการ
               </Link>
             </div>

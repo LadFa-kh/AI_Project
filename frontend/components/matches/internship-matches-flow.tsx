@@ -15,7 +15,19 @@ import { useEffect, useMemo, useRef } from "react";
 import { InternshipMatchesView } from "./internship-matches-view";
 import styles from "./matches-list.module.css";
 
-const HEADING = "ตำแหน่งฝึกงานที่ใช่สำหรับคุณ";
+const COPY = {
+  matches: {
+    eyebrow: "RESUMATE — INTERNSHIP MATCHES",
+    heading: "ตำแหน่งฝึกงานที่ใช่สำหรับคุณ",
+    subtitle: "จับคู่จากผลการประเมินทักษะของคุณ เรียงลำดับความสอดคล้องจากมากไปน้อย",
+  },
+  // /jobs — public board of every OPEN internship (no resume / admin needed)
+  browse: {
+    eyebrow: "RESUMATE — ที่ฝึกงานทั้งหมด",
+    heading: "ตำแหน่งฝึกงานที่เปิดรับทั้งหมด",
+    subtitle: "ดูได้ทันทีโดยไม่ต้องอัปโหลดเรซูเม่ · เข้าสู่ระบบและทำแบบประเมินเพื่อดูว่าตำแหน่งไหนตรงกับทักษะของคุณ",
+  },
+} as const;
 
 // ===== Particle field background — identical pattern to the rest of the
 // flow (try/catch, full cleanup). =====
@@ -113,7 +125,8 @@ function SplitHeading({ text }: { text: string }) {
   );
 }
 
-export function InternshipMatchesFlow() {
+export function InternshipMatchesFlow({ variant = "matches" }: { variant?: keyof typeof COPY } = {}) {
+  const copy = COPY[variant];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useParticleCanvas(canvasRef);
 
@@ -126,13 +139,11 @@ export function InternshipMatchesFlow() {
       </div>
 
       <main className={styles.main}>
-        <div className={`${styles.eyebrow} ${styles.animateIn}`}>RESUMATE — INTERNSHIP MATCHES</div>
-        <SplitHeading text={HEADING} />
-        <p className={`${styles.subtitle} ${styles.animateIn} ${styles.delay3}`}>
-          จับคู่จากผลการประเมินทักษะของคุณ เรียงลำดับความสอดคล้องจากมากไปน้อย
-        </p>
+        <div className={`${styles.eyebrow} ${styles.animateIn}`}>{copy.eyebrow}</div>
+        <SplitHeading text={copy.heading} />
+        <p className={`${styles.subtitle} ${styles.animateIn} ${styles.delay3}`}>{copy.subtitle}</p>
 
-        <InternshipMatchesView />
+        <InternshipMatchesView browseOnly={variant === "browse"} />
       </main>
     </div>
   );

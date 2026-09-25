@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/api-client";
 import { getCompanyById, getCompanyJobs, type Company } from "@/lib/company-service";
 import type { Workplace } from "@/lib/workplace-service";
 import { RequiredSkillChip } from "@/components/matches/required-skill-chip";
+import { BackLink } from "@/components/ui/back-link";
 import detailStyles from "@/components/matches/match-detail.module.css";
 import styles from "./company-profile.module.css";
 
@@ -82,12 +83,12 @@ export function CompanyProfileView({ companyId }: { companyId: string }) {
       </div>
 
       <main className={detailStyles.main}>
-        <Link href="/internship-matches" className={`${detailStyles.backLink} ${detailStyles.animateIn} ${detailStyles.delay1}`}>
+        <BackLink fallbackHref="/jobs" className={`${detailStyles.backLink} ${detailStyles.animateIn} ${detailStyles.delay1}`}>
           <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
             <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
           </svg>
-          กลับสู่รายการตำแหน่งฝึกงาน
-        </Link>
+          ย้อนกลับ
+        </BackLink>
 
         {status === "loading" && (
           <div className={`${detailStyles.detailCard} ${detailStyles.animateIn} ${detailStyles.delay2}`} aria-hidden="true">
@@ -105,7 +106,7 @@ export function CompanyProfileView({ companyId }: { companyId: string }) {
                 ? "ไม่พบข้อมูลบริษัทนี้ หรือบริษัทถูกระงับการแสดงผลชั่วคราว"
                 : "โหลดข้อมูลบริษัทไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"}
             </p>
-            <Link href="/internship-matches" className={detailStyles.ghostBtn}>
+            <Link href="/jobs" className={detailStyles.ghostBtn}>
               กลับสู่รายการ
             </Link>
           </div>

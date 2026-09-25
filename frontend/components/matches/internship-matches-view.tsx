@@ -27,10 +27,15 @@ import styles from "./matches-list.module.css";
 
 type Status = "loading" | "no-assessment" | "error" | "success";
 
-export function InternshipMatchesView() {
+export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boolean } = {}) {
   const { user, isLoading: authLoading } = useAuth();
   const isGuest = !authLoading && !user;
   const [status, setStatus] = useState<Status>("loading");
+  // Personal matching needs a login + a submitted assessment. Without either
+  // (or on /jobs = browseOnly) show every OPEN job instead of a dead end —
+  // /workplaces is public (FRONTEND_REQUESTS รอบ 4 ข้อ 3.1).
+  const noMatching = isGuest || status === "no-assessment";
+  const forceAll = browseOnly || noMatching;
   const [matches, setMatches] = useState<InternshipMatch[]>([]);
   // Separate load state for the "ทั้งหมด" (/workplaces) list — this is not
   // tied to the user's assessment, so it loads independently and lazily
@@ -39,9 +44,7 @@ export function InternshipMatchesView() {
   const [workplaces, setWorkplaces] = useState<Workplace[] | null>(null);
   const [workplacesStatus, setWorkplacesStatus] = useState<"idle" | "loading" | "error" | "success">("idle");
   const [selectedMode, setFilterMode] = useState<MatchFilterMode>("matching");
-  // Guests (not logged in) can browse every OPEN job (/workplaces is public)
-  // but have no personal matching → always "all".
-  const filterMode: MatchFilterMode = isGuest ? "all" : selectedMode;
+  const filterMode: MatchFilterMode = forceAll ? "all" : selectedMode;
   // Multiple skills can be selected at once — AND semantics (a job must
   // have every selected skill, not just one) applied in visibleMatches below.
   const [activeSkills, setActiveSkills] = useState<string[]>([]);
@@ -174,30 +177,23 @@ export function InternshipMatchesView() {
 
   return (
     <div className={styles.viewWrap}>
-      {isGuest && (
+      {!browseOnly && noMatching && (
         <div className={`${styles.emptyBlock} ${styles.animateIn}`}>
           <p className={fieldStyles.subheading}>
-            กำลังดูตำแหน่งฝึกงานทั้งหมดที่เปิดรับ —{" "}
-            <Link href="/login" style={{ textDecoration: "underline" }}>เข้าสู่ระบบ</Link>{" "}
-            แล้วอัปโหลดเรซูเม่เพื่อดูว่าตำแหน่งไหนตรงกับทักษะของคุณ
+            {isGuest ? (
+              <>
+                กำลังแสดงตำแหน่งฝึกงานทั้งหมดที่เปิดรับ —{" "}
+                <Link href="/login" style={{ textDecoration: "underline" }}>เข้าสู่ระบบ</Link>{" "}
+                แล้วอัปโหลดเรซูเม่เพื่อดูว่าตำแหน่งไหนตรงกับทักษะของคุณ
+              </>
+            ) : (
+              <>
+                ยังไม่มีผลการประเมิน จึงแสดงตำแหน่งฝึกงานทั้งหมดที่เปิดรับ —{" "}
+                <Link href="/upload-resume" style={{ textDecoration: "underline" }}>อัปโหลดเรซูเม่และทำแบบประเมิน</Link>{" "}
+                เพื่อดูตำแหน่งที่ตรงกับคุณ
+              </>
+            )}
           </p>
-        </div>
-      )}
-      {/* "no-assessment"/"error" here only block the default "matching"
-          filter — "ทั้งหมด" doesn't depend on the assessment, so the user
-          can still switch to it via the control bar below even when
-          matching has nothing to show. */}
-      {filterMode === "matching" && status === "no-assessment" && (
-        <div className={`${styles.emptyBlock} ${styles.animateIn}`}>
-          <h2 className={fieldStyles.heading} style={{ fontSize: 18 }}>
-            ยังไม่พบผลการประเมิน
-          </h2>
-          <p className={fieldStyles.subheading}>
-            กรุณาทำแบบประเมินทักษะให้เสร็จก่อน ระบบจะแนะนำที่ฝึกงานที่เหมาะกับคุณให้
-          </p>
-          <Link href="/skill-assessment" className={fieldStyles.submitBtn} style={{ maxWidth: 240, marginTop: 12 }}>
-            ไปหน้าแบบประเมินทักษะ
-          </Link>
         </div>
       )}
 
@@ -255,6 +251,7 @@ export function InternshipMatchesView() {
             activeSkills={activeSkills}
             onSkillToggle={toggleSkill}
             onClearSkills={clearSkills}
+            showModeSelect={!forceAll}
           />
         </ScrollReveal>
       )}

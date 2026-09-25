@@ -14,6 +14,7 @@ export function SiteFooter() {
       <div className={styles.inner}>
         <span>© 2569 ResuMate · มหาวิทยาลัยเทคโนโลยีราชมงคลอีสาน วิทยาเขตขอนแก่น</span>
         <ul className={styles.links}>
+          <li><Link href="/jobs" className={styles.link}>ที่ฝึกงานทั้งหมด</Link></li>
           <li><Link href="/terms" className={styles.link}>ข้อกำหนดการใช้งาน</Link></li>
           <li><Link href="/privacy-policy" className={styles.link}>นโยบายความเป็นส่วนตัว</Link></li>
           {isAuthenticated && (
