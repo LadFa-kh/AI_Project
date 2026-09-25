@@ -4,7 +4,7 @@
 // GET    /users/me/data-export  JSON with profile, resumes, consents, usage
 // DELETE /users/me              { password } or Google { confirm: email } → cookie cleared
 
-import { apiFetch, unwrap, unwrapList } from "./api-client";
+import { apiFetch, unwrap } from "./api-client";
 
 export type ConsentRecord = {
   id?: string;
@@ -15,8 +15,14 @@ export type ConsentRecord = {
   [key: string]: unknown;
 };
 
+// GET → data = { currentVersion, needsConsent, history: ConsentRecord[] } (confirmed รอบ 4 ข้อ 2.10).
+// Still accepts a bare array in case the shape changes.
 export async function listMyConsents(): Promise<ConsentRecord[]> {
-  return unwrapList<ConsentRecord>(await apiFetch<unknown>("/users/me/consents", { method: "GET" }));
+  const data = unwrap<{ history?: ConsentRecord[] } | ConsentRecord[] | null>(
+    await apiFetch<unknown>("/users/me/consents", { method: "GET" })
+  );
+  if (Array.isArray(data)) return data;
+  return data?.history ?? [];
 }
 
 export async function withdrawConsent(): Promise<void> {

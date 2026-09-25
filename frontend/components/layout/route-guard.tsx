@@ -12,9 +12,10 @@ import { useAuth } from "@/lib/auth-context";
 
 // /privacy-policy must be readable before sign-up (linked from the register
 // form's consent checkbox) — API_CHANGES.md §5.9.
-const PUBLIC_ROUTES = ["/", "/privacy-policy", "/terms"];
-// Company profiles are public on the backend too (API_CHANGES.md §5.4).
-const PUBLIC_PREFIXES = ["/companies/"];
+const PUBLIC_ROUTES = ["/", "/privacy-policy", "/terms", "/internship-matches"];
+// Company profiles + job listings are public on the backend too
+// (API_CHANGES.md §5.4; /workplaces/** permitAll — FRONTEND_REQUESTS รอบ 4 ข้อ 3.1).
+const PUBLIC_PREFIXES = ["/companies/", "/internship-matches/"];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

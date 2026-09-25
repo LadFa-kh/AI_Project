@@ -3,14 +3,14 @@ import Link from "next/link";
 import styles from "@/components/legal/privacy-policy.module.css";
 
 // Content follows the backend's draft docs/PRIVACY_POLICY_TH.md (written from
-// what the system actually stores — API_CHANGES.md §5.13). Still a DRAFT until
-// the project owner / advisor reviews it.
+// what the system actually stores — API_CHANGES.md §5.13). Approved as the
+// real v1.0 policy by the backend owner (FRONTEND_REQUESTS รอบ 4 ข้อ 3.5).
 // Version must match GET /api/v1/policies/current → { version, url: "/privacy-policy" }.
 // When the backend bumps the version, update these constants and the text together.
 const POLICY_VERSION = "1.0";
 const EFFECTIVE_DATE_LABEL = "24 กันยายน 2569";
-/** TODO: fill in once the project owner confirms (FRONTEND_REQUESTS 3.5). null = generic wording. */
-const CONTACT_EMAIL: string | null = null;
+/** Confirmed by backend (FRONTEND_REQUESTS รอบ 4 ข้อ 3.5) — ผู้ตรวจอนุมัติ: นายรัชพล ศรีชำนาญ. null = generic wording. */
+const CONTACT_EMAIL: string | null = "ratchaponsrichamnan@gmail.com";
 
 export const metadata: Metadata = {
   title: "นโยบายความเป็นส่วนตัว — ResuMate",

@@ -49,7 +49,23 @@ export type ImportResult = {
   errors: ImportError[];
 };
 
-export const IMPORT_TEMPLATE_URL = apiUrl("/admin/companies/import/template");
+/**
+ * Downloads the CSV template. Must go through fetch → blob (not .text()) so the
+ * UTF-8 BOM survives and Excel shows Thai correctly (FRONTEND_REQUESTS รอบ 4 ข้อ 3.4).
+ */
+export async function downloadImportTemplate(): Promise<void> {
+  const res = await fetch(apiUrl("/admin/companies/import/template"), { credentials: "include" });
+  if (!res.ok) throw new Error("ดาวน์โหลด template ไม่สำเร็จ");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "companies-template.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export async function importCompanies(file: File, dryRun: boolean): Promise<{ message: string; result: ImportResult }> {
   const fd = new FormData();
@@ -59,9 +75,35 @@ export async function importCompanies(file: File, dryRun: boolean): Promise<{ me
   return { message, result: unwrap<ImportResult>(res) };
 }
 
-/** Shape not documented beyond "history" — rendered generically. */
-export async function listImports(page = 0, size = 20): Promise<Paged<Record<string, unknown>>> {
-  return toPaged<Record<string, unknown>>(await apiFetch<unknown>(`/admin/imports${qs({ page, size })}`, { method: "GET" }));
+// Shapes confirmed in FRONTEND_REQUESTS รอบ 4 ข้อ 2.8–2.9.
+export type ImportLog = {
+  id: string;
+  type: string;
+  fileName: string;
+  dryRun: boolean;
+  totalRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errorCount: number;
+  /** JSON string of ImportError[] — parse with parseImportErrors(). */
+  errorsJson?: string | null;
+  importedBy?: string | null;
+  createdAt: string;
+};
+
+export function parseImportErrors(json: string | null | undefined): ImportError[] {
+  if (!json) return [];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? (v as ImportError[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function listImports(page = 0, size = 20): Promise<Paged<ImportLog>> {
+  return toPaged<ImportLog>(await apiFetch<unknown>(`/admin/imports${qs({ type: "COMPANY", page, size })}`, { method: "GET" }));
 }
 
 // ===== Cost per action (§5.13) — GET /admin/usage/cost?from=&to= =====
@@ -84,13 +126,27 @@ export async function getUsageCost(from?: string, to?: string): Promise<UsageCos
   return unwrap<UsageCost>(await apiFetch<unknown>(`/admin/usage/cost${qs({ from, to })}`, { method: "GET" }));
 }
 
-// ===== Usage (B8) — shapes not documented; rendered generically =====
-export async function getUsageSummary(from?: string, to?: string): Promise<unknown> {
-  return unwrap<unknown>(await apiFetch<unknown>(`/admin/usage/summary${qs({ from, to })}`, { method: "GET" }));
+// ===== Usage (B8) =====
+export type UsageSummaryRow = { action: string; total: number; success: number; creditsUsed: number };
+export type UsageLogRow = {
+  id: string;
+  userId: string | null;
+  email: string | null;
+  action: string;
+  success: boolean;
+  creditsUsed: number;
+  durationMs: number | null;
+  detail: string | null;
+  createdAt: string;
+};
+
+export async function getUsageSummary(from?: string, to?: string): Promise<UsageSummaryRow[]> {
+  const data = unwrap<UsageSummaryRow[] | null>(await apiFetch<unknown>(`/admin/usage/summary${qs({ from, to })}`, { method: "GET" }));
+  return Array.isArray(data) ? data : [];
 }
 
-export async function listUsage(params: { userId?: string; action?: string; from?: string; to?: string; page?: number; size?: number }): Promise<Paged<Record<string, unknown>>> {
-  return toPaged<Record<string, unknown>>(
+export async function listUsage(params: { userId?: string; action?: string; from?: string; to?: string; page?: number; size?: number }): Promise<Paged<UsageLogRow>> {
+  return toPaged<UsageLogRow>(
     await apiFetch<unknown>(`/admin/usage${qs({ ...params, page: params.page ?? 0, size: params.size ?? 50 })}`, { method: "GET" })
   );
 }

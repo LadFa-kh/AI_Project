@@ -133,18 +133,16 @@ function InternshipFormModal({
     setError("");
     try {
       if (editing) {
+        // PUT rules (FRONTEND_REQUESTS รอบ 4 ข้อ 2.5): position/supervisor editable on every record,
+        // companyName only off-system, status only CANCELLED in-system (any value off-system).
         const base = compact({
           startDate: form.startDate,
           endDate: form.endDate,
           studentNote: form.studentNote,
-          ...(offSystemEdit
-            ? {
-                companyName: form.companyName,
-                positionName: form.positionName,
-                supervisorName: form.supervisorName,
-                supervisorEmail: form.supervisorEmail,
-              }
-            : {}),
+          positionName: form.positionName,
+          supervisorName: form.supervisorName,
+          supervisorEmail: form.supervisorEmail,
+          ...(offSystemEdit ? { companyName: form.companyName } : {}),
         });
         const input: InternshipUpdateInput = offSystemEdit && form.status !== editing.status ? { ...base, status: form.status } : base;
         await updateMyInternship(editing.id, input);
@@ -208,9 +206,25 @@ function InternshipFormModal({
         )}
 
         {editing && !offSystemEdit && (
-          <p className={styles.statSub} style={{ marginTop: 0, marginBottom: 14 }}>
-            {editing.positionName ?? "-"} — {editing.companyName} · สถานะของบริษัทในระบบจะถูกอัปเดตโดยบริษัท
-          </p>
+          <>
+            <p className={styles.statSub} style={{ marginTop: 0, marginBottom: 14 }}>
+              {editing.companyName} · สถานะของบริษัทในระบบจะถูกอัปเดตโดยบริษัท
+            </p>
+            <div className={styles.grid2}>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="in-position-e">ตำแหน่ง</label>
+                <input id="in-position-e" className={styles.formInput} value={form.positionName} onChange={(e) => set("positionName", e.target.value)} />
+              </div>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="in-sup-e">ชื่อพี่เลี้ยง (ไม่บังคับ)</label>
+                <input id="in-sup-e" className={styles.formInput} value={form.supervisorName} onChange={(e) => set("supervisorName", e.target.value)} />
+              </div>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="in-supmail-e">อีเมลพี่เลี้ยง (ไม่บังคับ)</label>
+                <input id="in-supmail-e" type="email" className={styles.formInput} value={form.supervisorEmail} onChange={(e) => set("supervisorEmail", e.target.value)} />
+              </div>
+            </div>
+          </>
         )}
 
         {mode === "offsystem" && (

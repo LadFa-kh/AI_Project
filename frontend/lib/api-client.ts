@@ -149,6 +149,8 @@ export function describeError(err: unknown, fallback: string): string {
         return "กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก";
       case "NOT_JOB_OWNER":
         return "คุณไม่ใช่เจ้าของประกาศนี้ จึงแก้ไขไม่ได้";
+      case "POLICY_VERSION_MISMATCH":
+        return "นโยบายความเป็นส่วนตัวมีการอัปเดต กรุณารีเฟรชหน้าแล้วยอมรับนโยบายฉบับล่าสุด";
       case "CONFIRMATION_FAILED":
         return "ข้อมูลยืนยันไม่ถูกต้อง กรุณาตรวจสอบแล้วลองใหม่";
     }

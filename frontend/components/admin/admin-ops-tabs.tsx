@@ -10,19 +10,23 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { describeError } from "@/lib/api-client";
 import {
-  IMPORT_TEMPLATE_URL,
+  downloadImportTemplate,
   getUsageCost,
   getUsageSummary,
   importCompanies,
   listAdminCompanies,
   listImports,
   listUsage,
+  parseImportErrors,
   setCompanyStatus,
   type AdminCompany,
   type CostRow,
   type UsageCost,
+  type ImportLog,
   type ImportResult,
   type Paged,
+  type UsageLogRow,
+  type UsageSummaryRow,
 } from "@/lib/admin-ops-service";
 import {
   INTERNSHIP_STATUSES,
@@ -30,7 +34,7 @@ import {
   listAllInternships,
   type Internship,
 } from "@/lib/internship-service";
-import { formatThaiDate, formatThaiDateRange } from "@/lib/date-format";
+import { formatThaiDateRange } from "@/lib/date-format";
 import { InternshipStatusBadge } from "@/components/internships/internship-status-badge";
 import styles from "./admin-dashboard.module.css";
 
@@ -47,67 +51,15 @@ function Pager({ page, totalPages, onPage }: { page: number; totalPages: number;
   );
 }
 
-function formatCell(key: string, value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "string" && /(At|Date|date|time)$/.test(key) && !Number.isNaN(Date.parse(value))) {
-    const d = new Date(value);
-    return value.length <= 10 ? formatThaiDate(value) : d.toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
-  }
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
+const ACTION_LABEL: Record<string, string> = {
+  RESUME_UPLOAD: "อัปโหลดเรซูเม่",
+  ASSESSMENT_SUBMIT: "ส่งแบบประเมิน",
+};
 
-/** Renders any array of flat objects as a table — for endpoints whose shape isn't documented yet. */
-function GenericTable({ rows, hideKeys = [] }: { rows: Record<string, unknown>[]; hideKeys?: string[] }) {
-  if (rows.length === 0) return <p className={styles.emptyState}>ไม่มีข้อมูล</p>;
-  const keys = Array.from(new Set(rows.flatMap((r) => Object.keys(r)))).filter((k) => !hideKeys.includes(k));
-  return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>{keys.map((k) => <th key={k}>{k}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>{keys.map((k) => <td key={k}>{formatCell(k, r[k])}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/** Summary endpoint: array → table, object → key/value tiles (numbers) + nested tables. */
-function SummaryView({ data }: { data: unknown }) {
-  if (Array.isArray(data)) return <GenericTable rows={data as Record<string, unknown>[]} />;
-  if (!data || typeof data !== "object") return <p className={styles.emptyState}>ไม่มีข้อมูล</p>;
-  const entries = Object.entries(data as Record<string, unknown>);
-  const scalars = entries.filter(([, v]) => v === null || typeof v !== "object");
-  const nested = entries.filter(([, v]) => v !== null && typeof v === "object");
-  return (
-    <>
-      {scalars.length > 0 && (
-        <div className={styles.statGrid} style={{ marginBottom: 16 }}>
-          {scalars.map(([k, v]) => (
-            <div key={k} className={`${styles.card} ${styles.statCard}`}>
-              <span className={styles.statLabel}>{k}</span>
-              <span className={styles.statValue}>{formatCell(k, v)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {nested.map(([k, v]) => (
-        <div key={k} style={{ marginBottom: 16, position: "relative", zIndex: 1 }}>
-          <h3 className={styles.sectionHeading} style={{ marginBottom: 8 }}>{k}</h3>
-          {Array.isArray(v) ? (
-            <GenericTable rows={v as Record<string, unknown>[]} />
-          ) : (
-            <GenericTable rows={Object.entries(v as Record<string, unknown>).map(([key, val]) => ({ key, value: val }))} />
-          )}
-        </div>
-      ))}
-    </>
-  );
+function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
 }
 
 // ---------- Companies + import (B4/B7) ----------
@@ -218,7 +170,16 @@ function ImportPanel({ onImported }: { onImported: () => void }) {
           <h2 className={styles.sectionHeading}>นำเข้าบริษัทจากไฟล์</h2>
           <p className={styles.sectionSub}>1) ดาวน์โหลด template 2) ตรวจไฟล์ (ยังไม่บันทึก) 3) ยืนยันนำเข้า</p>
         </div>
-        <a href={IMPORT_TEMPLATE_URL} className={styles.btnGhost} download>ดาวน์โหลด template (CSV)</a>
+        <button
+          type="button"
+          className={styles.btnGhost}
+          onClick={() => {
+            setError("");
+            downloadImportTemplate().catch((err: unknown) => setError(describeError(err, "ดาวน์โหลด template ไม่สำเร็จ")));
+          }}
+        >
+          ดาวน์โหลด template (CSV)
+        </button>
       </div>
 
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -295,9 +256,10 @@ function ImportPanel({ onImported }: { onImported: () => void }) {
 }
 
 function ImportHistory({ reloadKey }: { reloadKey: number }) {
-  const [data, setData] = useState<Paged<Record<string, unknown>> | null>(null);
+  const [data, setData] = useState<Paged<ImportLog> | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -316,7 +278,64 @@ function ImportHistory({ reloadKey }: { reloadKey: number }) {
         <div className={styles.skeletonCard}><div className={styles.skeletonLine} style={{ height: 40 }} /></div>
       ) : (
         <>
-          <GenericTable rows={data.content} hideKeys={["errors"]} />
+          {data.content.length === 0 ? (
+            <p className={styles.emptyState}>ยังไม่มีประวัติการนำเข้า</p>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr><th>วันเวลา</th><th>ไฟล์</th><th>แบบ</th><th>แถว</th><th>เพิ่มใหม่</th><th>อัปเดต</th><th>ข้าม</th><th>ข้อผิดพลาด</th><th>ผู้นำเข้า</th></tr>
+                </thead>
+                <tbody>
+                  {data.content.map((log) => {
+                    const errors = openId === log.id ? parseImportErrors(log.errorsJson) : [];
+                    return (
+                      <Fragment key={log.id}>
+                        <tr>
+                          <td className={styles.nowrap}>{formatDateTime(log.createdAt)}</td>
+                          <td>{log.fileName}</td>
+                          <td>
+                            <span className={`${styles.badge} ${log.dryRun ? styles.badgeNeutral : styles.badgeEmployer}`}>
+                              {log.dryRun ? "ตรวจอย่างเดียว" : "นำเข้าจริง"}
+                            </span>
+                          </td>
+                          <td>{log.totalRows}</td>
+                          <td>{log.created}</td>
+                          <td>{log.updated}</td>
+                          <td>{log.skipped}</td>
+                          <td>
+                            {log.errorCount > 0 ? (
+                              <button type="button" className={styles.btnGhost} onClick={() => setOpenId(openId === log.id ? null : log.id)} aria-expanded={openId === log.id}>
+                                {log.errorCount} รายการ {openId === log.id ? "▲" : "▼"}
+                              </button>
+                            ) : (
+                              "0"
+                            )}
+                          </td>
+                          <td>{log.importedBy ?? "—"}</td>
+                        </tr>
+                        {openId === log.id && (
+                          <tr>
+                            <td colSpan={9}>
+                              {errors.length === 0 ? (
+                                <span className={styles.userEmail}>ไม่มีรายละเอียด</span>
+                              ) : (
+                                errors.map((e, i) => (
+                                  <div key={i} className={styles.userEmail}>
+                                    แถว {e.row}{e.field ? ` · ${e.field}` : ""}: {e.message}
+                                  </div>
+                                ))
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           <Pager page={data.page} totalPages={data.totalPages} onPage={setPage} />
         </>
       )}
@@ -454,10 +473,13 @@ const COST_LABEL: Record<string, string> = {
   "judge-skill-matches": "Python: Semantic matching (B2)",
 };
 
+// Per-action cost is a fraction of a cent (USD) — show per 1 time (6 decimals)
+// and per 1,000 times, as the backend suggested (รอบ 4 ข้อ 3.6).
 function formatCost(value: number, currency: string): string {
-  if (!value) return `0 ${currency}`;
-  // Per-action costs are fractions of a cent — show enough significant digits.
-  return `${value.toLocaleString("en-US", { maximumSignificantDigits: 3 })} ${currency}`;
+  return `${(value || 0).toFixed(6)} ${currency}`;
+}
+function formatCostPer1000(value: number, currency: string): string {
+  return `${((value || 0) * 1000).toFixed(2)} ${currency}`;
 }
 
 function CostTable({ title, rows, currency }: { title: string; rows: CostRow[]; currency: string }) {
@@ -472,7 +494,7 @@ function CostTable({ title, rows, currency }: { title: string; rows: CostRow[]; 
             <thead>
               <tr>
                 <th>รายการ</th><th>model</th><th>จำนวนครั้ง</th><th>LLM calls เฉลี่ย</th>
-                <th>input tokens เฉลี่ย</th><th>output tokens เฉลี่ย</th><th>ต้นทุนเฉลี่ย / ครั้ง</th>
+                <th>input tokens เฉลี่ย</th><th>output tokens เฉลี่ย</th><th>ต้นทุน / ครั้ง</th><th>ต้นทุน / 1,000 ครั้ง</th>
               </tr>
             </thead>
             <tbody>
@@ -488,6 +510,7 @@ function CostTable({ title, rows, currency }: { title: string; rows: CostRow[]; 
                   <td>{Math.round(r.avgInputTokens).toLocaleString("th-TH")}</td>
                   <td>{Math.round(r.avgOutputTokens).toLocaleString("th-TH")}</td>
                   <td className={styles.nowrap}>{formatCost(r.avgCost, currency)}</td>
+                  <td className={styles.nowrap}><strong>{formatCostPer1000(r.avgCost, currency)}</strong></td>
                 </tr>
               ))}
             </tbody>
@@ -558,15 +581,15 @@ export function UsageTab() {
   const [to, setTo] = useState(todayIso);
   const [action, setAction] = useState("");
   const [range, setRange] = useState({ from: monthStartIso(), to: todayIso(), action: "" });
-  const [summary, setSummary] = useState<unknown>(null);
-  const [log, setLog] = useState<Paged<Record<string, unknown>> | null>(null);
+  const [summary, setSummary] = useState<UsageSummaryRow[] | null>(null);
+  const [log, setLog] = useState<Paged<UsageLogRow> | null>(null);
   const [page, setPage] = useState(0);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     getUsageSummary(range.from, range.to)
-      .then((s) => { if (!cancelled) setSummary(s ?? {}); })
+      .then((s) => { if (!cancelled) setSummary(s); })
       .catch((err: unknown) => { if (!cancelled) setError(describeError(err, "โหลดสรุปการใช้งานไม่ได้")); });
     return () => { cancelled = true; };
   }, [range]);
@@ -594,9 +617,9 @@ export function UsageTab() {
             <input type="date" className={styles.formInput} style={{ width: "auto" }} value={from} onChange={(e) => setFrom(e.target.value)} aria-label="ตั้งแต่วันที่" />
             <input type="date" className={styles.formInput} style={{ width: "auto" }} value={to} min={from} onChange={(e) => setTo(e.target.value)} aria-label="ถึงวันที่" />
             <select className={styles.formSelect} style={{ width: "auto" }} value={action} onChange={(e) => setAction(e.target.value)} aria-label="ประเภทการใช้งาน">
-              <option value="">ทุก action</option>
-              <option value="RESUME_UPLOAD">RESUME_UPLOAD</option>
-              <option value="ASSESSMENT_SUBMIT">ASSESSMENT_SUBMIT</option>
+              <option value="">ทุกประเภท</option>
+              <option value="RESUME_UPLOAD">อัปโหลดเรซูเม่</option>
+              <option value="ASSESSMENT_SUBMIT">ส่งแบบประเมิน</option>
             </select>
             <button type="submit" className={styles.btnGhost}>แสดง</button>
           </form>
@@ -605,7 +628,31 @@ export function UsageTab() {
         {summary === null ? (
           <div className={styles.skeletonCard}><div className={styles.skeletonLine} style={{ height: 60 }} /></div>
         ) : (
-          <SummaryView data={summary} />
+          summary.length === 0 ? (
+            <p className={styles.emptyState}>ไม่มีการใช้งานในช่วงนี้</p>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr><th>ประเภท</th><th>ทั้งหมด</th><th>สำเร็จ</th><th>ไม่สำเร็จ</th><th>เครดิตที่ใช้</th></tr>
+                </thead>
+                <tbody>
+                  {summary.map((r) => (
+                    <tr key={r.action}>
+                      <td>
+                        <div className={styles.userName}>{ACTION_LABEL[r.action] ?? r.action}</div>
+                        <div className={styles.userEmail}>{r.action}</div>
+                      </td>
+                      <td>{r.total.toLocaleString("th-TH")}</td>
+                      <td>{r.success.toLocaleString("th-TH")}</td>
+                      <td>{(r.total - r.success).toLocaleString("th-TH")}</td>
+                      <td>{r.creditsUsed.toLocaleString("th-TH")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
 
@@ -620,7 +667,34 @@ export function UsageTab() {
           <div className={styles.skeletonCard}><div className={styles.skeletonLine} style={{ height: 40 }} /></div>
         ) : (
           <>
-            <GenericTable rows={log.content} />
+            {log.content.length === 0 ? (
+              <p className={styles.emptyState}>ไม่มีรายการ</p>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr><th>วันเวลา</th><th>ผู้ใช้</th><th>ประเภท</th><th>ผล</th><th>เครดิต</th><th>ใช้เวลา</th><th>รายละเอียด</th></tr>
+                  </thead>
+                  <tbody>
+                    {log.content.map((r) => (
+                      <tr key={r.id}>
+                        <td className={styles.nowrap}>{formatDateTime(r.createdAt)}</td>
+                        <td>{r.email ?? <span className={styles.userEmail}>บัญชีที่ลบแล้ว</span>}</td>
+                        <td>{ACTION_LABEL[r.action] ?? r.action}</td>
+                        <td>
+                          <span className={`${styles.badge} ${r.success ? styles.badgeEmployer : styles.badgeRejected}`}>
+                            {r.success ? "สำเร็จ" : "ไม่สำเร็จ"}
+                          </span>
+                        </td>
+                        <td>{r.creditsUsed}</td>
+                        <td className={styles.nowrap}>{r.durationMs != null ? `${(r.durationMs / 1000).toFixed(1)} วิ` : "—"}</td>
+                        <td>{r.detail ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <Pager page={log.page} totalPages={log.totalPages} onPage={setPage} />
           </>
         )}

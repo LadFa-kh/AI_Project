@@ -28,7 +28,8 @@ import styles from "./matches-list.module.css";
 type Status = "loading" | "no-assessment" | "error" | "success";
 
 export function InternshipMatchesView() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const isGuest = !authLoading && !user;
   const [status, setStatus] = useState<Status>("loading");
   const [matches, setMatches] = useState<InternshipMatch[]>([]);
   // Separate load state for the "ทั้งหมด" (/workplaces) list — this is not
@@ -37,7 +38,10 @@ export function InternshipMatchesView() {
   // fetch when they never leave the default "matching" filter).
   const [workplaces, setWorkplaces] = useState<Workplace[] | null>(null);
   const [workplacesStatus, setWorkplacesStatus] = useState<"idle" | "loading" | "error" | "success">("idle");
-  const [filterMode, setFilterMode] = useState<MatchFilterMode>("matching");
+  const [selectedMode, setFilterMode] = useState<MatchFilterMode>("matching");
+  // Guests (not logged in) can browse every OPEN job (/workplaces is public)
+  // but have no personal matching → always "all".
+  const filterMode: MatchFilterMode = isGuest ? "all" : selectedMode;
   // Multiple skills can be selected at once — AND semantics (a job must
   // have every selected skill, not just one) applied in visibleMatches below.
   const [activeSkills, setActiveSkills] = useState<string[]>([]);
@@ -170,6 +174,15 @@ export function InternshipMatchesView() {
 
   return (
     <div className={styles.viewWrap}>
+      {isGuest && (
+        <div className={`${styles.emptyBlock} ${styles.animateIn}`}>
+          <p className={fieldStyles.subheading}>
+            กำลังดูตำแหน่งฝึกงานทั้งหมดที่เปิดรับ —{" "}
+            <Link href="/login" style={{ textDecoration: "underline" }}>เข้าสู่ระบบ</Link>{" "}
+            แล้วอัปโหลดเรซูเม่เพื่อดูว่าตำแหน่งไหนตรงกับทักษะของคุณ
+          </p>
+        </div>
+      )}
       {/* "no-assessment"/"error" here only block the default "matching"
           filter — "ทั้งหมด" doesn't depend on the assessment, so the user
           can still switch to it via the control bar below even when
