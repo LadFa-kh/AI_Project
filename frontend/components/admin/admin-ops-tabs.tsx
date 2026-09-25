@@ -380,6 +380,9 @@ export function CompaniesTab() {
 
   return (
     <>
+      {/* Import sits above the list (requested) — the list can be pages long. */}
+      <ImportPanel onImported={reload} />
+
       <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
         <div className={styles.sectionHeadRow}>
           <div>
@@ -456,7 +459,6 @@ export function CompaniesTab() {
         )}
       </div>
 
-      <ImportPanel onImported={reload} />
       <ImportHistory reloadKey={reloadKey} />
 
       {suspending && <SuspendModal company={suspending} onClose={() => setSuspending(null)} onDone={reload} />}
