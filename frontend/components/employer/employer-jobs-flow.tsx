@@ -7,11 +7,19 @@
 // (admin-dashboard.module.css) rather than duplicating ~500 lines of
 // glass-card/Nocturne-token styles for one page.
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployerJobsView } from "./employer-jobs-view";
+import { EmployerCompanyView } from "./employer-company-view";
 import styles from "@/components/admin/admin-dashboard.module.css";
 
 const HEADING = "ประกาศงานของบริษัทคุณ";
+
+type EmployerTab = "jobs" | "company";
+
+const EMPLOYER_TABS: { key: EmployerTab; label: string }[] = [
+  { key: "jobs", label: "ประกาศงาน" },
+  { key: "company", label: "ข้อมูลบริษัท" },
+];
 
 // ===== Particle field background — identical pattern to the rest of the
 // flow (try/catch, full cleanup). =====
@@ -108,6 +116,7 @@ function SplitHeading({ text }: { text: string }) {
 export function EmployerJobsFlow() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useParticleCanvas(canvasRef);
+  const [tab, setTab] = useState<EmployerTab>("jobs");
 
   return (
     <div className={styles.page}>
@@ -123,12 +132,28 @@ export function EmployerJobsFlow() {
             <span className={styles.eyebrow}>RESUMATE — EMPLOYER</span>
             <SplitHeading text={HEADING} />
             <p className={styles.pageSubheading}>
-              สร้าง แก้ไข และลบประกาศรับสมัครฝึกงาน/งานของบริษัทคุณ
+              สร้าง แก้ไข เปิด/ปิดรับสมัคร และจัดการข้อมูลบริษัทของคุณ
             </p>
           </div>
         </div>
 
-        <EmployerJobsView />
+        <div className={`${styles.tabBar} ${styles.animateIn} ${styles.delay1}`} role="tablist">
+          {EMPLOYER_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              className={`${styles.tabBtn} ${tab === t.key ? styles.tabBtnActive : ""}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "jobs" && <EmployerJobsView />}
+        {tab === "company" && <EmployerCompanyView />}
       </main>
     </div>
   );

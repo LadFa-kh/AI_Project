@@ -121,7 +121,14 @@ export type AdminJob = {
   duration: string;
   salary: string;
   contactLink: string;
+  // B3/B4 (API_CHANGES.md §5.3–5.4) — absent on rows the backend hasn't filled.
+  status?: JobStatus;
+  openDate?: string | null;
+  closeDate?: string | null;
+  companyId?: string | null;
 };
+
+export type JobStatus = "DRAFT" | "OPEN" | "CLOSED";
 
 // requiredSkills is a COMMA-STRING on the way IN — different shape from
 // AdminJob.requiredSkills (array). Every skill name must match the O*NET
@@ -137,6 +144,9 @@ export type AdminJobInput = {
   duration: string;
   salary: string;
   contactLink: string;
+  /** "YYYY-MM-DD" — openDate in the future makes the job DRAFT until then (B3). */
+  openDate?: string;
+  closeDate?: string;
 };
 
 export type AdminJobUpdateInput = Partial<AdminJobInput>;

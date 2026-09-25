@@ -3,7 +3,7 @@
 // GET /companies/{id}/jobs  -> OPEN jobs only, same shape as GET /workplaces.
 //   Handled defensively: bare array, envelope, or paginated { content }.
 
-import { apiFetch } from "./api-client";
+import { apiFetch, unwrap, unwrapList } from "./api-client";
 import type { Workplace } from "./workplace-service";
 
 export type Company = {
@@ -22,13 +22,6 @@ export type Company = {
   jobCount: number;
 };
 
-function unwrap<T>(res: unknown): T {
-  if (res && typeof res === "object" && "data" in res && "status" in res) {
-    return (res as { data: T }).data;
-  }
-  return res as T;
-}
-
 export async function getCompanyById(id: string): Promise<Company> {
   const res = await apiFetch<unknown>(`/companies/${encodeURIComponent(id)}`, { method: "GET" });
   return unwrap<Company>(res);
@@ -36,7 +29,34 @@ export async function getCompanyById(id: string): Promise<Company> {
 
 export async function getCompanyJobs(id: string): Promise<Workplace[]> {
   const res = await apiFetch<unknown>(`/companies/${encodeURIComponent(id)}/jobs`, { method: "GET" });
-  const data = unwrap<Workplace[] | { content?: Workplace[] } | null>(res);
-  if (Array.isArray(data)) return data;
-  return data?.content ?? [];
+  return unwrapList<Workplace>(res);
+}
+
+// ===== EMPLOYER — own company (GET/PUT /companies/me) =====
+
+export type CompanyInput = {
+  nameTh: string;
+  nameEn: string;
+  industry: string;
+  description: string;
+  website: string;
+  email: string;
+  phone: string;
+  address: string;
+  province: string;
+  logoUrl: string;
+};
+
+export async function getMyCompany(): Promise<Company> {
+  const res = await apiFetch<unknown>("/companies/me", { method: "GET" });
+  return unwrap<Company>(res);
+}
+
+/** Send only the fields that changed (API_CHANGES.md §5.4). */
+export async function updateMyCompany(input: Partial<CompanyInput>): Promise<Company> {
+  const res = await apiFetch<unknown>("/companies/me", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return unwrap<Company>(res);
 }

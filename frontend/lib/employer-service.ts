@@ -11,28 +11,49 @@
 //
 // รูปร่างข้อมูลเหมือน admin-service ทุกประการ จึงใช้ชนิดข้อมูลร่วมกันได้
 
-import { apiFetch } from "./api-client";
-import type { AdminJob, AdminJobInput, AdminJobUpdateInput } from "./admin-service";
+import { apiFetch, unwrap, unwrapList } from "./api-client";
+import type { AdminJob, AdminJobInput, AdminJobUpdateInput, JobStatus } from "./admin-service";
+
+export type { JobStatus };
 
 export type EmployerJob = AdminJob;
 /** employerId ไม่ต้องส่ง — backend เติมจากโทเคนให้เอง และทับค่าที่ส่งมาเสมอ */
 export type EmployerJobInput = Omit<AdminJobInput, "employerId"> & { employerId?: string };
 export type EmployerJobUpdateInput = AdminJobUpdateInput;
 
+// Envelope/bare handled defensively — TESTING_FLOWS.md itself reads
+// `job.data?.id ?? job.id`, so the shape isn't pinned down yet.
 export async function listMyJobs(): Promise<EmployerJob[]> {
-  return apiFetch<EmployerJob[]>("/employer/jobs", { method: "GET" });
+  const res = await apiFetch<unknown>("/employer/jobs", { method: "GET" });
+  return unwrapList<EmployerJob>(res);
 }
 
 export async function createMyJob(input: EmployerJobInput): Promise<EmployerJob> {
-  return apiFetch<EmployerJob>("/employer/jobs", {
+  const res = await apiFetch<unknown>("/employer/jobs", {
     method: "POST",
     body: JSON.stringify(input),
   });
+  return unwrap<EmployerJob>(res);
 }
 
 export async function updateMyJob(id: string, input: EmployerJobUpdateInput): Promise<EmployerJob> {
-  return apiFetch<EmployerJob>(`/employer/jobs/${id}`, {
+  const res = await apiFetch<unknown>(`/employer/jobs/${id}`, {
     method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return unwrap<EmployerJob>(res);
+}
+
+export type JobStatusInput = {
+  status: Exclude<JobStatus, "DRAFT">;
+  openDate?: string;
+  closeDate?: string;
+};
+
+// PATCH /jobs/{id}/status — owner or ADMIN; other owners get 403 NOT_JOB_OWNER (B3).
+export async function setJobStatus(id: string, input: JobStatusInput): Promise<void> {
+  await apiFetch<unknown>(`/jobs/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
     body: JSON.stringify(input),
   });
 }

@@ -37,6 +37,22 @@ function extractErrorCode(body: unknown): string | null {
   return null;
 }
 
+/** Unwraps the backend's `{ status, message, data }` envelope when present;
+ *  returns the body as-is otherwise (some endpoints return bare JSON). */
+export function unwrap<T>(res: unknown): T {
+  if (res && typeof res === "object" && "data" in res && "status" in res) {
+    return (res as { data: T }).data;
+  }
+  return res as T;
+}
+
+/** Normalizes a list response: bare array, envelope, or paginated `{ content }`. */
+export function unwrapList<T>(res: unknown): T[] {
+  const data = unwrap<T[] | { content?: T[] } | null>(res);
+  if (Array.isArray(data)) return data;
+  return data?.content ?? [];
+}
+
 /** Returns the backend error `code` if `err` is an ApiError that has one. */
 export function getErrorCode(err: unknown): string | null {
   return err instanceof ApiError ? err.code : null;
@@ -124,6 +140,10 @@ export function describeError(err: unknown, fallback: string): string {
         return "เบอร์โทรนี้ถูกใช้สมัครแล้ว";
       case "CONSENT_REQUIRED":
         return "กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก";
+      case "NOT_JOB_OWNER":
+        return "คุณไม่ใช่เจ้าของประกาศนี้ จึงแก้ไขไม่ได้";
+      case "CONFIRMATION_FAILED":
+        return "ข้อมูลยืนยันไม่ถูกต้อง กรุณาตรวจสอบแล้วลองใหม่";
     }
     return err.message || fallback;
   }

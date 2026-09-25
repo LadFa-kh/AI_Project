@@ -18,10 +18,12 @@ import {
   createMyJob as createJob,
   updateMyJob as updateJob,
   deleteMyJob as deleteJob,
+  setJobStatus,
   type EmployerJob as AdminJob,
   type EmployerJobInput as AdminJobInput,
+  type JobStatus,
 } from "@/lib/employer-service";
-import { ApiError } from "@/lib/api-client";
+import { describeError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import styles from "@/components/admin/admin-dashboard.module.css";
 
@@ -44,9 +46,129 @@ function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 function extractMessage(err: unknown, fallback: string): string {
-  if (err instanceof ApiError) return err.message || fallback;
-  if (err instanceof Error) return err.message || fallback;
-  return fallback;
+  return describeError(err, fallback);
+}
+
+// ===== Job status (B3 — API_CHANGES.md §5.3) =====
+
+const STATUS_LABEL: Record<JobStatus, string> = {
+  DRAFT: "ยังไม่เปิดรับ",
+  OPEN: "เปิดรับสมัคร",
+  CLOSED: "ปิดรับแล้ว",
+};
+
+function statusBadgeClass(status: JobStatus | undefined): string {
+  if (status === "OPEN") return styles.badgeEmployer;
+  if (status === "DRAFT") return styles.badgePending;
+  return styles.badgeNeutral;
+}
+
+/** "2026-10-01" -> "1 ต.ค. 2569" (display only; API keeps ISO dates). */
+function formatThaiDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function todayIso(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function JobStatusModal({
+  job,
+  onClose,
+  onSaved,
+}: {
+  job: AdminJob;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [status, setStatus] = useState<"OPEN" | "CLOSED">(job.status === "OPEN" ? "CLOSED" : "OPEN");
+  const [openDate, setOpenDate] = useState(job.openDate?.slice(0, 10) ?? "");
+  const [closeDate, setCloseDate] = useState(job.closeDate?.slice(0, 10) ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    if (status === "OPEN" && openDate && closeDate && closeDate < openDate) {
+      setError("วันปิดรับต้องไม่ก่อนวันเปิดรับ");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await setJobStatus(
+        job.id,
+        status === "OPEN"
+          ? { status, ...(openDate ? { openDate } : {}), ...(closeDate ? { closeDate } : {}) }
+          : { status }
+      );
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(extractMessage(err, "เปลี่ยนสถานะไม่สำเร็จ กรุณาลองใหม่"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const futureOpen = status === "OPEN" && !!openDate && openDate > todayIso();
+
+  return createPortal(
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <h3 className={styles.modalTitle}>สถานะประกาศ: {job.positionName}</h3>
+        {error && (
+          <p className={styles.formError} role="alert" style={{ marginBottom: 12 }}>
+            {error}
+          </p>
+        )}
+        <div className={styles.formField}>
+          <label className={styles.formLabel} htmlFor="js-status">สถานะ</label>
+          <select
+            id="js-status"
+            className={styles.formSelect}
+            value={status}
+            onChange={(e) => setStatus(e.target.value as "OPEN" | "CLOSED")}
+          >
+            <option value="OPEN">เปิดรับสมัคร</option>
+            <option value="CLOSED">ปิดรับ</option>
+          </select>
+        </div>
+        {status === "OPEN" && (
+          <>
+            <div className={styles.grid2}>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="js-open">วันเปิดรับ (ไม่บังคับ)</label>
+                <input id="js-open" type="date" className={styles.formInput} value={openDate} onChange={(e) => setOpenDate(e.target.value)} />
+              </div>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="js-close">วันปิดรับ (ไม่บังคับ)</label>
+                <input id="js-close" type="date" className={styles.formInput} value={closeDate} min={openDate || undefined} onChange={(e) => setCloseDate(e.target.value)} />
+              </div>
+            </div>
+            <p className={styles.statSub} style={{ margin: 0 }}>
+              {futureOpen
+                ? "วันเปิดรับอยู่ในอนาคต ประกาศจะเป็น \"ยังไม่เปิดรับ\" และเปิดเองเมื่อถึงวัน"
+                : "ไม่ใส่วันเปิดรับ = เปิดทันที · ถึงวันปิดรับ ระบบจะปิดประกาศให้อัตโนมัติ"}
+            </p>
+          </>
+        )}
+        <div className={styles.modalActions}>
+          <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>
+            ยกเลิก
+          </button>
+          <button type="button" className={styles.btnPrimary} onClick={handleSave} disabled={saving}>
+            {saving ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 function emptyJobForm(employerId: string): AdminJobInput {
@@ -60,6 +182,8 @@ function emptyJobForm(employerId: string): AdminJobInput {
     duration: "",
     salary: "",
     contactLink: "",
+    openDate: "",
+    closeDate: "",
   };
 }
 
@@ -85,8 +209,21 @@ function JobFormModal({
   async function handleSave() {
     setSaving(true);
     setError("");
+    if (!jobId && form.openDate && form.closeDate && form.closeDate < form.openDate) {
+      setError("วันปิดรับต้องไม่ก่อนวันเปิดรับ");
+      setSaving(false);
+      return;
+    }
+    // Dates are only set on create; later changes go through PATCH /jobs/{id}/status.
+    // Empty date strings are dropped so the backend doesn't try to parse "".
+    const { openDate, closeDate, ...rest } = form;
+    const payload: AdminJobInput = {
+      ...rest,
+      ...(!jobId && openDate ? { openDate } : {}),
+      ...(!jobId && closeDate ? { closeDate } : {}),
+    };
     try {
-      const job = jobId ? await updateJob(jobId, form) : await createJob(form);
+      const job = jobId ? await updateJob(jobId, payload) : await createJob(payload);
       onSaved(job);
       onClose();
     } catch (err) {
@@ -150,6 +287,23 @@ function JobFormModal({
           <label className={styles.formLabel} htmlFor="ej-link">ลิงก์สมัคร</label>
           <input id="ej-link" className={styles.formInput} value={form.contactLink} onChange={(e) => set("contactLink", e.target.value)} placeholder="https://..." />
         </div>
+        {!jobId && (
+          <>
+            <div className={styles.grid2}>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="ej-open">วันเปิดรับ (ไม่บังคับ)</label>
+                <input id="ej-open" type="date" className={styles.formInput} value={form.openDate ?? ""} onChange={(e) => set("openDate", e.target.value)} />
+              </div>
+              <div className={styles.formField}>
+                <label className={styles.formLabel} htmlFor="ej-close">วันปิดรับ (ไม่บังคับ)</label>
+                <input id="ej-close" type="date" className={styles.formInput} value={form.closeDate ?? ""} min={form.openDate || undefined} onChange={(e) => set("closeDate", e.target.value)} />
+              </div>
+            </div>
+            <p className={styles.statSub} style={{ margin: 0 }}>
+              ไม่ใส่วันเปิดรับ = เปิดทันที · ถ้าวันเปิดรับอยู่ในอนาคต ประกาศจะเปิดเองเมื่อถึงวัน
+            </p>
+          </>
+        )}
         <div className={styles.modalActions}>
           <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>
             ยกเลิก
@@ -175,6 +329,7 @@ export function EmployerJobsView() {
   const [modal, setModal] = useState<{ jobId: string | null; initial: AdminJobInput } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+  const [statusJob, setStatusJob] = useState<AdminJob | null>(null);
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -258,10 +413,6 @@ export function EmployerJobsView() {
         </div>
       </div>
 
-      <p className={styles.statSub} style={{ marginBottom: 14 }}>
-        หมายเหตุ: ระบบยังไม่มี endpoint กรองประกาศงานเฉพาะของบริษัทคุณ รายการด้านล่างจึงแสดงประกาศงานของทุกบริษัทในระบบ
-      </p>
-
       {status === "loading" ? (
         <div className={styles.skeletonCard}>
           <div className={styles.skeletonLine} style={{ height: 40 }} />
@@ -279,6 +430,7 @@ export function EmployerJobsView() {
                 <th>ตำแหน่ง</th>
                 <th>ทักษะที่ต้องการ</th>
                 <th>ระยะเวลา / ค่าตอบแทน</th>
+                <th>สถานะ</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
@@ -303,7 +455,30 @@ export function EmployerJobsView() {
                       <div className={styles.userEmail}>{j.salary}</div>
                     </td>
                     <td className={styles.nowrap}>
+                      {j.status ? (
+                        <span className={`${styles.badge} ${statusBadgeClass(j.status)}`}>{STATUS_LABEL[j.status]}</span>
+                      ) : (
+                        <span className={styles.userEmail}>—</span>
+                      )}
+                      {(j.openDate || j.closeDate) && (
+                        <div className={styles.userEmail} style={{ marginTop: 4 }}>
+                          {formatThaiDate(j.openDate) || "…"} – {formatThaiDate(j.closeDate) || "…"}
+                        </div>
+                      )}
+                    </td>
+                    <td className={styles.nowrap}>
                       <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => setStatusJob(j)}
+                          title="เปิด/ปิดรับสมัคร"
+                          aria-label={`เปิด/ปิดรับสมัคร ${j.positionName}`}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z" />
+                          </svg>
+                        </button>
                         <button
                           type="button"
                           className={styles.actionBtn}
@@ -332,7 +507,7 @@ export function EmployerJobsView() {
                   </tr>
                   {rowError?.id === j.id && (
                     <tr>
-                      <td colSpan={5} style={{ borderBottom: "none", paddingTop: 0 }}>
+                      <td colSpan={6} style={{ borderBottom: "none", paddingTop: 0 }}>
                         <p className={styles.formError} role="alert">{rowError.message}</p>
                       </td>
                     </tr>
@@ -342,6 +517,10 @@ export function EmployerJobsView() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {statusJob && (
+        <JobStatusModal job={statusJob} onClose={() => setStatusJob(null)} onSaved={load} />
       )}
 
       {modal && (
