@@ -202,7 +202,7 @@ const label = `${breakdown.resumeWeight * 100}%`;
 }
 ```
 
-ต้องล็อกอินก่อน (cookie `accessToken` ต้องส่ง `credentials: "include"`)
+ไม่ต้องล็อกอิน (public) — ถ้าล็อกอินอยู่จะได้ `requiredSkillsDetail` เพิ่มมา
 
 ### ข้อควรระวัง 3 ข้อ
 

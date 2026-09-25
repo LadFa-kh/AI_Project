@@ -83,6 +83,19 @@ public class CompanyService {
         return PageResponse.of(p.map(this::toDto));
     }
 
+    /** GET /companies (สาธารณะ) — เฉพาะบริษัท ACTIVE เรียงตามชื่อ ไม่เปิดเผยเลขผู้เสียภาษี */
+    @Transactional(readOnly = true)
+    public PageResponse<CompanyDto> publicList(String q, int page, int size) {
+        var p = companyRepository.search(CompanyEntity.Status.ACTIVE, (q == null || q.isBlank()) ? null : q.trim(),
+                PageRequest.of(Math.max(page, 0), Math.max(1, Math.min(size, 100)), Sort.by("nameTh")));
+        return PageResponse.of(p.map(c -> {
+            CompanyDto dto = toDto(c);
+            dto.setTaxId(null);
+            dto.setRejectReason(null);
+            return dto;
+        }));
+    }
+
     @Transactional(readOnly = true)
     public CompanyDto adminGet(UUID id) { return toDto(require(id)); }
 

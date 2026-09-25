@@ -16,7 +16,6 @@ import com.example.backend.resume.repository.SoftwareSkillRepository;
 import com.example.backend.user.entity.UserEntity;
 import com.example.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,7 +56,7 @@ public class JobDescriptionService {
                 .toList();
 
         if (!invalidSkills.isEmpty()) {
-            throw new IllegalArgumentException("พบ skill ที่ไม่อยู่ในระบบ: " + String.join(", ", invalidSkills));
+            throw BusinessException.badRequest("UNKNOWN_SKILL", "พบ skill ที่ไม่อยู่ในระบบ: " + String.join(", ", invalidSkills));
         }
 
         // 2. ค้นหา User ที่เป็น Employer (ตรวจ null ก่อน เพื่อไม่ให้ Spring Data โยน InvalidDataAccessApiUsageException)
@@ -202,7 +201,7 @@ public class JobDescriptionService {
                     .toList();
 
             if (!invalidSkills.isEmpty()) {
-                throw new IllegalArgumentException("พบ skill ที่ไม่อยู่ในระบบ: " + String.join(", ", invalidSkills));
+                throw BusinessException.badRequest("UNKNOWN_SKILL", "พบ skill ที่ไม่อยู่ในระบบ: " + String.join(", ", invalidSkills));
             }
 
             job.setRequiredSkills(String.join(",", requestedSkills));
@@ -251,14 +250,13 @@ public class JobDescriptionService {
 
     /**
      * ตรวจว่าประกาศงานนั้นเป็นของผู้ประกาศที่กำลังเรียกใช้จริงหรือไม่
-     * ถ้าไม่ใช่ จะโยน AccessDeniedException ซึ่ง GlobalExceptionHandler ส่งต่อให้
-     * Spring Security จัดการเป็นรหัสสถานะ 403 ตามเดิม
+     * ถ้าไม่ใช่ ตอบ 403 พร้อม code NOT_JOB_OWNER แบบเดียวกับ PATCH /jobs/{id}/status
      */
     private void requireOwnership(UUID employerId, UUID jobId) {
         JobDescriptionEntity job = jobDescriptionRepository.findById(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("ไม่พบตำแหน่งงานที่ระบุ"));
+                .orElseThrow(() -> BusinessException.notFound("JOB_NOT_FOUND", "ไม่พบตำแหน่งงานที่ระบุ"));
         if (job.getEmployer() == null || !job.getEmployer().getId().equals(employerId)) {
-            throw new AccessDeniedException("ไม่มีสิทธิ์จัดการประกาศงานของผู้อื่น");
+            throw BusinessException.forbidden("NOT_JOB_OWNER", "ไม่มีสิทธิ์จัดการประกาศงานของผู้อื่น");
         }
     }
 

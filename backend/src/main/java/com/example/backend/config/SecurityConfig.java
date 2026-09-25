@@ -69,7 +69,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/workplaces/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/policies/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/companies/me").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/companies/*", "/api/v1/companies/*/jobs").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/companies", "/api/v1/companies/*", "/api/v1/companies/*/jobs").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/employer/**").hasAnyRole("EMPLOYER", "ADMIN")
                         .anyRequest().authenticated()
