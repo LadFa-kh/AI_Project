@@ -52,6 +52,7 @@ function Pager({ page, totalPages, onPage }: { page: number; totalPages: number;
 }
 
 const ACTION_LABEL: Record<string, string> = {
+  JOB_MATCHING: "จับคู่ที่ฝึกงาน",
   RESUME_UPLOAD: "อัปโหลดเรซูเม่",
   ASSESSMENT_SUBMIT: "ส่งแบบประเมิน",
 };
@@ -469,6 +470,7 @@ export function CompaniesTab() {
 // ---------- Cost per action (§5.13) ----------
 
 const COST_LABEL: Record<string, string> = {
+  JOB_MATCHING: "จับคู่ที่ฝึกงาน (ไม่หักเครดิต)",
   RESUME_UPLOAD: "อัปโหลดเรซูเม่",
   ASSESSMENT_SUBMIT: "ส่งแบบประเมิน",
   "process-resume": "Python: วิเคราะห์เรซูเม่",
@@ -523,6 +525,48 @@ function CostTable({ title, rows, currency }: { title: string; rows: CostRow[]; 
   );
 }
 
+// Credits are the cost ceiling (อาจารย์: "ต้องเทียบ Credits ด้วย"). Values from
+// FRONTEND_REQUESTS รอบ 5 ข้อ 2.7: 30 credits/user/month, upload = 1, submit = 1.
+const MONTHLY_CREDITS = 30;
+const CREDIT_ACTIONS = ["RESUME_UPLOAD", "ASSESSMENT_SUBMIT"];
+
+function CreditComparison({ rows, currency }: { rows: CostRow[]; currency: string }) {
+  const priced = rows.filter((r) => CREDIT_ACTIONS.includes(r.name) && r.samples > 0);
+  if (priced.length === 0) return null;
+  // Worst case: every credit spent on the most expensive credit-consuming action.
+  const worst = priced.reduce((a, b) => (b.avgCost > a.avgCost ? b : a));
+  const matching = rows.find((r) => r.name === "JOB_MATCHING");
+  const perUser = worst.avgCost * MONTHLY_CREDITS;
+  const scenarios = [1, 100, 1000];
+  return (
+    <div style={{ position: "relative", zIndex: 1, marginTop: 20 }}>
+      <h3 className={styles.sectionHeading} style={{ marginBottom: 8 }}>เทียบกับเครดิต (เพดานต้นทุนต่อเดือน)</h3>
+      <p className={styles.statSub} style={{ marginTop: 0, lineHeight: 1.7 }}>
+        ผู้ใช้ 1 คนมี {MONTHLY_CREDITS} เครดิต/เดือน (อัปโหลดเรซูเม่ = 1, ส่งแบบประเมิน = 1) · กรณีแย่สุดคือใช้ทุกเครดิตกับรายการที่แพงที่สุด
+        คือ <strong>{COST_LABEL[worst.name] ?? worst.name}</strong> ({formatCost(worst.avgCost, currency)}/ครั้ง)
+        {matching && matching.samples > 0 && (
+          <> · ไม่รวม &quot;จับคู่ที่ฝึกงาน&quot; ({formatCost(matching.avgCost, currency)}/ครั้ง) ซึ่งไม่หักเครดิต</>
+        )}
+      </p>
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr><th>จำนวนผู้ใช้</th><th>ต้นทุนสูงสุด / เดือน</th></tr>
+          </thead>
+          <tbody>
+            {scenarios.map((n) => (
+              <tr key={n}>
+                <td>{n.toLocaleString("th-TH")} คน</td>
+                <td><strong>{(perUser * n).toFixed(n === 1 ? 4 : 2)} {currency}</strong></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function CostPanel({ from, to }: { from: string; to: string }) {
   const [cost, setCost] = useState<UsageCost | null>(null);
   const [error, setError] = useState("");
@@ -561,6 +605,7 @@ function CostPanel({ from, to }: { from: string; to: string }) {
           )}
           <CostTable title="ต่อการใช้งานของผู้ใช้" rows={cost.byAction ?? []} currency={currency} />
           <CostTable title="ต่อ endpoint ฝั่ง Python (AI)" rows={cost.byPythonEndpoint ?? []} currency={currency} />
+          <CreditComparison rows={cost.byAction ?? []} currency={currency} />
         </>
       )}
     </div>
@@ -622,6 +667,7 @@ export function UsageTab() {
               <option value="">ทุกประเภท</option>
               <option value="RESUME_UPLOAD">อัปโหลดเรซูเม่</option>
               <option value="ASSESSMENT_SUBMIT">ส่งแบบประเมิน</option>
+              <option value="JOB_MATCHING">จับคู่ที่ฝึกงาน</option>
             </select>
             <button type="submit" className={styles.btnGhost}>แสดง</button>
           </form>

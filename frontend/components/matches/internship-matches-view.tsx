@@ -55,6 +55,8 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
     );
   }, []);
   const clearSkills = useCallback(() => setActiveSkills([]), []);
+  // Company filter for the "all" list (/jobs) — options come from the loaded jobs.
+  const [activeCompany, setActiveCompany] = useState("");
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -133,7 +135,7 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
         userFinalScore: scored?.userFinalScore,
         matchedSkills: scored?.matchedSkills ?? fromDetail.matchedSkills,
         missingSkills: scored?.missingSkills ?? fromDetail.missingSkills,
-        aiMatchedSkills: scored?.aiMatchedSkills,
+        aiMatchedSkills: scored ? scored.aiMatchedSkills : fromDetail.aiMatchedSkills,
         jobDescription: w.jobDescription,
         duration: w.duration,
         salary: w.salary,
@@ -146,12 +148,21 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
   const skillOptions = useMemo(() => {
     const set = new Set<string>();
     if (filterMode === "all") {
-      allJobs.forEach((j) => (j.matchedSkills ?? j.requiredSkills)?.forEach((s) => set.add(s)));
+      // "All" lists every job's REQUIRED skills (not only the ones the user has).
+      allJobs.forEach((j) => (j.requiredSkills ?? j.matchedSkills)?.forEach((s) => set.add(s)));
     } else {
       matches.forEach((m) => m.matchedSkills.forEach((s) => set.add(s)));
     }
     return Array.from(set).sort();
   }, [matches, allJobs, filterMode]);
+
+  const companyOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    allJobs.forEach((j) => {
+      if (j.companyId) map.set(j.companyId, j.companyName);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, "th"));
+  }, [allJobs]);
 
   const visibleMatches: DisplayJob[] = useMemo(() => {
     // Dropdown: "Matching" (default) = jobs from the user's scored matching
@@ -163,9 +174,10 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
     // re-sorted here.
     if (filterMode === "all") {
       let result = allJobs;
+      if (activeCompany) result = result.filter((j) => j.companyId === activeCompany);
       if (activeSkills.length > 0) {
         result = result.filter((j) => {
-          const skills = j.matchedSkills ?? j.requiredSkills ?? [];
+          const skills = j.requiredSkills ?? j.matchedSkills ?? [];
           return activeSkills.every((s) => skills.includes(s));
         });
       }
@@ -181,7 +193,7 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
       result = result.filter((m) => activeSkills.every((s) => (m.matchedSkills ?? []).includes(s)));
     }
     return result;
-  }, [matches, allJobs, filterMode, activeSkills]);
+  }, [matches, allJobs, filterMode, activeSkills, activeCompany]);
 
   return (
     <div className={styles.viewWrap}>
@@ -260,6 +272,9 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
             onSkillToggle={toggleSkill}
             onClearSkills={clearSkills}
             showModeSelect={!forceAll}
+            companyOptions={filterMode === "all" ? companyOptions : undefined}
+            activeCompany={activeCompany}
+            onCompanyChange={setActiveCompany}
           />
         </ScrollReveal>
       )}

@@ -14,6 +14,10 @@ type MatchesControlBarProps = {
   onClearSkills: () => void;
   /** false = hide the "ตรงกับคุณ / ทั้งหมด" select (browse-only / no personal matching). */
   showModeSelect?: boolean;
+  /** When provided (the "all" list), shows a company dropdown. "" = every company. */
+  companyOptions?: { id: string; name: string }[];
+  activeCompany?: string;
+  onCompanyChange?: (companyId: string) => void;
 };
 
 // "ทั้งหมด" (all workplaces) can surface dozens of distinct required skills
@@ -29,6 +33,9 @@ export function MatchesControlBar({
   onSkillToggle,
   onClearSkills,
   showModeSelect = true,
+  companyOptions,
+  activeCompany = "",
+  onCompanyChange,
 }: MatchesControlBarProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -57,6 +64,28 @@ export function MatchesControlBar({
           >
             <option value="matching">ตรงกับคุณ</option>
             <option value="all">ทั้งหมด</option>
+          </select>
+        </>
+      )}
+
+      {companyOptions && companyOptions.length > 1 && onCompanyChange && (
+        <>
+          <label htmlFor="match-filter-company" className="sr-only">
+            กรองตามบริษัท
+          </label>
+          <select
+            id="match-filter-company"
+            value={activeCompany}
+            onChange={(e) => onCompanyChange(e.target.value)}
+            className={styles.sortSelect}
+            style={{ maxWidth: 260 }}
+          >
+            <option value="">ทุกบริษัท ({companyOptions.length})</option>
+            {companyOptions.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
         </>
       )}

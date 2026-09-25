@@ -28,7 +28,7 @@ export type Workplace = {
   companyId?: string | null;
   companyLogoUrl?: string | null;
   /** §5.13 — only when logged in AND the user has uploaded a resume; compared with their latest resume. */
-  requiredSkillsDetail?: { skillName: string; isMatch: boolean }[] | null;
+  requiredSkillsDetail?: { skillName: string; isMatch: boolean; matchMethod?: "WORD" | "SEMANTIC" }[] | null;
 };
 
 /**
@@ -39,12 +39,14 @@ export type Workplace = {
 export function skillsFromDetail(w: Pick<Workplace, "requiredSkillsDetail">): {
   matchedSkills?: string[];
   missingSkills?: string[];
+  aiMatchedSkills?: string[];
 } {
   const detail = w.requiredSkillsDetail;
   if (!detail?.length) return {};
   return {
     matchedSkills: detail.filter((d) => d.isMatch).map((d) => d.skillName),
     missingSkills: detail.filter((d) => !d.isMatch).map((d) => d.skillName),
+    aiMatchedSkills: detail.filter((d) => d.isMatch && d.matchMethod === "SEMANTIC").map((d) => d.skillName),
   };
 }
 

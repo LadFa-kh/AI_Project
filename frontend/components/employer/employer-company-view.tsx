@@ -87,8 +87,15 @@ export function EmployerCompanyView() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        // 404 NO_COMPANY = this employer account isn't linked to a company yet.
-        setNoCompany(getErrorCode(err) === "NO_COMPANY");
+        // 404 NO_COMPANY = account not linked to a company yet. PUT /companies/me
+        // with nameTh creates + links one (FRONTEND_REQUESTS รอบ 5 ข้อ 2.5), so
+        // show the empty form instead of a dead end.
+        if (getErrorCode(err) === "NO_COMPANY") {
+          setNoCompany(true);
+          setForm(EMPTY);
+          setStatus("success");
+          return;
+        }
         setLoadError(describeError(err, "ไม่สามารถโหลดข้อมูลบริษัทได้"));
         setStatus("error");
       });
@@ -98,8 +105,8 @@ export function EmployerCompanyView() {
   }, [reloadKey]);
 
   const changed = useMemo(() => {
-    if (!company) return {} as Partial<CompanyInput>;
-    const original = toForm(company);
+    // No company yet → send every filled field (creates the company).
+    const original = company ? toForm(company) : EMPTY;
     const diff: Partial<CompanyInput> = {};
     (Object.keys(form) as (keyof CompanyInput)[]).forEach((k) => {
       if (form[k].trim() !== original[k].trim()) diff[k] = form[k].trim();
@@ -123,30 +130,13 @@ export function EmployerCompanyView() {
       const next = updated && typeof updated === "object" && "id" in updated ? updated : { ...company!, ...changed };
       setCompany(next as Company);
       setForm(toForm(next as Company));
+      setNoCompany(false);
       setSaved(true);
     } catch (err) {
       setError(describeError(err, "บันทึกข้อมูลบริษัทไม่สำเร็จ กรุณาลองใหม่"));
     } finally {
       setSaving(false);
     }
-  }
-
-  if (status === "error" && noCompany) {
-    return (
-      <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
-        <h2 className={styles.sectionHeading}>บัญชีนี้ยังไม่ได้ผูกกับบริษัท</h2>
-        <p className={styles.sectionSub} style={{ marginTop: 8, lineHeight: 1.7 }}>
-          ระบบยังไม่มีบริษัทที่เชื่อมกับบัญชีผู้ประกาศงานนี้ จึงยังแก้ข้อมูลบริษัทและลงประกาศงานไม่ได้
-          กรุณาติดต่อผู้ดูแลระบบ
-          {CONTACT_EMAIL ? (
-            <>
-              {" "}ที่ <a href={`mailto:${CONTACT_EMAIL}`} style={{ textDecoration: "underline" }}>{CONTACT_EMAIL}</a>
-            </>
-          ) : null}{" "}
-          พร้อมแจ้งชื่อบริษัทและเลขประจำตัวผู้เสียภาษี
-        </p>
-      </div>
-    );
   }
 
   if (status === "error") {
@@ -196,6 +186,12 @@ export function EmployerCompanyView() {
             void handleSave();
           }}
         >
+          {noCompany && (
+            <p className={styles.formError} role="status" style={{ marginBottom: 14 }}>
+              บัญชีนี้ยังไม่มีข้อมูลบริษัท — กรอกอย่างน้อย &quot;ชื่อบริษัท (ไทย)&quot; แล้วกดบันทึก ระบบจะสร้างบริษัทและผูกกับบัญชีให้ทันที
+              {CONTACT_EMAIL ? <> (ถ้าบริษัทมีอยู่ในระบบแล้ว ติดต่อ {CONTACT_EMAIL} เพื่อผูกบัญชี)</> : null}
+            </p>
+          )}
           {company?.status && company.status !== "ACTIVE" && (
             <p className={styles.formError} role="status" style={{ marginBottom: 14 }}>
               สถานะบริษัท: {company.status} — หน้าบริษัทจะยังไม่แสดงต่อสาธารณะจนกว่าผู้ดูแลระบบจะเปิดใช้งาน
