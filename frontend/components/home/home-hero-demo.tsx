@@ -22,7 +22,7 @@
 // context failure can never block the heading animation (or vice versa).
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { TopNav } from "@/components/layout/top-nav";
 
@@ -319,7 +319,7 @@ export function HomeHeroDemo() {
           <p className="mt-6 max-w-[560px]" style={{ color: "var(--nocturne-text-secondary)" }}>
             อัปโหลดเรซูเม่ ให้ AI ประเมินทักษะของคุณ แล้วรับคำแนะนำสถานที่ฝึกงานที่เหมาะกับคุณที่สุด
           </p>
-          <div className="mt-10 flex gap-4">
+          <div className="mt-10 flex flex-wrap items-center gap-4">
             {isAuthenticated && user ? (
               // Signed in already — sending back to /login or /register here
               // would just show the auth forms to someone who doesn't need
@@ -356,6 +356,14 @@ export function HomeHeroDemo() {
                 </Link>
               </>
             )}
+            {/* Public job board — everyone can browse open internships, no resume needed. */}
+            <Link
+              href="/jobs"
+              className="rounded-full border px-8 py-3.5 text-sm font-semibold transition-transform hover:-translate-y-0.5"
+              style={{ borderColor: "var(--nocturne-border-strong)", color: "var(--nocturne-text-primary)" }}
+            >
+              ดูที่ฝึกงานทั้งหมด
+            </Link>
           </div>
         </div>
       </header>

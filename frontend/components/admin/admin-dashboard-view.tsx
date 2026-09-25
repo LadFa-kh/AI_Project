@@ -39,6 +39,7 @@ import { ApiError, describeError } from "@/lib/api-client";
 import { ADMIN_TABS, type AdminTab } from "@/lib/admin-types";
 import styles from "./admin-dashboard.module.css";
 import { CompaniesTab, InternshipsTab, UsageTab } from "./admin-ops-tabs";
+import { SkillPicker } from "@/components/employer/skill-picker";
 
 type Status = "loading" | "error" | "success";
 
@@ -1015,16 +1016,10 @@ function JobFormModal({
           <input id="job-type" className={styles.formInput} value={form.jobType} onChange={(e) => set("jobType", e.target.value)} placeholder="เช่น Internship" />
         </div>
         <div className={styles.formField}>
-          <label className={styles.formLabel} htmlFor="job-skills">ทักษะที่ต้องการ (คั่นด้วยจุลภาค)</label>
-          <input
-            id="job-skills"
-            className={styles.formInput}
-            value={form.requiredSkills}
-            onChange={(e) => set("requiredSkills", e.target.value)}
-            placeholder="React.js,Node.js,PostgreSQL"
-          />
+          <label className={styles.formLabel} htmlFor="job-skills">ทักษะที่ต้องการ</label>
+          <SkillPicker id="job-skills" value={form.requiredSkills} onChange={(v) => set("requiredSkills", v)} />
           <p className={styles.statSub} style={{ margin: 0 }}>
-            ต้องตรงกับชื่อทักษะมาตรฐาน O*NET ในระบบเป๊ะทุกตัวอักษร ไม่งั้นจะถูกปฏิเสธทั้งชุด
+            เลือกจากรายการทักษะมาตรฐาน (O*NET) ในระบบ — ทักษะที่ไม่อยู่ในรายการจะบันทึกไม่ได้
           </p>
         </div>
         <div className={styles.formField}>

@@ -6,7 +6,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { describeError } from "@/lib/api-client";
+import { describeError, getErrorCode } from "@/lib/api-client";
+import { CONTACT_EMAIL } from "@/components/legal/privacy-policy-content";
 import { getMyCompany, updateMyCompany, type Company, type CompanyInput } from "@/lib/company-service";
 import styles from "@/components/admin/admin-dashboard.module.css";
 
@@ -68,6 +69,7 @@ export function EmployerCompanyView() {
   const [company, setCompany] = useState<Company | null>(null);
   const [form, setForm] = useState<CompanyInput>(EMPTY);
   const [loadError, setLoadError] = useState("");
+  const [noCompany, setNoCompany] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -85,6 +87,8 @@ export function EmployerCompanyView() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
+        // 404 NO_COMPANY = this employer account isn't linked to a company yet.
+        setNoCompany(getErrorCode(err) === "NO_COMPANY");
         setLoadError(describeError(err, "ไม่สามารถโหลดข้อมูลบริษัทได้"));
         setStatus("error");
       });
@@ -125,6 +129,24 @@ export function EmployerCompanyView() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (status === "error" && noCompany) {
+    return (
+      <div className={`${styles.card} ${styles.animateIn} ${styles.delay2}`}>
+        <h2 className={styles.sectionHeading}>บัญชีนี้ยังไม่ได้ผูกกับบริษัท</h2>
+        <p className={styles.sectionSub} style={{ marginTop: 8, lineHeight: 1.7 }}>
+          ระบบยังไม่มีบริษัทที่เชื่อมกับบัญชีผู้ประกาศงานนี้ จึงยังแก้ข้อมูลบริษัทและลงประกาศงานไม่ได้
+          กรุณาติดต่อผู้ดูแลระบบ
+          {CONTACT_EMAIL ? (
+            <>
+              {" "}ที่ <a href={`mailto:${CONTACT_EMAIL}`} style={{ textDecoration: "underline" }}>{CONTACT_EMAIL}</a>
+            </>
+          ) : null}{" "}
+          พร้อมแจ้งชื่อบริษัทและเลขประจำตัวผู้เสียภาษี
+        </p>
+      </div>
+    );
   }
 
   if (status === "error") {

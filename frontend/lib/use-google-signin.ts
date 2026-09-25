@@ -118,21 +118,24 @@ function initializeGoogleOnce() {
 }
 
 export function useGoogleSignIn(onIdToken: (idToken: string) => void | Promise<void>) {
-  const [error, setError] = useState<string | null>(null);
+  // Missing client id is known at render time — no need to set it from an effect.
+  const [error, setError] = useState<string | null>(
+    CLIENT_ID ? null : "ยังไม่ได้ตั้งค่า Google Sign-In (NEXT_PUBLIC_GOOGLE_CLIENT_ID) กรุณาติดต่อผู้ดูแลระบบ"
+  );
   const [isReady, setIsReady] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   // เก็บ callback ล่าสุดไว้ใน ref เพื่อไม่ให้ต้องเรนเดอร์ปุ่มใหม่ทุกครั้งที่
   // component ข้างนอกสร้างฟังก์ชันขึ้นมาใหม่
   const handlerRef = useRef(onIdToken);
-  handlerRef.current = onIdToken;
+  // Refs must not be written during render (react-hooks/refs) — sync after commit.
+  useEffect(() => {
+    handlerRef.current = onIdToken;
+  }, [onIdToken]);
 
   useEffect(() => {
     let cancelled = false;
 
-    if (!CLIENT_ID) {
-      setError("ยังไม่ได้ตั้งค่า Google Sign-In (NEXT_PUBLIC_GOOGLE_CLIENT_ID) กรุณาติดต่อผู้ดูแลระบบ");
-      return;
-    }
+    if (!CLIENT_ID) return;
 
     (async () => {
       try {

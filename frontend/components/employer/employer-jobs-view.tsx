@@ -26,6 +26,7 @@ import {
 import { describeError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import styles from "@/components/admin/admin-dashboard.module.css";
+import { SkillPicker } from "./skill-picker";
 
 type Status = "loading" | "error" | "success";
 
@@ -259,16 +260,10 @@ function JobFormModal({
           <input id="ej-type" className={styles.formInput} value={form.jobType} onChange={(e) => set("jobType", e.target.value)} placeholder="เช่น Internship" />
         </div>
         <div className={styles.formField}>
-          <label className={styles.formLabel} htmlFor="ej-skills">ทักษะที่ต้องการ (คั่นด้วยจุลภาค)</label>
-          <input
-            id="ej-skills"
-            className={styles.formInput}
-            value={form.requiredSkills}
-            onChange={(e) => set("requiredSkills", e.target.value)}
-            placeholder="React.js,Node.js,PostgreSQL"
-          />
+          <label className={styles.formLabel} htmlFor="ej-skills">ทักษะที่ต้องการ</label>
+          <SkillPicker id="ej-skills" value={form.requiredSkills} onChange={(v) => set("requiredSkills", v)} />
           <p className={styles.statSub} style={{ margin: 0 }}>
-            ต้องตรงกับชื่อทักษะมาตรฐาน O*NET ในระบบเป๊ะทุกตัวอักษร ไม่งั้นจะถูกปฏิเสธทั้งชุด
+            เลือกจากรายการทักษะมาตรฐาน (O*NET) ในระบบ — ทักษะที่ไม่อยู่ในรายการจะบันทึกไม่ได้
           </p>
         </div>
         <div className={styles.formField}>

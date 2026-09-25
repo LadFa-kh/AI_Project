@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { register, loginWithGoogle, getCurrentPolicy, type RegisterRole } from "@/lib/auth-service";

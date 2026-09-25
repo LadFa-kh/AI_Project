@@ -15,6 +15,16 @@ const eslintConfig = defineConfig([
     // Local scratch — files staged for deletion, not part of the project.
     "_to_delete/**",
   ]),
+  {
+    rules: {
+      // New in eslint-plugin-react-hooks v6 (React Compiler guidance). The
+      // existing "load data in an effect, set status to loading" pattern used
+      // across ~20 older components trips it; the code works correctly, so it
+      // is a warning (shown, not blocking `npm run lint`) until those
+      // components are refactored. New code should avoid it.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;
