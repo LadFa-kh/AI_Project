@@ -15,7 +15,7 @@
 // should treat any failure here as "matches aren't available right now,
 // possibly because the assessment isn't done" rather than a hard error.
 
-import { apiFetch } from "./api-client";
+import { apiFetch, unwrapList } from "./api-client";
 
 export type InternshipMatch = {
   jobId: string;
@@ -24,11 +24,15 @@ export type InternshipMatch = {
   userFinalScore: number;
   matchedSkills: string[];
   missingSkills: string[];
+  /** Subset of matchedSkills that the AI judged equivalent by meaning (backend b99c8da). */
+  aiMatchedSkills?: string[];
 };
 
 export async function getMatchingRecommendations(resumeId: string): Promise<InternshipMatch[]> {
   const params = new URLSearchParams({ resumeId });
-  return apiFetch<InternshipMatch[]>(`/matching/recommendations?${params.toString()}`, {
+  // No assessment yet → 404 ASSESSMENT_NOT_FOUND (backend a5ac65f) — callers check getErrorCode().
+  const res = await apiFetch<unknown>(`/matching/recommendations?${params.toString()}`, {
     method: "GET",
   });
+  return unwrapList<InternshipMatch>(res);
 }

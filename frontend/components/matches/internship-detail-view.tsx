@@ -300,7 +300,7 @@ export function InternshipDetailView({ internshipId }: { internshipId: string })
               <div className={styles.skillChipRow}>
                 {detail.matchedSkills?.map((skill) => (
                   <span key={`matched-${skill}`} className={styles.chipHoverable}>
-                    <RequiredSkillChip skill={skill} isMatch />
+                    <RequiredSkillChip skill={skill} isMatch ai={detail.aiMatchedSkills?.includes(skill)} />
                   </span>
                 ))}
                 {detail.missingSkills?.map((skill) => (

@@ -10,6 +10,7 @@
 // vertical list + score-ring card design (see MatchCard).
 
 import Link from "next/link";
+import { getErrorCode } from "@/lib/api-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMatchingRecommendations, type InternshipMatch } from "@/lib/matching-service";
 import { getAllWorkplaces, skillsFromDetail, type Workplace } from "@/lib/workplace-service";
@@ -74,8 +75,14 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
       // look a job up by id without a separate fetch.
       writeMatchList(result);
       setStatus("success");
-    } catch {
-      // KNOWN BACKEND BUG (README §6): /matching/recommendations returns a
+    } catch (err) {
+      // Backend now answers 404 ASSESSMENT_NOT_FOUND when there's simply no
+      // assessment yet → same "show all jobs" path as having no local result.
+      if (getErrorCode(err) === "ASSESSMENT_NOT_FOUND") {
+        setStatus("no-assessment");
+        return;
+      }
+      // (older backend) /matching/recommendations returned a
       // bodyless 500 for every failure, including the normal "assessment
       // not done yet" case — can't tell those apart, so the message below
       // stays deliberately non-committal rather than claiming a hard error.
@@ -126,6 +133,7 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
         userFinalScore: scored?.userFinalScore,
         matchedSkills: scored?.matchedSkills ?? fromDetail.matchedSkills,
         missingSkills: scored?.missingSkills ?? fromDetail.missingSkills,
+        aiMatchedSkills: scored?.aiMatchedSkills,
         jobDescription: w.jobDescription,
         duration: w.duration,
         salary: w.salary,

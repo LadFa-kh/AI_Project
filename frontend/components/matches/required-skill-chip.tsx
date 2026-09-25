@@ -7,20 +7,27 @@ type RequiredSkillChipProps = {
    *  matching context at all (e.g. a job from GET /workplaces that hasn't
    *  been scored against the student). */
   isMatch: boolean | "neutral";
+  /** Matched by the AI on meaning (not the exact name) → small "AI" tag. */
+  ai?: boolean;
 };
 
 /** Skill chip indicating whether it matches the student's assessed level, is a gap,
  *  or (in "neutral" mode) is just a plain requirement with no match context.
  *  Conveyed by icon + text label as well as color, not color alone. */
-export function RequiredSkillChip({ skill, isMatch }: RequiredSkillChipProps) {
+export function RequiredSkillChip({ skill, isMatch, ai = false }: RequiredSkillChipProps) {
   if (isMatch === true) {
     return (
-      <span className={nocturne.chipSkillMatch}>
+      <span className={nocturne.chipSkillMatch} title={ai ? "AI จับคู่จากความหมาย (ชื่อไม่ตรงกันตรง ๆ)" : undefined}>
         <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
           <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z" />
         </svg>
         {skill}
-        <span className="sr-only"> (ตรงกับทักษะของคุณ)</span>
+        {ai && (
+          <span className={nocturne.chipTag} style={{ marginLeft: 4 }}>
+            AI
+          </span>
+        )}
+        <span className="sr-only"> (ตรงกับทักษะของคุณ{ai ? " — AI จับคู่จากความหมาย" : ""})</span>
       </span>
     );
   }

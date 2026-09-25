@@ -112,7 +112,7 @@ export function MatchCard({ match, revealDelayMs = 0 }: MatchCardProps) {
           {hasSkillChips && (
             <div className={`${styles.matchSkills} ${styles.chipHoverable}`}>
               {match.matchedSkills?.map((skill) => (
-                <RequiredSkillChip key={`matched-${skill}`} skill={skill} isMatch />
+                <RequiredSkillChip key={`matched-${skill}`} skill={skill} isMatch ai={match.aiMatchedSkills?.includes(skill)} />
               ))}
               {match.missingSkills?.map((skill) => (
                 <RequiredSkillChip key={`missing-${skill}`} skill={skill} isMatch={false} />

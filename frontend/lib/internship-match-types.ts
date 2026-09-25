@@ -26,6 +26,8 @@ export type DisplayJob = {
   userFinalScore?: number;
   matchedSkills?: string[];
   missingSkills?: string[];
+  /** matchedSkills the AI matched by meaning → "AI" tag on the chip. */
+  aiMatchedSkills?: string[];
   jobDescription?: string;
   duration?: string;
   salary?: string;
