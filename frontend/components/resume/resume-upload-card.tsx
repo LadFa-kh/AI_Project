@@ -17,6 +17,9 @@ import { formatFileSize, validateResumeFile } from "@/lib/validators";
 import { uploadResume } from "@/lib/resume-service";
 import { writeResumeUploadResult } from "@/lib/resume-session";
 import { useAuth } from "@/lib/auth-context";
+import { describeError } from "@/lib/api-client";
+import { isOutOfCredits, useCredits } from "@/lib/credit-service";
+import { CreditsNotice } from "@/components/ui/credits-notice";
 import styles from "./resume-upload.module.css";
 
 type Status = "default" | "loading" | "error" | "success";
@@ -44,7 +47,9 @@ export function ResumeUploadCard() {
 
   const isLoading = status === "loading";
   const isSuccess = status === "success";
-  const canSubmit = !!file && !fileError && !isLoading;
+  const { credits, refresh: refreshCredits } = useCredits(!!user);
+  const outOfCredits = isOutOfCredits(credits);
+  const canSubmit = !!file && !fileError && !isLoading && !outOfCredits;
 
   useEffect(() => {
     if (!isLoading) {
@@ -91,7 +96,9 @@ export function ResumeUploadCard() {
       setStatus("success");
     } catch (err) {
       setStatus("error");
-      setFormError(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      // 429 CREDITS_EXHAUSTED / RATE_LIMITED get Thai copy from describeError (B8/B10).
+      setFormError(describeError(err, "อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
+      refreshCredits();
     }
   }
 
@@ -220,6 +227,7 @@ export function ResumeUploadCard() {
       >
         ดำเนินการต่อ
       </button>
+      <CreditsNotice credits={credits} className={`${styles.animateIn} ${styles.delay4}`} />
     </>
   );
 }

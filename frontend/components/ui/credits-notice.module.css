@@ -1,0 +1,32 @@
+/* Credits counter shown near upload / submit buttons (B8). Tokens only. */
+.notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--nocturne-text-muted);
+}
+
+.count {
+  font-weight: 600;
+  color: var(--nocturne-text-secondary);
+}
+
+.empty {
+  font-weight: 600;
+  color: var(--nocturne-warning-text);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--nocturne-success-text);
+  flex: none;
+}
+
+.dotEmpty {
+  background: var(--nocturne-warning-text);
+}

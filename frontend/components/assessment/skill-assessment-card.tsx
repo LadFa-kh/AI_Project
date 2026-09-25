@@ -27,12 +27,17 @@ import { readResumeUploadResult } from "@/lib/resume-session";
 import { submitAssessment } from "@/lib/assessment-service";
 import { writeAssessmentResult } from "@/lib/assessment-session";
 import { useAuth } from "@/lib/auth-context";
-import { ApiError } from "@/lib/api-client";
+import { ApiError, describeError } from "@/lib/api-client";
+import { isOutOfCredits, useCredits } from "@/lib/credit-service";
+import { CreditsNotice } from "@/components/ui/credits-notice";
 import type { AssessmentAnswers, AssessmentQuestion } from "@/lib/assessment-types";
 import styles from "./skill-assessment.module.css";
 import fieldStyles from "@/components/resume/resume-upload.module.css";
 
 function describeSubmitError(err: unknown): string {
+  if (err instanceof ApiError && (err.code === "CREDITS_EXHAUSTED" || err.code === "RATE_LIMITED")) {
+    return describeError(err, "ส่งแบบประเมินไม่สำเร็จ กรุณาลองใหม่");
+  }
   if (err instanceof ApiError) {
     if (err.message.includes("ทำแบบประเมินไปแล้ว")) {
       return "เรซูเม่นี้ทำแบบประเมินไปแล้ว ไม่สามารถส่งซ้ำได้";
@@ -76,7 +81,8 @@ export function SkillAssessmentCard() {
   const isComplete = questions !== null && total > 0 && answeredCount === total;
   const isLoading = status === "loading";
   const isSuccess = status === "success";
-  const canSubmit = isComplete && !isLoading && !!user && !!resumeId;
+  const { credits, refresh: refreshCredits } = useCredits(!!user);
+  const canSubmit = isComplete && !isLoading && !!user && !!resumeId && !isOutOfCredits(credits);
 
   // Height-animate the step content wrapper to the active step's measured
   // height, same idea as the real Stepper's StepContentWrapper
@@ -136,6 +142,7 @@ export function SkillAssessmentCard() {
     } catch (err) {
       setStatus("error");
       setFormError(describeSubmitError(err));
+      refreshCredits();
     }
   }
 
@@ -293,6 +300,7 @@ export function SkillAssessmentCard() {
                   ส่งแบบประเมิน
                 </button>
               </div>
+              <CreditsNotice credits={credits} />
             </div>
           ) : currentQuestion ? (
             <>
