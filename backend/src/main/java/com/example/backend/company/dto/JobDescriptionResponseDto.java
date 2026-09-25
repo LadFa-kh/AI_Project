@@ -31,4 +31,10 @@ public class JobDescriptionResponseDto {
     private String status;
     private java.time.LocalDate openDate;
     private java.time.LocalDate closeDate;
+
+    /**
+     * ทักษะของงานพร้อมบอกว่าผู้ใช้ที่ล็อกอินอยู่มีทักษะนั้นแล้วหรือยัง (เทียบกับเรซูเม่ล่าสุด)
+     * รูปแบบ [{"skillName":"Java","isMatch":true}] — มีเฉพาะตอนล็อกอินและเคยอัปโหลดเรซูเม่แล้ว
+     */
+    private List<java.util.Map<String, Object>> requiredSkillsDetail;
 }

@@ -218,3 +218,9 @@ mvn -Dtest=CareerMatchCalculatorTest test
 - **Cache**: เก็บทักษะมาตรฐานของแต่ละตำแหน่ง (`standardSkills`) และผลตัดสินคู่ทักษะของ LLM (`skill_match_cache`)
 - **งานเบื้องหลัง**: `POST /api/v1/assessments/submit?async=true` ตอบ 202 พร้อม `{taskId}` ทันที แล้วให้ poll `GET /api/v1/tasks/{taskId}` จน `status` เป็น DONE หรือ FAILED
 - **Rate limit**: นับต่อ IP ต่อนาที เกินแล้วได้ 429 `RATE_LIMITED` พร้อม header `Retry-After`
+
+### เพิ่มเติม (24 ก.ย. 2569)
+- **Cost per action**: `main.py` นับ token ทุกครั้งที่เรียก Gemini แล้วส่งกลับทาง header `X-LLM-Input-Tokens` / `X-LLM-Output-Tokens` / `X-LLM-Calls` / `X-LLM-Model` ส่วน `TokenMeter` (Java) รวมยอดต่อ 1 action แล้วบันทึกลง `usage_logs` (`input_tokens`, `output_tokens`, `llm_model`, `token_breakdown`) ดูรายงานได้ที่ `GET /api/v1/admin/usage/cost` ราคาตั้งที่ `app.llm.price.*`
+- **`careerMatches[].roleNameTh`**: ชื่อสายงานภาษาไทยจาก `infer-roles-from-skills`
+- **`requiredSkillsDetail`**: ใน `/workplaces` เมื่อผู้ใช้ล็อกอินอยู่ เทียบทักษะของงานกับเรซูเม่ล่าสุดด้วยการจับคู่ด้วยคำ (`JobSkillAnnotator`)
+- ร่างนโยบายความเป็นส่วนตัว: `docs/PRIVACY_POLICY_TH.md`

@@ -32,6 +32,14 @@ public class AdminUsageController {
         return ResponseEntity.ok(new ApiResponse<>(200, "OK", usageService.search(userId, action, from, to, page, size)));
     }
 
+    /** Cost per action — ค่าเฉลี่ย token และค่าใช้จ่ายต่อครั้ง */
+    @GetMapping("/cost")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> cost(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(new ApiResponse<>(200, "OK", usageService.costReport(from, to)));
+    }
+
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> summary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,

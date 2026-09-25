@@ -41,6 +41,20 @@ public class UsageLogEntity {
     @Column(length = 500)
     private String detail;
 
+    // ===== Cost per action (nullable — log เก่าไม่มีค่า) =====
+    @Column(name = "input_tokens")
+    private Long inputTokens;
+
+    @Column(name = "output_tokens")
+    private Long outputTokens;
+
+    @Column(name = "llm_model", length = 100)
+    private String llmModel;
+
+    /** แยกตาม endpoint ของ Python เช่น {"judge-skill-matches":{"input":..,"output":..,"calls":..}} */
+    @Column(name = "token_breakdown", columnDefinition = "TEXT")
+    private String tokenBreakdown;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 }

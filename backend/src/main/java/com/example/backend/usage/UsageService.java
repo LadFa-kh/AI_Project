@@ -56,13 +56,16 @@ public class UsageService {
         int cost = costOf(action);
         requireCredits(user, cost);
         long t0 = System.currentTimeMillis();
+        TokenMeter meter = TokenMeter.start();
         try {
             T result = work.get();
-            log(user, action, true, cost, System.currentTimeMillis() - t0, null);
+            log(user, action, true, cost, System.currentTimeMillis() - t0, null, meter);
             return result;
         } catch (RuntimeException e) {
-            log(user, action, false, 0, System.currentTimeMillis() - t0, e.getClass().getSimpleName() + ": " + e.getMessage());
+            log(user, action, false, 0, System.currentTimeMillis() - t0, e.getClass().getSimpleName() + ": " + e.getMessage(), meter);
             throw e;
+        } finally {
+            TokenMeter.clear();
         }
     }
 
@@ -78,6 +81,11 @@ public class UsageService {
     /** REQUIRES_NEW: บันทึก log ได้แม้งานหลัก rollback */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(UserEntity user, String action, boolean success, int credits, long ms, String detail) {
+        log(user, action, success, credits, ms, detail, null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void log(UserEntity user, String action, boolean success, int credits, long ms, String detail, TokenMeter meter) {
         UsageLogEntity l = new UsageLogEntity();
         l.setUser(user);
         l.setAction(action);
@@ -86,6 +94,13 @@ public class UsageService {
         l.setDurationMs(ms);
         l.setDetail(detail != null && detail.length() > 500 ? detail.substring(0, 500) : detail);
         l.setCreatedAt(Instant.now());
+        if (meter != null) {
+            l.setInputTokens(meter.totalInput());
+            l.setOutputTokens(meter.totalOutput());
+            l.setLlmModel(meter.model());
+            try { l.setTokenBreakdown(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(meter.breakdown())); }
+            catch (Exception ignored) { }
+        }
         repository.save(l);
     }
 
@@ -137,6 +152,76 @@ public class UsageService {
         }
         return out;
     }
+
+    @Value("${app.llm.price.input-per-1m:0}")
+    private double priceInputPer1M;
+
+    @Value("${app.llm.price.output-per-1m:0}")
+    private double priceOutputPer1M;
+
+    @Value("${app.llm.price.currency:USD}")
+    private String priceCurrency;
+
+    /**
+     * Cost per action: ค่าเฉลี่ย token ต่อ 1 ครั้งที่สำเร็จ แยกตาม action และตาม endpoint ของ Python
+     * ราคาอ่านจาก app.llm.price.* (ตั้งตามหน้าราคาของผู้ให้บริการ) — ถ้ายังเป็น 0 ช่อง cost จะเป็น 0
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> costReport(LocalDate from, LocalDate to) {
+        Instant f = (from == null ? LocalDate.now(TH).minusDays(30) : from).atStartOfDay(TH).toInstant();
+        Instant t = (to == null ? LocalDate.now(TH) : to).plusDays(1).atStartOfDay(TH).toInstant();
+        List<UsageLogEntity> logs = repository.findMetered(f, t);
+        com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        Map<String, long[]> byAction = new TreeMap<>();      // [count, in, out]
+        Map<String, long[]> byEndpoint = new TreeMap<>();    // [actions, in, out, calls]
+        Map<String, String> models = new TreeMap<>();
+        for (UsageLogEntity l : logs) {
+            long[] a = byAction.computeIfAbsent(l.getAction(), k -> new long[3]);
+            a[0]++; a[1] += nz(l.getInputTokens()); a[2] += nz(l.getOutputTokens());
+            if (l.getLlmModel() != null) models.put(l.getAction(), l.getLlmModel());
+            if (l.getTokenBreakdown() != null) {
+                try {
+                    Map<String, Map<String, Number>> bd = om.readValue(l.getTokenBreakdown(),
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Map<String, Number>>>() {});
+                    bd.forEach((ep, v) -> {
+                        long[] e = byEndpoint.computeIfAbsent(ep, k -> new long[4]);
+                        e[0]++; e[1] += v.getOrDefault("input", 0).longValue();
+                        e[2] += v.getOrDefault("output", 0).longValue(); e[3] += v.getOrDefault("calls", 0).longValue();
+                    });
+                } catch (Exception ignored) { }
+            }
+        }
+        List<Map<String, Object>> actions = new ArrayList<>();
+        byAction.forEach((k, a) -> actions.add(row(k, a[0], a[1], a[2], null, models.get(k))));
+        List<Map<String, Object>> endpoints = new ArrayList<>();
+        byEndpoint.forEach((k, e) -> endpoints.add(row(k, e[0], e[1], e[2], e[3], null)));
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("from", f);
+        out.put("to", t);
+        out.put("pricePer1M", Map.of("input", priceInputPer1M, "output", priceOutputPer1M, "currency", priceCurrency));
+        out.put("byAction", actions);
+        out.put("byPythonEndpoint", endpoints);
+        out.put("note", "ค่าเฉลี่ยต่อ 1 action ที่สำเร็จ; judge-skill-matches = ค่าใช้จ่ายของ semantic matching (B2)");
+        return out;
+    }
+
+    private Map<String, Object> row(String name, long count, long in, long out, Long calls, String model) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        double avgIn = count == 0 ? 0 : (double) in / count;
+        double avgOut = count == 0 ? 0 : (double) out / count;
+        m.put("name", name);
+        m.put("samples", count);
+        if (model != null) m.put("model", model);
+        if (calls != null) m.put("avgLlmCalls", count == 0 ? 0 : Math.round((double) calls / count * 100) / 100.0);
+        m.put("avgInputTokens", Math.round(avgIn));
+        m.put("avgOutputTokens", Math.round(avgOut));
+        m.put("avgCost", Math.round((avgIn * priceInputPer1M + avgOut * priceOutputPer1M) / 1_000_000 * 1_000_000) / 1_000_000.0);
+        return m;
+    }
+
+    private static long nz(Long v) { return v == null ? 0 : v; }
 
     private boolean unlimited(UserEntity u) {
         return monthlyLimit <= 0 || u.getRole() == UserEntity.Role.ADMIN;

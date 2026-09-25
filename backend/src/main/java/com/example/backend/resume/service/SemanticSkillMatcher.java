@@ -39,10 +39,10 @@ public class SemanticSkillMatcher {
 
     private final SkillTaxonomyService taxonomy;
     private final SkillMatchCacheRepository cacheRepository;
-    private final RestTemplate restTemplate = new RestTemplateBuilder()
+    private final RestTemplate restTemplate = com.example.backend.usage.TokenMeter.instrument(new RestTemplateBuilder()
             .setConnectTimeout(Duration.ofSeconds(5))
             .setReadTimeout(Duration.ofSeconds(30))
-            .build();
+            .build());
 
     @Value("${fastapi.base.url:http://fastapi-ai:8000}")
     private String fastapiBaseUrl;

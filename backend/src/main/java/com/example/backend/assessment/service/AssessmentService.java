@@ -77,7 +77,7 @@ public class AssessmentService {
     private final SkillTaxonomyService skillTaxonomyService;
     private final DesiredRoleRepository desiredRoleRepository;
     private final com.example.backend.resume.service.SemanticSkillMatcher semanticSkillMatcher;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = com.example.backend.usage.TokenMeter.instrument(new RestTemplate());
 
     @Value("${fastapi.base.url:http://fastapi-ai:8000}")
     private String fastapiBaseUrl;
@@ -199,8 +199,8 @@ public class AssessmentService {
         List<String> standardSkills = skillTaxonomyService.extractAndAggregateStandardSkills(englishRoleName);
 
         // B1: ขอรายชื่ออาชีพจาก LLM "ขนานไปพร้อมกัน" กับการจับคู่ทักษะ เพื่อไม่ให้เวลารวมเกิน 30 วินาที
-        java.util.concurrent.CompletableFuture<List<String>> roleCandidatesFuture = roleInferredByAi
-                ? java.util.concurrent.CompletableFuture.supplyAsync(() -> inferRoleCandidates(hardSkills))
+        java.util.concurrent.CompletableFuture<RoleCandidates> roleCandidatesFuture = roleInferredByAi
+                ? supplyWithMeter(() -> inferRoleCandidates(hardSkills, englishRoleName))
                 : null;
 
         // B2: จับคู่แบบเข้าใจความหมาย (มี fallback เป็นแบบคำอัตโนมัติถ้า LLM ใช้ไม่ได้)
@@ -308,16 +308,18 @@ public class AssessmentService {
      */
     private List<com.example.backend.assessment.dto.CareerMatchDto> buildCareerMatches(
             List<String> hardSkills, String primaryRole, List<String> primaryStandard, SkillMatchResult primaryResult,
-            java.util.concurrent.CompletableFuture<List<String>> candidatesFuture) {
+            java.util.concurrent.CompletableFuture<RoleCandidates> candidatesFuture) {
         try {
             LinkedHashMap<String, String> roles = new LinkedHashMap<>();
             if (primaryRole != null && !primaryRole.isBlank()) roles.put(primaryRole.trim().toLowerCase(), primaryRole.trim());
-            List<String> candidates;
+            RoleCandidates rc;
             try {
-                candidates = candidatesFuture.get(15, java.util.concurrent.TimeUnit.SECONDS);
+                rc = candidatesFuture.get(15, java.util.concurrent.TimeUnit.SECONDS);
             } catch (Exception e) {
-                candidates = List.of(); // ช้าเกิน/ล้มเหลว → ใช้อาชีพหลักอาชีพเดียว
+                rc = new RoleCandidates(); // ช้าเกิน/ล้มเหลว → ใช้อาชีพหลักอาชีพเดียว
             }
+            List<String> candidates = rc.roles == null ? List.of() : rc.roles;
+            Map<String, String> thai = rc.thaiNames();
             for (String r : candidates) {
                 if (roles.size() >= MAX_CAREER_MATCHES) break;
                 roles.putIfAbsent(r.trim().toLowerCase(), r.trim());
@@ -363,7 +365,8 @@ public class AssessmentService {
                                 .thenComparing(java.util.Comparator.naturalOrder()))
                         .limit(MAX_MISSING_PER_CAREER).toList();
                 out.add(com.example.backend.assessment.dto.CareerMatchDto.builder()
-                        .roleName(names.get(i)).percent(pct.get(i))
+                        .roleName(names.get(i)).roleNameTh(thai.get(names.get(i).trim().toLowerCase()))
+                        .percent(pct.get(i))
                         .matchedSkills(r.getMatchedSkills()).missingSkills(missing).build());
             }
             out.sort((a, b) -> Integer.compare(b.getPercent(), a.getPercent()));
@@ -374,23 +377,46 @@ public class AssessmentService {
         }
     }
 
-    private List<String> inferRoleCandidates(List<String> hardSkills) {
+    /** รัน async โดยพา TokenMeter ของ action นี้ไปด้วย (ไม่งั้น token ของงานเบื้องหลังจะไม่ถูกนับ) */
+    private static <T> java.util.concurrent.CompletableFuture<T> supplyWithMeter(java.util.function.Supplier<T> s) {
+        var meter = com.example.backend.usage.TokenMeter.current();
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            com.example.backend.usage.TokenMeter.bind(meter);
+            try { return s.get(); } finally { com.example.backend.usage.TokenMeter.clear(); }
+        });
+    }
+
+    private RoleCandidates inferRoleCandidates(List<String> hardSkills, String primaryRole) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("hardSkills", String.join(" | ", hardSkills));
         body.add("maxRoles", String.valueOf(MAX_CAREER_MATCHES));
+        body.add("primaryRole", primaryRole == null ? "" : primaryRole);
         try {
             RoleCandidates res = restTemplate.postForObject(fastapiBaseUrl + INFER_ROLES_PATH,
                     new HttpEntity<>(body, headers), RoleCandidates.class);
-            if (res != null && res.roles != null) return res.roles;
+            if (res != null && res.roles != null) return res;
         } catch (Exception e) {
             System.err.println("Role candidates failed, using primary role only: " + e.getMessage());
         }
-        return List.of();
+        return new RoleCandidates();
     }
 
-    static class RoleCandidates { public List<String> roles; }
+    static class RoleCandidates {
+        public List<String> roles = List.of();
+        public List<String> roles_th = List.of();
+
+        /** ชื่อไทยของแต่ละตำแหน่ง (key = ชื่ออังกฤษตัวพิมพ์เล็ก) */
+        Map<String, String> thaiNames() {
+            Map<String, String> m = new HashMap<>();
+            for (int i = 0; roles != null && roles_th != null && i < roles.size() && i < roles_th.size(); i++) {
+                String th = roles_th.get(i);
+                if (th != null && !th.isBlank()) m.put(roles.get(i).trim().toLowerCase(), th.trim());
+            }
+            return m;
+        }
+    }
 
     /**
      * แปล desiredRoleName เป็นชื่ออาชีพภาษาอังกฤษผ่าน Python/Gemini
