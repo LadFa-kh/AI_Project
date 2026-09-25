@@ -191,7 +191,7 @@ export function TopNav() {
               {menuOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-xl border py-1 backdrop-blur-md"
+                  className="absolute right-0 top-[calc(100%+8px)] w-52 overflow-hidden rounded-xl border py-1 backdrop-blur-md"
                   style={{
                     background: "var(--nocturne-card-bg)",
                     borderColor: "var(--nocturne-border)",
@@ -207,6 +207,24 @@ export function TopNav() {
                     style={{ color: "var(--nocturne-text-primary)" }}
                   >
                     ตั้งค่าบัญชี
+                  </Link>
+                  <Link
+                    href="/privacy-policy"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="block w-full px-4 py-2 text-left text-xs transition-colors hover:opacity-80 sm:text-sm"
+                    style={{ color: "var(--nocturne-text-secondary)" }}
+                  >
+                    นโยบายความเป็นส่วนตัว
+                  </Link>
+                  <Link
+                    href="/terms"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="block w-full px-4 py-2 text-left text-xs transition-colors hover:opacity-80 sm:text-sm"
+                    style={{ color: "var(--nocturne-text-secondary)" }}
+                  >
+                    ข้อกำหนดการใช้งาน
                   </Link>
                   <button
                     type="button"

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { TopNav } from "./top-nav";
 import { RouteGuard } from "./route-guard";
 import { ConsentModal } from "@/components/auth/consent-modal";
+import { SiteFooter } from "./site-footer";
 
 // The old Stardust sidebar (navbar.tsx / mobile-topbar.tsx / nav-context.tsx)
 // has been retired app-wide per explicit request — every route now uses the
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <>
         <RouteGuard>{children}</RouteGuard>
+        <SiteFooter />
         <ConsentModal />
       </>
     );
@@ -44,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-dvh pt-[88px] sm:pt-[96px]" style={{ background: "var(--nocturne-bg)" }}>
         <RouteGuard>{children}</RouteGuard>
       </div>
+      <SiteFooter />
       <ConsentModal />
     </>
   );

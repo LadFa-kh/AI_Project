@@ -231,3 +231,8 @@ body {
     @apply font-sans;
   }
 }
+
+/* Text on accent-gradient buttons — same in light and dark themes. */
+:root {
+  --nocturne-on-accent: #ffffff;
+}

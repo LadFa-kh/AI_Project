@@ -8,6 +8,7 @@ import { describeError, getErrorCode } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleSignIn } from "@/lib/use-google-signin";
 import { EmployerPendingNotice } from "./employer-pending-notice";
+import { LegalDialog, type LegalDoc } from "@/components/legal/legal-dialog";
 import styles from "./register.module.css";
 
 type FieldErrors = {
@@ -101,6 +102,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // Terms / privacy open in an in-form dialog (not a new tab) so the user
+  // actually sees them and can accept from there without losing the form.
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<"default" | "loading" | "error">("default");
   const [formError, setFormError] = useState<string | null>(null);
@@ -442,10 +446,28 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps = {}) {
           className={styles.checkbox}
         />
         <label htmlFor="terms" className={styles.checkLabel}>
-          ฉันยอมรับ <a href="/terms" target="_blank" rel="noopener noreferrer" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>ข้อกำหนดการใช้งาน</a> และ{" "}
-          <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className={styles.link} style={{ display: "inline", minHeight: "auto" }}>นโยบายความเป็นส่วนตัว</a>
+          ฉันยอมรับ{" "}
+          <button type="button" className={styles.link} style={{ display: "inline", minHeight: "auto", padding: 0, background: "none", border: "none", cursor: "pointer", font: "inherit" }} onClick={() => setLegalDoc("terms")}>
+            ข้อกำหนดการใช้งาน
+          </button>{" "}
+          และ{" "}
+          <button type="button" className={styles.link} style={{ display: "inline", minHeight: "auto", padding: 0, background: "none", border: "none", cursor: "pointer", font: "inherit" }} onClick={() => setLegalDoc("privacy")}>
+            นโยบายความเป็นส่วนตัว
+          </button>
         </label>
       </div>
+      {legalDoc && (
+        <LegalDialog
+          doc={legalDoc}
+          onClose={() => setLegalDoc(null)}
+          acceptLabel="ยอมรับข้อกำหนดและนโยบาย"
+          onAccept={() => {
+            setAgreedToTerms(true);
+            setErrors((prev) => ({ ...prev, terms: null }));
+            setLegalDoc(null);
+          }}
+        />
+      )}
       {errors.terms && <p id="terms-error" className={styles.fieldError} style={{ marginTop: "-8px" }}>{errors.terms}</p>}
 
       <button

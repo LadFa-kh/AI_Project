@@ -1,0 +1,36 @@
+/* App-wide footer — legal links reachable from every page after login. Tokens only. */
+.footer {
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid var(--nocturne-border);
+  background: var(--nocturne-bg);
+  color: var(--nocturne-text-muted);
+  font-size: 13px;
+}
+
+.inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 18px 16px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  color: var(--nocturne-text-secondary);
+  text-decoration: none;
+}
+.link:hover { color: var(--nocturne-text-primary); text-decoration: underline; text-underline-offset: 3px; }
+.link:focus-visible { outline: 2px solid var(--color-home-hero-accent-1); outline-offset: 2px; border-radius: 4px; }

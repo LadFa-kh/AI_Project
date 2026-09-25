@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TERMS_EFFECTIVE_DATE_LABEL, TERMS_VERSION, TermsContent } from "@/components/legal/terms-content";
 import styles from "@/components/legal/privacy-policy.module.css";
-
-// Terms of use — linked from the register form's consent checkbox.
-// Plain-language draft for a student project; review together with the privacy policy.
-const TERMS_VERSION = "1.0";
-const EFFECTIVE_DATE_LABEL = "24 กันยายน 2569";
 
 export const metadata: Metadata = {
   title: "ข้อกำหนดการใช้งาน — ResuMate",
@@ -20,66 +16,11 @@ export default function TermsPage() {
         <h1 className={styles.title}>ข้อกำหนดการใช้งาน</h1>
         <div className={styles.meta}>
           <span className={styles.metaChip}>เวอร์ชัน {TERMS_VERSION}</span>
-          <span className={styles.metaChip}>มีผลตั้งแต่ {EFFECTIVE_DATE_LABEL}</span>
+          <span className={styles.metaChip}>มีผลตั้งแต่ {TERMS_EFFECTIVE_DATE_LABEL}</span>
         </div>
       </header>
 
-      <article className={styles.card}>
-        <p className={styles.intro}>
-          ResuMate เป็นระบบวิเคราะห์เรซูเม่และประเมินสมรรถนะเบื้องต้น เพื่อแนะนำสายงานและสถานประกอบการฝึกงานสำหรับนักศึกษา
-          พัฒนาเป็นโครงงานของนักศึกษา การสมัครและใช้งานถือว่าคุณยอมรับข้อกำหนดนี้และ{" "}
-          <Link href="/privacy-policy" className={styles.link}>นโยบายความเป็นส่วนตัว</Link>
-        </p>
-
-        <section className={styles.section}>
-          <h2>1. บัญชีผู้ใช้</h2>
-          <ul>
-            <li>กรอกข้อมูลที่เป็นความจริง และดูแลรหัสผ่านของตนเอง ห้ามให้ผู้อื่นใช้บัญชีแทน</li>
-            <li>บัญชีผู้ประกาศงานต้องได้รับการอนุมัติจากผู้ดูแลระบบก่อนใช้งาน และต้องเป็นตัวแทนของบริษัทจริง</li>
-            <li>ผู้ดูแลระบบอาจระงับบัญชีที่ใช้งานผิดข้อกำหนดโดยแจ้งเหตุผล</li>
-          </ul>
-        </section>
-
-        <section className={styles.section}>
-          <h2>2. ผลการวิเคราะห์โดย AI</h2>
-          <ul>
-            <li>คะแนน สายงานที่แนะนำ และตำแหน่งฝึกงานที่แนะนำ เป็นข้อมูลประกอบการตัดสินใจเบื้องต้นเท่านั้น ไม่ใช่การรับรองความสามารถ</li>
-            <li>ผลอาจคลาดเคลื่อนได้ ขึ้นกับความชัดเจนของเรซูเม่และข้อมูลทักษะมาตรฐาน (O*NET) ที่ระบบใช้เทียบ</li>
-          </ul>
-        </section>
-
-        <section className={styles.section}>
-          <h2>3. เครดิตและการจำกัดการใช้งาน</h2>
-          <p>
-            การอัปโหลดเรซูเม่และการส่งแบบประเมินใช้เครดิตรายเดือน ซึ่งหักเฉพาะเมื่อทำสำเร็จ และระบบจำกัดจำนวนคำขอต่อนาทีเพื่อป้องกันการใช้งานผิดวัตถุประสงค์
-            ดูเครดิตคงเหลือได้ที่<Link href="/settings" className={styles.link}>หน้าตั้งค่าบัญชี</Link>
-          </p>
-        </section>
-
-        <section className={styles.section}>
-          <h2>4. ประกาศงานและข้อมูลบริษัท</h2>
-          <ul>
-            <li>ผู้ประกาศงานรับผิดชอบความถูกต้องของประกาศ ข้อมูลบริษัท และลิงก์สมัครงานที่เผยแพร่</li>
-            <li>ห้ามประกาศงานที่หลอกลวง เรียกเก็บเงินจากผู้สมัคร หรือขัดต่อกฎหมาย</li>
-            <li>การสมัครงานและการตกลงฝึกงานเกิดขึ้นระหว่างนักศึกษากับบริษัทโดยตรง ResuMate ไม่ได้เป็นคู่สัญญา</li>
-          </ul>
-        </section>
-
-        <section className={styles.section}>
-          <h2>5. สิ่งที่ห้ามทำ</h2>
-          <ul>
-            <li>อัปโหลดไฟล์ที่ไม่ใช่เรซูเม่ของตนเอง หรือมีข้อมูลส่วนบุคคลของผู้อื่นโดยไม่ได้รับอนุญาต</li>
-            <li>พยายามเข้าถึงข้อมูลของผู้อื่น รบกวนการทำงานของระบบ หรือใช้โปรแกรมอัตโนมัติยิงคำขอจำนวนมาก</li>
-          </ul>
-        </section>
-
-        <section className={styles.section}>
-          <h2>6. การเปลี่ยนแปลงและการยกเลิก</h2>
-          <p>
-            ระบบอาจปรับปรุงฟีเจอร์หรือข้อกำหนดนี้ได้ โดยจะแจ้งผ่านหน้าเว็บ คุณลบบัญชีได้ทุกเมื่อที่<Link href="/settings" className={styles.link}>หน้าตั้งค่าบัญชี</Link>
-          </p>
-        </section>
-      </article>
+      <TermsContent />
 
       <footer className={styles.footer}>
         <span>ข้อกำหนดการใช้งาน เวอร์ชัน {TERMS_VERSION}</span>

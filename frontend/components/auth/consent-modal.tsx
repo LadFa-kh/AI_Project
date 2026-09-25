@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { acceptPolicy, getCurrentPolicy, type PolicyInfo } from "@/lib/auth-service";
 import { describeError } from "@/lib/api-client";
+import { LegalDialog } from "@/components/legal/legal-dialog";
 import styles from "./consent-modal.module.css";
 
 const FALLBACK_POLICY: Pick<PolicyInfo, "version" | "url"> = { version: "1.0", url: "/privacy-policy" };
@@ -27,6 +28,7 @@ export function ConsentModal() {
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFull, setShowFull] = useState(false);
   const checkboxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -107,9 +109,14 @@ export function ConsentModal() {
           เวอร์ชัน {version}
           {policy?.effectiveDate ? ` · มีผลตั้งแต่ ${new Date(policy.effectiveDate).toLocaleDateString("th-TH")}` : ""}
           {" · "}
-          <a href={policy?.url ?? FALLBACK_POLICY.url} target="_blank" rel="noopener noreferrer" className={styles.link}>
+          <button
+            type="button"
+            className={styles.link}
+            style={{ padding: 0, background: "none", border: "none", cursor: "pointer", font: "inherit" }}
+            onClick={() => setShowFull(true)}
+          >
             อ่านนโยบายฉบับเต็ม
-          </a>
+          </button>
         </p>
 
         <label className={styles.checkRow}>
@@ -144,6 +151,17 @@ export function ConsentModal() {
           </button>
         </div>
       </div>
+      {showFull && (
+        <LegalDialog
+          doc="privacy"
+          onClose={() => setShowFull(false)}
+          acceptLabel="อ่านแล้ว ยอมรับนโยบาย"
+          onAccept={() => {
+            setChecked(true);
+            setShowFull(false);
+          }}
+        />
+      )}
     </div>,
     document.body
   );
