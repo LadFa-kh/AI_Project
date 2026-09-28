@@ -19,7 +19,7 @@
 // because a result saved to sessionStorage before this change won't have
 // them (see result-session's read path).
 
-import { apiFetch } from "./api-client";
+import { ApiError, apiFetch, getErrorCode, unwrap, unwrapList } from "./api-client";
 import type { AssessmentAnswers, AssessmentQuestion } from "./assessment-types";
 
 // Mirrors scoreBreakdown exactly (see API_CHANGES.md §1) — every number here
@@ -97,7 +97,61 @@ export type AssessmentSubmitResult = {
   scoreExplanation?: string;
 
   careerMatches?: CareerMatch[];
+
+  // §5.14 — only on results fetched back from GET /assessments/me/…
+  submittedAt?: string;
+  /** true = round taken before 28 ก.ย. 2569: no scoreBreakdown / careerMatches / scoreExplanation, recommendationItems = []. */
+  partial?: boolean;
+  /** Top-level on partial results (full results carry it inside scoreBreakdown). */
+  roleUsedForMatching?: string | null;
 };
+
+// ===== Assessment history (API_CHANGES.md §5.14) =====
+
+export type AssessmentHistoryItem = {
+  resumeId: string;
+  originalFilename: string | null;
+  finalScore: number;
+  roleUsedForMatching: string | null;
+  submittedAt: string;
+  partial: boolean;
+};
+
+function isNoAssessment(err: unknown): boolean {
+  return getErrorCode(err) === "NO_ASSESSMENT" || (err instanceof ApiError && err.status === 404);
+}
+
+/** Latest result of the logged-in user, or null when there is none (404 NO_ASSESSMENT). */
+export async function getLatestAssessment(): Promise<AssessmentSubmitResult | null> {
+  try {
+    return unwrap<AssessmentSubmitResult>(await apiFetch<unknown>("/assessments/me/latest", { method: "GET" }));
+  } catch (err) {
+    if (isNoAssessment(err)) return null;
+    throw err;
+  }
+}
+
+/** Result of one specific resume (owner or ADMIN), or null when not found. */
+export async function getAssessmentByResume(resumeId: string): Promise<AssessmentSubmitResult | null> {
+  try {
+    return unwrap<AssessmentSubmitResult>(
+      await apiFetch<unknown>(`/assessments/me/${encodeURIComponent(resumeId)}`, { method: "GET" })
+    );
+  } catch (err) {
+    if (isNoAssessment(err)) return null;
+    throw err;
+  }
+}
+
+/** Every round, newest first. Empty list when there is none. */
+export async function listMyAssessments(): Promise<AssessmentHistoryItem[]> {
+  try {
+    return unwrapList<AssessmentHistoryItem>(await apiFetch<unknown>("/assessments/me", { method: "GET" }));
+  } catch (err) {
+    if (isNoAssessment(err)) return [];
+    throw err;
+  }
+}
 
 // Each option is prefixed like "1. พอใช้" / "2. มาตรฐาน" — the leading
 // digit is the score. Falls back to the option's position in the list

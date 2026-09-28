@@ -14,7 +14,8 @@ import { getErrorCode } from "@/lib/api-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMatchingRecommendations, type InternshipMatch } from "@/lib/matching-service";
 import { getAllWorkplaces, skillsFromDetail, type Workplace } from "@/lib/workplace-service";
-import { readAssessmentResult } from "@/lib/assessment-session";
+import { readAssessmentResult, writeAssessmentResult } from "@/lib/assessment-session";
+import { getLatestAssessment } from "@/lib/assessment-service";
 import { writeMatchList } from "@/lib/match-session";
 import { writeWorkplaceList } from "@/lib/workplace-session";
 import type { DisplayJob } from "@/lib/internship-match-types";
@@ -64,14 +65,25 @@ export function InternshipMatchesView({ browseOnly = false }: { browseOnly?: boo
     // resumeId comes from the skill-assessment step's sessionStorage
     // hand-off — matching only works after that resume's assessment has
     // been submitted, so if we don't have it, there's nothing to fetch yet.
-    const assessment = readAssessmentResult();
-    if (!user || !assessment) {
+    if (!user) {
       setStatus("no-assessment");
       return;
     }
 
     try {
-      const result = await getMatchingRecommendations(assessment.resumeId);
+      // sessionStorage first; otherwise the latest result from the server
+      // (new tab / other device — API_CHANGES.md §5.14).
+      let resumeId = readAssessmentResult()?.resumeId ?? null;
+      if (!resumeId) {
+        const latest = await getLatestAssessment();
+        if (latest) writeAssessmentResult(latest);
+        resumeId = latest?.resumeId ?? null;
+      }
+      if (!resumeId) {
+        setStatus("no-assessment");
+        return;
+      }
+      const result = await getMatchingRecommendations(resumeId);
       setMatches(result);
       // So the detail page (which has no backend endpoint of its own) can
       // look a job up by id without a separate fetch.

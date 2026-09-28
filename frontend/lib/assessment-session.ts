@@ -1,8 +1,7 @@
 // Hands off the assessment-submit result to the evaluation-result page via
-// sessionStorage — same pattern as resume-session.ts. No backend "fetch my
-// last result" endpoint exists, and a resume can only be submitted once, so
-// this is the only way evaluation-result can show the score after the user
-// navigates there from skill-assessment.
+// sessionStorage (fast path right after submitting). When it's missing — new
+// tab, another device — pages fall back to GET /assessments/me/latest
+// (API_CHANGES.md §5.14).
 
 import type { AssessmentSubmitResult } from "./assessment-service";
 

@@ -208,6 +208,17 @@ export function TopNav() {
                   >
                     ตั้งค่าบัญชี
                   </Link>
+                  {user?.role === "STUDENT" && (
+                    <Link
+                      href="/assessment-history"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="block w-full px-4 py-2 text-left text-xs transition-colors hover:opacity-80 sm:text-sm"
+                      style={{ color: "var(--nocturne-text-primary)" }}
+                    >
+                      ประวัติการประเมิน
+                    </Link>
+                  )}
                   <Link
                     href="/privacy-policy"
                     role="menuitem"

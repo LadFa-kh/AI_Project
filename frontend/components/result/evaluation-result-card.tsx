@@ -20,12 +20,15 @@ import { ScoreBadge } from "@/components/ui/score-badge";
 import { InsightChipList } from "@/components/ui/insight-chip-list";
 import { CareerMatchRanking } from "./career-match-ranking";
 import type { EvaluationResult } from "@/lib/result-types";
-import type { ScoreBreakdown } from "@/lib/assessment-service";
-import { readAssessmentResult } from "@/lib/assessment-session";
+import { getAssessmentByResume, getLatestAssessment, type ScoreBreakdown } from "@/lib/assessment-service";
+import { readAssessmentResult, writeAssessmentResult } from "@/lib/assessment-session";
+import { useAuth } from "@/lib/auth-context";
+import { describeError } from "@/lib/api-client";
+import { formatThaiDate } from "@/lib/date-format";
 import styles from "./evaluation-result.module.css";
 import fieldStyles from "@/components/resume/resume-upload.module.css";
 
-type Status = "loading" | "empty" | "success";
+type Status = "loading" | "empty" | "error" | "success";
 
 // "ที่มาของคะแนน" — collapsible breakdown of exactly how resumeScore/
 // assessmentScore/finalScore were computed, per API_CHANGES.md §1. Every
@@ -236,28 +239,54 @@ function useTypewriter(text: string | null) {
 }
 
 export function EvaluationResultCard() {
+  const { user, isLoading: authLoading } = useAuth();
   const [status, setStatus] = useState<Status>("loading");
   const [result, setResult] = useState<EvaluationResult | null>(null);
+  const [loadError, setLoadError] = useState("");
   const { shown: aiShown, done: aiDone } = useTypewriter(result?.recommendationSummary ?? null);
 
-  const load = useCallback(() => {
+  // Sources, in order (API_CHANGES.md §5.14 / BACKEND_REQUESTS ข้อ 1):
+  // 1) ?resumeId=… (opened from /assessment-history) → GET /assessments/me/{resumeId}
+  // 2) sessionStorage hand-off right after submitting
+  // 3) GET /assessments/me/latest — new tab / another device
+  // 404 NO_ASSESSMENT → empty state.
+  const load = useCallback(async () => {
     setStatus("loading");
-    // Result comes from the skill-assessment step's sessionStorage hand-off
-    // (POST /assessments/submit's response) — there's no GET endpoint to
-    // re-fetch it, and a resume can only be submitted once.
-    const stored = readAssessmentResult();
-    if (!stored) {
-      setResult(null);
-      setStatus("empty");
-      return;
+    setLoadError("");
+    const resumeId =
+      typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("resumeId") : null;
+    try {
+      if (resumeId) {
+        const picked = await getAssessmentByResume(resumeId);
+        setResult(picked);
+        setStatus(picked ? "success" : "empty");
+        return;
+      }
+      const stored = readAssessmentResult();
+      if (stored) {
+        setResult(stored);
+        setStatus("success");
+        return;
+      }
+      if (!user) {
+        setResult(null);
+        setStatus("empty");
+        return;
+      }
+      const latest = await getLatestAssessment();
+      if (latest) writeAssessmentResult(latest); // matches page reuses its resumeId
+      setResult(latest);
+      setStatus(latest ? "success" : "empty");
+    } catch (err) {
+      setLoadError(describeError(err, "โหลดผลการประเมินไม่สำเร็จ กรุณาลองใหม่"));
+      setStatus("error");
     }
-    setResult(stored);
-    setStatus("success");
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (authLoading) return;
+    void load();
+  }, [load, authLoading]);
 
   if (status === "loading") {
     return (
@@ -266,6 +295,19 @@ export function EvaluationResultCard() {
           <span className={fieldStyles.loadingSpinner} aria-hidden="true" />
           <p className={fieldStyles.subheading}>กำลังโหลดผลการประเมินของคุณ…</p>
         </div>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className={fieldStyles.stateBlock}>
+        <p className={`${fieldStyles.formError} ${fieldStyles.animateIn}`} role="alert">
+          {loadError}
+        </p>
+        <button type="button" onClick={() => void load()} className={`${fieldStyles.submitBtn} ${fieldStyles.animateIn}`}>
+          ลองใหม่
+        </button>
       </div>
     );
   }
@@ -292,8 +334,24 @@ export function EvaluationResultCard() {
     );
   }
 
+  const roleUsed = result.scoreBreakdown?.roleUsedForMatching ?? result.roleUsedForMatching ?? null;
+
   return (
     <div className={styles.resultWrap}>
+      {(result.submittedAt || result.partial) && (
+        <p className={`${styles.breakdownReason} ${styles.animateIn}`} style={{ textAlign: "center" }}>
+          {result.submittedAt && <>ผลการประเมินเมื่อ {formatThaiDate(result.submittedAt)}</>}
+          {roleUsed && <> · ตำแหน่ง {roleUsed}</>}
+          {" · "}
+          <Link href="/assessment-history" style={{ textDecoration: "underline" }}>ดูประวัติการประเมินทั้งหมด</Link>
+        </p>
+      )}
+      {result.partial && (
+        <p className={`${styles.breakdownReason} ${styles.animateIn}`} style={{ textAlign: "center" }}>
+          ผลรอบนี้ทำก่อนระบบเพิ่มรายละเอียดคะแนน จึงไม่มี &quot;ที่มาของคะแนน&quot; และ &quot;สายงานที่เหมาะกับคุณ&quot; —
+          อัปโหลดเรซูเม่และทำแบบประเมินใหม่เพื่อดูข้อมูลครบ
+        </p>
+      )}
       <div className={`${styles.scoreCard} ${styles.animateIn} ${styles.delay1}`}>
         <ScoreBadge score={Math.round(result.finalScore)} />
         <div className={styles.scoreRow}>
@@ -331,7 +389,7 @@ export function EvaluationResultCard() {
             {aiShown}
             {!aiDone && <span className={styles.aiCursor} aria-hidden="true" />}
           </p>
-          {result.recommendationItems.length > 0 && aiDone && (
+          {(result.recommendationItems?.length ?? 0) > 0 && aiDone && (
             <ul className={`${styles.recommendationList} ${styles.animateIn}`}>
               {result.recommendationItems.map((item, index) => (
                 <li key={index} className={styles.recommendationItem}>
@@ -343,7 +401,7 @@ export function EvaluationResultCard() {
         </div>
       )}
 
-      {result.missingSkills.length > 0 && (
+      {(result.missingSkills?.length ?? 0) > 0 && (
         <div className={`${styles.sectionBlock} ${styles.animateIn} ${styles.delay3}`}>
           <InsightChipList heading="ทักษะที่ยังขาด" items={result.missingSkills} tone="warning" />
         </div>
