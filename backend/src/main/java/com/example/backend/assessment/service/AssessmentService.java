@@ -77,6 +77,7 @@ public class AssessmentService {
     private final SkillTaxonomyService skillTaxonomyService;
     private final DesiredRoleRepository desiredRoleRepository;
     private final com.example.backend.resume.service.SemanticSkillMatcher semanticSkillMatcher;
+    private final AssessmentHistoryService assessmentHistoryService;
     private final RestTemplate restTemplate = com.example.backend.usage.TokenMeter.instrument(new RestTemplate());
 
     @Value("${fastapi.base.url:http://fastapi-ai:8000}")
@@ -283,7 +284,7 @@ public class AssessmentService {
         gapEntity.setCreatedAt(Instant.now());
         resumeGapAnalysisRepository.save(gapEntity);
 
-        return AssessmentScoreResponseDto.builder()
+        AssessmentScoreResponseDto responseDto = AssessmentScoreResponseDto.builder()
                 .resumeId(resume.getId())
                 .resumeScore(resumeScore)
                 .assessmentScore(assessmentScore)
@@ -295,6 +296,10 @@ public class AssessmentService {
                 .scoreExplanation(recommendationResult.getScore_explanation())
                 .careerMatches(careerMatches)
                 .build();
+
+        // เก็บผลฉบับเต็มไว้ให้เปิดดูย้อนหลังได้ (GET /assessments/me/latest)
+        assessmentHistoryService.save(user, resume, responseDto, effectiveRoleName);
+        return responseDto;
     }
 
     // =====================================================================

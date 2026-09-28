@@ -202,7 +202,7 @@ const label = `${breakdown.resumeWeight * 100}%`;
 }
 ```
 
-ไม่ต้องล็อกอิน (public) — ถ้าล็อกอินอยู่จะได้ `requiredSkillsDetail` เพิ่มมา
+ต้องล็อกอินก่อน (cookie `accessToken` ต้องส่ง `credentials: "include"`)
 
 ### ข้อควรระวัง 3 ข้อ
 
@@ -704,3 +704,14 @@ POST /api/v1/users/me/consents
 - เริ่มนับ token ตั้งแต่ deploy รอบนี้ — log ก่อนหน้านี้ไม่มีตัวเลข ต้องใช้งานจริงสักพักก่อนจะได้ค่าเฉลี่ย
 - `judge-skill-matches` = ค่าใช้จ่ายของ semantic matching (B2), `process-resume` = อัปโหลดเรซูเม่
 - ราคาต่อ 1M token ตั้งที่ backend (`app.llm.price.*`) ถ้ายังเป็น 0 ช่อง `avgCost` จะเป็น 0
+
+---
+
+### 5.14 ผลการประเมินย้อนหลัง (28 ก.ย. 2569)
+
+- `GET /api/v1/assessments/me/latest` ได้ผลล่าสุด รูปแบบเดียวกับ response ของ `POST /assessments/submit` (+ `submittedAt`, `partial`)
+- `GET /api/v1/assessments/me` ได้ประวัติทุกรอบแบบย่อ
+- `GET /api/v1/assessments/me/{resumeId}` ได้ผลของเรซูเม่ที่ระบุ (เจ้าของ หรือ ADMIN)
+- ไม่มีผลเลย → 404 `NO_ASSESSMENT`
+- รอบที่ทำก่อนอัปเดตนี้ได้ `partial: true` คือไม่มี `scoreBreakdown` / `careerMatches` / `scoreExplanation`
+- สิ่งที่ขอให้ frontend ทำ ดูที่ `BACKEND_REQUESTS.md`

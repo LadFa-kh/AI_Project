@@ -1,7 +1,7 @@
 # HANDOFF_CONTEXT: ResuMate backend (สำหรับเริ่มแชทใหม่)
 
 > ถ้าเริ่มแชทใหม่ ให้วางไฟล์นี้ทั้งไฟล์เป็นข้อความแรก
-> อัปเดตล่าสุด: 24 ก.ย. 2569
+> อัปเดตล่าสุด: 28 ก.ย. 2569
 
 ## 1. ผู้ใช้และบทบาท
 - Axz (Ratchapon Srichamnan) นักศึกษาวิศวกรรมคอมพิวเตอร์ มทร.อีสาน ขอนแก่น เป็น **backend developer คนเดียว** ของโครงงาน ECP-P01 ResuMate (ทีม 2 คน)
@@ -48,13 +48,15 @@
 | B9 | consent, `/policies/current`, `needsConsent`, data-export, `DELETE /users/me`, retention | `user/consent/`, `user/account/` |
 | B10 | แบ่งหน้า, index, cache, async `/tasks`, rate limit (in-memory) | `platform/` |
 | B11 | `backend/README.md` | |
+| ย้อนหลัง | เก็บผลประเมินฉบับเต็ม (`assessment_results`) + `GET /assessments/me`, `/me/latest`, `/me/{resumeId}` (รอบเก่าได้ `partial:true`) | `AssessmentHistoryService` |
 | FE | `requiredSkillsDetail` บนการ์ดงาน (เมื่อล็อกอิน), ยืนยันรูปแบบ response | `JobSkillAnnotator` |
 
 - error ทุกตัวมีรูปแบบ `{status, message, code}` (ผ่าน `BusinessException` / `GlobalExceptionHandler`) id ที่ผิดรูปแบบได้ 400 `INVALID_PARAMETER`
 - ฟิลด์ใหม่ทุกตัวไม่บังคับ (NON_NULL) หน้าบ้านเดิมจึงไม่พัง
 
 ## 4. เอกสารในโปรเจกต์
-- `API_CHANGES.md` หัวข้อ 5 เป็นสัญญา API กับหน้าบ้าน (5.13 = คำตอบต่อ FRONTEND_REQUESTS)
+- `API_CHANGES.md` หัวข้อ 5 เป็นสัญญา API กับหน้าบ้าน (5.13 = คำตอบต่อ FRONTEND_REQUESTS, 5.14 = ผลย้อนหลัง)
+- `BACKEND_REQUESTS.md` **ไฟล์ของ backend** รวมสิ่งที่ขอให้ FE ทำ (ห้ามแก้ `FRONTEND_REQUESTS.md` ของเพื่อน ให้ตอบผ่านไฟล์นี้แทน)
 - `TESTING_FLOWS.md` ทดสอบผ่าน Console ของเบราว์เซอร์ด้วย helper `api()` (ต้องพิมพ์ `allow pasting` ก่อน)
 - `backend/README.md` สถาปัตยกรรม, ER, config, endpoint ทั้งหมด
 - `docs/PRIVACY_POLICY_TH.md` **ร่าง**นโยบาย PDPA (ต้องเติม [อีเมลติดต่อ] และให้เจ้าของโครงงานตรวจก่อนใช้)

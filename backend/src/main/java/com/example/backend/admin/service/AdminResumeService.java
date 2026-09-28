@@ -40,6 +40,7 @@ public class AdminResumeService {
     private final AssessmentAnswerRepository assessmentAnswerRepository;
     private final FinalScoreRepository finalScoreRepository;
     private final DesiredRoleRepository desiredRoleRepository;
+    private final com.example.backend.assessment.repository.AssessmentResultRepository assessmentResultRepository;
 
     public List<AdminResumeDto> getAllResumes() {
         return resumeRepository.findAll().stream()
@@ -102,6 +103,9 @@ public class AdminResumeService {
         desiredRoleRepository.deleteAll(desiredRoleRepository.findAll().stream()
                 .filter(d -> d.getResume() != null && d.getResume().getId().equals(resumeId))
                 .toList());
+
+        // 6.1 ผลการประเมินฉบับเต็ม (ย้อนหลัง)
+        assessmentResultRepository.deleteByResume_Id(resumeId);
 
         // 7. ตัวเรซูเม่เอง
         resumeRepository.delete(resume);

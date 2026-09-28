@@ -18,6 +18,7 @@ public class AssessmentController {
 
     private final AssessmentService assessmentService;
     private final CurrentUserProvider currentUserProvider;
+    private final com.example.backend.assessment.service.AssessmentHistoryService assessmentHistoryService;
     private final com.example.backend.usage.UsageService usageService;
     private final com.example.backend.platform.AsyncTaskService asyncTaskService;
 
@@ -46,5 +47,29 @@ public class AssessmentController {
         // B8: ตรวจ/หักเครดิต — หักเฉพาะตอนสำเร็จ
         return ResponseEntity.ok(usageService.run(user, com.example.backend.usage.UsageService.ASSESSMENT_SUBMIT,
                 () -> assessmentService.submitAssessment(user.getId(), request)));
+    }
+
+    // ===== ผลการประเมินย้อนหลัง =====
+
+    /** ผลล่าสุดของผู้ใช้ — รูปแบบเดียวกับ response ของ submit (+ submittedAt, partial) */
+    @GetMapping("/me/latest")
+    public ResponseEntity<com.example.backend.handle.ApiResponse<java.util.Map<String, Object>>> myLatest(Authentication authentication) {
+        var user = currentUserProvider.getCurrentUser(authentication);
+        return ResponseEntity.ok(new com.example.backend.handle.ApiResponse<>(200, "OK", assessmentHistoryService.latest(user)));
+    }
+
+    /** ประวัติการประเมินทุกรอบ (ย่อ) เรียงล่าสุดก่อน */
+    @GetMapping("/me")
+    public ResponseEntity<com.example.backend.handle.ApiResponse<java.util.List<java.util.Map<String, Object>>>> myHistory(Authentication authentication) {
+        var user = currentUserProvider.getCurrentUser(authentication);
+        return ResponseEntity.ok(new com.example.backend.handle.ApiResponse<>(200, "OK", assessmentHistoryService.listMine(user)));
+    }
+
+    /** ผลของเรซูเม่ที่ระบุ (เจ้าของ หรือ ADMIN) */
+    @GetMapping("/me/{resumeId}")
+    public ResponseEntity<com.example.backend.handle.ApiResponse<java.util.Map<String, Object>>> myByResume(Authentication authentication,
+                                                                                                          @PathVariable UUID resumeId) {
+        var user = currentUserProvider.getCurrentUser(authentication);
+        return ResponseEntity.ok(new com.example.backend.handle.ApiResponse<>(200, "OK", assessmentHistoryService.byResume(user, resumeId)));
     }
 }
